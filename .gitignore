@@ -1,0 +1,18 @@
+# dependensi
+node_modules/
+
+# rahasia: API key dan kredensial tidak boleh di-commit
+.env
+.env.*
+!.env.example
+
+# hasil build dan log
+dist/
+build/
+*.log
+
+# editor dan sistem operasi
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
