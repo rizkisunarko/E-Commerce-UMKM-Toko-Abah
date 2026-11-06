@@ -5,3 +5,4 @@ export async function apiGet(path) {
   if (!res.ok) throw new Error(`Request gagal: ${res.status}`);
   return res.json();
 }
+
