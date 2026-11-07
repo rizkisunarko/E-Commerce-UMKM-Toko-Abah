@@ -1,4 +1,7 @@
+import { mockRequest } from '../mocks/mockServer';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 const TOKEN_KEY = 'toko_abah_token';
 
 export function getToken() {
@@ -26,9 +29,16 @@ export class ApiError extends Error {
   }
 }
 
-// Semua data aplikasi dilayani backend dan disimpan di MySQL.
+// Satu pintu untuk semua panggilan ke backend.
+// Mode mock (VITE_USE_MOCK=true) memakai data tiruan di browser.
 export async function request(method, path, body) {
   const token = getToken();
+
+  if (USE_MOCK) {
+    const res = await mockRequest(method, path, body, token);
+    if (res.status >= 400) throw new ApiError(res.status, res.body.message, res.body.errors);
+    return res.body;
+  }
 
   const res = await fetch(`${API_URL}${path}`, {
     method,

@@ -1,0 +1,540 @@
+/* ==========================================================================
+   GAYA HALAMAN LOGIN TOKO ABAH (PPL-20.2)
+   Mengadaptasi desain UI/UX Toko Abah POS v2.4
+   ========================================================================== */
+
+:root {
+  /* Palet Warna Desain Toko Abah */
+  --login-primary: #2f7c38;        /* Hijau utama Toko Abah: rgb(47, 124, 56) */
+  --login-primary-dark: #256628;   /* Hijau hover tombol */
+  --login-accent-orange: #c17d28;  /* Oranye aksen strip atas kartu */
+  --login-bg: #f8fafc;             /* Latar belakang halaman */
+  --login-card-bg: #ffffff;        /* Latar kartu putih */
+  --login-card-border: #e5e7eb;    /* Border halus kartu */
+  --login-input-bg: #edf4fe;       /* Latar isian input: rgb(237, 244, 254) */
+  --login-input-border: #dbe4f0;   /* Border default input */
+  --login-terminal-bg: #edf3ff;    /* Latar box status terminal POS bawah */
+  --login-badge-bg: #d5ece2;       /* Latar badge POS v2.4 */
+  --login-badge-text: #236f37;     /* Teks badge POS v2.4 */
+  --login-text-dark: #111827;      /* Teks judul utama */
+  --login-text-body: #1f2937;      /* Teks isi / label */
+  --login-text-muted: #6b7280;     /* Teks keterangan / pembantu */
+  --login-error-bg: #fee2e2;       /* Latar pesan error: rgb(254, 226, 226) */
+  --login-error-border: #fecaca;   /* Border pesan error */
+  --login-error-text: #991b1b;     /* Teks pesan error */
+  --login-error-icon: #ef4444;     /* Ikon error */
+  --login-success-bg: #ecfdf5;     /* Latar alert sukses autentikasi */
+  --login-success-border: #bbf7d0; /* Border alert sukses */
+  --login-success-text: #166534;   /* Teks alert sukses */
+}
+
+/* Wadah Pembungkus Utama Halaman Login */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background-color: var(--login-bg);
+  /* Efek ambient glow hijau lembut di kiri atas dan oranye di kanan bawah */
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(74, 222, 128, 0.12) 0%, transparent 35%),
+    radial-gradient(circle at 88% 82%, rgba(251, 146, 60, 0.08) 0%, transparent 35%);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--login-text-body);
+  box-sizing: border-box;
+}
+
+/* Header di Atas Kartu (Ikon Aplikasi, Nama Toko, Badge POS) */
+.login-brand-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.login-brand-logo {
+  width: 48px;
+  height: 48px;
+  background-color: var(--login-primary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(47, 124, 56, 0.25);
+  margin-bottom: 12px;
+}
+
+.login-brand-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.login-brand-name {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--login-text-dark);
+  letter-spacing: -0.2px;
+}
+
+.login-brand-badge {
+  background-color: var(--login-badge-bg);
+  color: var(--login-badge-text);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+}
+
+.login-brand-subtitle {
+  font-size: 12.5px;
+  color: var(--login-text-muted);
+  margin-top: 3px;
+  font-weight: 400;
+}
+
+/* Kartu Utama */
+.login-card-wrapper {
+  width: 100%;
+  max-width: 440px;
+  background-color: var(--login-card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--login-card-border);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Garis Aksen Ganda di Atas Kartu (Hijau ~65%, Oranye ~35%) */
+.login-card-top-stripe {
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(to right, var(--login-primary) 65%, var(--login-accent-orange) 65%);
+}
+
+.login-card-body {
+  padding: 20px 24px 24px 24px;
+}
+
+/* Banner Foto Toko */
+.login-store-banner {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #2c3e50;
+}
+
+.login-store-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.login-banner-tag {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.login-banner-tag svg {
+  flex-shrink: 0;
+}
+
+/* Judul & Keterangan di Dalam Kartu */
+.login-card-header {
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.login-card-title {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--login-text-dark);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.login-card-description {
+  font-size: 13px;
+  color: var(--login-text-muted);
+  margin-top: 5px;
+  margin-bottom: 0;
+  line-height: 1.45;
+}
+
+/* Form */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Form Group */
+.login-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.login-form-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.login-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--login-text-body);
+}
+
+.login-badge-required {
+  font-size: 11.5px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.login-forgot-link {
+  font-size: 12px;
+  color: var(--login-primary);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.login-forgot-link:hover {
+  text-decoration: underline;
+}
+
+/* Wadah Input dengan Ikon */
+.login-input-box {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 12px;
+  background-color: var(--login-input-bg);
+  border: 1px solid var(--login-input-border);
+  border-radius: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.login-input-box:focus-within {
+  border-color: var(--login-primary);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(47, 124, 56, 0.12);
+}
+
+.login-input-box.has-error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.login-input-box.has-error:focus-within {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.login-input-icon {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.login-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0 10px;
+  font-size: 14px;
+  color: var(--login-text-body);
+  font-family: inherit;
+  width: 100%;
+}
+
+.login-input::placeholder {
+  color: #9ca3af;
+}
+
+.login-input-action-btn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.login-input-action-btn:hover {
+  color: var(--login-text-body);
+}
+
+.login-field-error-text {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* Kotak Pesan Error (Alert) */
+.login-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.login-alert-error {
+  background-color: var(--login-error-bg);
+  border: 1px solid var(--login-error-border);
+  color: var(--login-error-text);
+}
+
+.login-alert-error-icon {
+  color: var(--login-error-icon);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.login-alert-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+  font-size: 13px;
+}
+
+.login-alert-desc {
+  margin: 0;
+}
+
+/* Kotak Pesan Berhasil (Saat Memproses Sesi) */
+.login-alert-success {
+  background-color: var(--login-success-bg);
+  border: 1px solid var(--login-success-border);
+  color: var(--login-success-text);
+}
+
+.login-alert-success-icon {
+  color: #16a34a;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Baris Opsi "Ingat Saya" & Status Sesi Kasir */
+.login-options-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.login-remember-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+  color: #374151;
+  font-weight: 500;
+}
+
+.login-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--login-primary);
+  cursor: pointer;
+  margin: 0;
+}
+
+.login-session-active {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--login-primary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Tombol Masuk */
+.login-submit-btn {
+  width: 100%;
+  height: 44px;
+  background-color: var(--login-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.05s active;
+  font-family: inherit;
+  margin-top: 2px;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  background-color: var(--login-primary-dark);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+/* Animasi Spinner Loading */
+.login-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: login-spin 0.7s linear infinite;
+}
+
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Progress Bar Pengalihan */
+.login-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.login-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.login-progress-text {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.login-progress-percent {
+  font-weight: 700;
+  color: var(--login-primary);
+}
+
+.login-progress-track {
+  width: 100%;
+  height: 5px;
+  background-color: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.login-progress-bar {
+  height: 100%;
+  background-color: var(--login-primary);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Box Status Terminal POS di Bawah */
+.login-terminal-box {
+  background-color: var(--login-terminal-bg);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.login-terminal-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-terminal-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #16a34a;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+  flex-shrink: 0;
+}
+
+.login-terminal-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-terminal-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--login-text-dark);
+}
+
+.login-terminal-subtitle {
+  font-size: 11px;
+  color: var(--login-text-muted);
+  margin-top: 1px;
+}
+
+.login-terminal-icon {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Petunjuk Akun Uji Mode Mock */
+.login-mock-hint {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background-color: rgba(255, 255, 255, 0.85);
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--login-text-muted);
+  text-align: center;
+  line-height: 1.4;
+  backdrop-filter: blur(4px);
+}
+
+.login-mock-hint strong {
+  color: var(--login-text-dark);
+}
+

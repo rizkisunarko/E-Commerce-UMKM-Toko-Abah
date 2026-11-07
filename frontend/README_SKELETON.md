@@ -1,6 +1,6 @@
 # Kerangka Frontend Toko Abah
 
-Frontend menggunakan backend API sebagai sumber data; akun, produk, kategori, dan stok disimpan di MySQL.
+Kerangka ini sudah diuji: `npm install` dan `npm run build` berhasil, dan logika data tiruan diuji terhadap login, validasi, hak akses admin/pegawai, dan stok kritis.
 
 ## Cara memasang ke repositori
 
@@ -22,9 +22,13 @@ Frontend menggunakan backend API sebagai sumber data; akun, produk, kategori, da
    - admin / admin123
    - pegawai / pegawai123
 
-## Backend dan database
+## Mode data tiruan dan backend asli
 
-Atur `VITE_API_URL` di `frontend/.env` untuk menunjuk ke backend. Jalankan `npm run db:setup` di folder `backend` untuk membuat skema MySQL dan mengisi akun, kategori, serta produk contoh.
+Di `frontend/.env`:
+- `VITE_USE_MOCK=true`: semua panggilan API dilayani data tiruan di browser (`src/mocks/mockServer.js`). Backend belum diperlukan.
+- `VITE_USE_MOCK=false`: panggilan dikirim ke backend asli di `VITE_API_URL`.
+
+Bentuk permintaan dan respons data tiruan sama dengan dokumen Kontrak API. Saat backend siap, cukup ubah `VITE_USE_MOCK` menjadi `false`. Halaman tidak perlu diubah.
 
 ## Isi kerangka
 
@@ -35,10 +39,11 @@ src/
 ├── index.css                gaya dasar (warna hijau Toko Abah)
 ├── context/AuthContext.jsx  status login, login(), logout()
 ├── services/
-│   ├── api.js               satu pintu panggilan ke backend API
+│   ├── api.js               satu pintu panggilan API (mock atau backend asli)
 │   ├── authService.js
 │   ├── productService.js
 │   └── stockService.js
+├── mocks/mockServer.js      backend tiruan
 ├── components/
 │   ├── Layout.jsx, Sidebar.jsx, ProtectedRoute.jsx
 │   └── Button.jsx, TextField.jsx, Badge.jsx, Modal.jsx

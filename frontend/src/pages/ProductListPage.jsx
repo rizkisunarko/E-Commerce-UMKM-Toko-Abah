@@ -63,7 +63,7 @@ export default function ProductListPage() {
                 <th>Nama Produk</th>
                 <th>Kategori</th>
                 <th>Harga</th>
-                <th>Berat / Satuan</th>
+                <th>Berat (gram)</th>
                 <th>Stok</th>
                 {isAdmin && <th>Aksi</th>}
               </tr>
@@ -79,7 +79,7 @@ export default function ProductListPage() {
                   <td>{p.nama}</td>
                   <td>{p.kategori}</td>
                   <td>{formatRupiah(p.harga)}</td>
-                  <td>{p.satuan ?? (p.berat ? `${p.berat} g` : '—')}</td>
+                  <td>{p.berat}</td>
                   <td>{p.stok}</td>
                   {isAdmin && (
                     <td>
