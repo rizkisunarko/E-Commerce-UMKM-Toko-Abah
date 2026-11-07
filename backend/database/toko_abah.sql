@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Nov 06, 2026 at 12:13 PM
+-- Generation Time: Nov 07, 2026 at 02:11 PM
 -- Server version: 8.4.8
 -- PHP Version: 8.1.10
 
@@ -34,6 +34,14 @@ CREATE TABLE `admin` (
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `admin`
+--
+
+INSERT INTO `admin` (`id_admin`, `username`, `password`, `created_at`, `updated_at`) VALUES
+(1, 'admin', '$2b$10$QrYCXfOWIb6lBBM/CSJQH.L1q2hix4FjeS1GuurAtkOrz1zPSTxYG', '2026-11-07 19:56:36', '2026-11-07 20:07:40'),
+(2, 'admin_contoh', '$2b$10$74Knn/u0fAU6sNFTPPYlUuUVg4SnkQjEZ2dlUwka0BzqrnS1xHQ82', '2026-11-07 20:32:36', NULL);
 
 -- --------------------------------------------------------
 
@@ -79,6 +87,19 @@ CREATE TABLE `kategori` (
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `kategori`
+--
+
+INSERT INTO `kategori` (`id_kategori`, `nama_kategori`, `deskripsi`, `created_at`, `updated_at`) VALUES
+(1, 'Beras & Tepung', NULL, '2026-11-07 20:39:29', NULL),
+(2, 'Minyak & Bumbu', NULL, '2026-11-07 20:39:29', NULL),
+(3, 'Gula & Pemanis', NULL, '2026-11-07 20:39:29', NULL),
+(4, 'Telur & Lauk', NULL, '2026-11-07 20:39:29', NULL),
+(5, 'Makanan Instan', NULL, '2026-11-07 20:39:29', NULL),
+(6, 'Minuman', NULL, '2026-11-07 20:39:29', NULL),
+(7, 'Kebutuhan Rumah', NULL, '2026-11-07 20:39:29', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -91,6 +112,30 @@ CREATE TABLE `kurir` (
   `kode_kurir` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` enum('aktif','nonaktif') COLLATE utf8mb4_unicode_ci DEFAULT 'aktif'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pegawai`
+--
+
+CREATE TABLE `pegawai` (
+  `id_pegawai` int NOT NULL,
+  `nama` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('aktif','nonaktif') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'aktif',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `pegawai`
+--
+
+INSERT INTO `pegawai` (`id_pegawai`, `nama`, `username`, `password`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'Pegawai Contoh', 'pegawai_contoh', '$2b$10$/VVMg.LTE1N7xZVHrNAEUejZjpn89nczXmFepz3dmCDK4Sml4IFVm', 'aktif', '2026-11-07 20:32:36', NULL),
+(2, 'Pegawai Toko', 'pegawai', '$2b$10$b8pqRa5189ZwLfxtBRacn.cWZzJ5wqfG/EfZ4a3pTbwvipO5flmG2', 'aktif', '2026-11-07 20:39:29', NULL);
 
 -- --------------------------------------------------------
 
@@ -184,6 +229,20 @@ CREATE TABLE `produk` (
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `produk`
+--
+
+INSERT INTO `produk` (`id_produk`, `id_kategori`, `kode_produk`, `nama_produk`, `deskripsi`, `harga_beli`, `harga_jual`, `satuan`, `foto_produk`, `status_produk`, `jumlah_stok`, `batas_stok_minimum`, `created_at`, `updated_at`) VALUES
+(1, 1, 'CONTOH-001', 'Beras 5 kg', NULL, '0.00', '68000.00', '5 kg', NULL, 'tersedia', '3.990', '10.000', '2026-11-07 20:39:29', '2026-11-07 21:10:18'),
+(2, 3, 'CONTOH-003', 'Gula Pasir 1 kg', NULL, '0.00', '17000.00', '1 kg', NULL, 'tersedia', '5.000', '10.000', '2026-11-07 20:39:29', NULL),
+(3, 7, 'CONTOH-007', 'Sabun Mandi', NULL, '0.00', '3500.00', '100 g', NULL, 'tersedia', '12.000', '5.000', '2026-11-07 20:39:29', NULL),
+(4, 5, 'CONTOH-005', 'Mie Instan', NULL, '0.00', '3500.00', '80 g', NULL, 'tersedia', '48.000', '5.000', '2026-11-07 20:39:29', NULL),
+(5, 6, 'CONTOH-006', 'Kopi Sachet', NULL, '0.00', '1500.00', '20 g', NULL, 'tersedia', '30.000', '5.000', '2026-11-07 20:39:29', NULL),
+(6, 6, 'CONTOH-008', 'Teh Celup', NULL, '0.00', '8000.00', '100 g', NULL, 'tersedia', '15.000', '5.000', '2026-11-07 20:39:29', NULL),
+(7, 2, 'CONTOH-002', 'Minyak Goreng 1 L', NULL, '0.00', '18000.00', '1 L', NULL, 'tersedia', '3.000', '10.000', '2026-11-07 20:39:29', NULL),
+(8, 4, 'CONTOH-004', 'Telur Ayam 1 kg', NULL, '0.00', '30000.00', '1 kg', NULL, 'tersedia', '20.000', '5.000', '2026-11-07 20:39:29', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -202,6 +261,29 @@ CREATE TABLE `riwayat_stok` (
   `keterangan` text COLLATE utf8mb4_unicode_ci,
   `tanggal` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `riwayat_stok`
+--
+
+INSERT INTO `riwayat_stok` (`id_riwayat`, `id_produk`, `id_admin`, `id_user`, `jenis_perubahan`, `jumlah`, `stok_sebelum`, `stok_sesudah`, `keterangan`, `tanggal`) VALUES
+(1, 1, 2, NULL, 'keluar', '1.000', '4.000', '3.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:40:15'),
+(2, 1, 2, NULL, 'masuk', '1.000', '3.000', '4.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:40:15'),
+(5, 1, 2, NULL, 'keluar', '1.000', '4.000', '3.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:45:19'),
+(6, 1, 2, NULL, 'masuk', '1.000', '3.000', '4.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:45:19'),
+(8, 1, 1, NULL, 'masuk', '4.000', '0.000', '4.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(9, 7, 1, NULL, 'masuk', '3.000', '0.000', '3.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(10, 2, 1, NULL, 'masuk', '5.000', '0.000', '5.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(11, 8, 1, NULL, 'masuk', '20.000', '0.000', '20.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(12, 4, 1, NULL, 'masuk', '48.000', '0.000', '48.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(13, 5, 1, NULL, 'masuk', '30.000', '0.000', '30.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(14, 3, 1, NULL, 'masuk', '12.000', '0.000', '12.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(15, 6, 1, NULL, 'masuk', '15.000', '0.000', '15.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(23, 1, 2, NULL, 'keluar', '1.000', '4.000', '3.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:46:10'),
+(24, 1, 2, NULL, 'masuk', '1.000', '3.000', '4.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:46:10'),
+(26, 1, NULL, NULL, 'keluar', '1.000', '4.000', '3.000', 'Penyesuaian stok oleh pegawai Pegawai Toko (ID 2)', '2026-11-07 21:07:24'),
+(27, 1, 2, NULL, 'masuk', '1.000', '3.000', '4.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 21:07:24'),
+(28, 1, NULL, NULL, 'keluar', '0.010', '4.000', '3.990', 'Penyesuaian stok oleh pegawai Pegawai Toko (ID 2)', '2026-11-07 21:10:18');
 
 -- --------------------------------------------------------
 
@@ -223,7 +305,7 @@ CREATE TABLE `transaksi` (
   `subtotal_produk` decimal(12,2) NOT NULL DEFAULT '0.00',
   `ongkos_kirim` decimal(12,2) NOT NULL DEFAULT '0.00',
   `total_bayar` decimal(12,2) NOT NULL DEFAULT '0.00',
-  `status_transaksi` enum('menunggu','diproses','selesai','batal') COLLATE utf8mb4_unicode_ci DEFAULT 'menunggu',
+  `status_transaksi` enum('menunggu','diproses','siap_diambil','siap_dikirim','selesai','batal') COLLATE utf8mb4_unicode_ci DEFAULT 'menunggu',
   `tanggal_transaksi` datetime DEFAULT CURRENT_TIMESTAMP,
   `catatan` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -284,6 +366,13 @@ ALTER TABLE `kategori`
 ALTER TABLE `kurir`
   ADD PRIMARY KEY (`id_kurir`),
   ADD UNIQUE KEY `kode_kurir` (`kode_kurir`);
+
+--
+-- Indexes for table `pegawai`
+--
+ALTER TABLE `pegawai`
+  ADD PRIMARY KEY (`id_pegawai`),
+  ADD UNIQUE KEY `username` (`username`);
 
 --
 -- Indexes for table `pemasok`
@@ -357,7 +446,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `admin`
 --
 ALTER TABLE `admin`
-  MODIFY `id_admin` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_admin` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `detail_pembelian`
@@ -375,13 +464,19 @@ ALTER TABLE `detail_transaksi`
 -- AUTO_INCREMENT for table `kategori`
 --
 ALTER TABLE `kategori`
-  MODIFY `id_kategori` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_kategori` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT for table `kurir`
 --
 ALTER TABLE `kurir`
   MODIFY `id_kurir` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pegawai`
+--
+ALTER TABLE `pegawai`
+  MODIFY `id_pegawai` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `pemasok`
@@ -411,13 +506,13 @@ ALTER TABLE `pengiriman`
 -- AUTO_INCREMENT for table `produk`
 --
 ALTER TABLE `produk`
-  MODIFY `id_produk` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_produk` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `riwayat_stok`
 --
 ALTER TABLE `riwayat_stok`
-  MODIFY `id_riwayat` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_riwayat` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `transaksi`
