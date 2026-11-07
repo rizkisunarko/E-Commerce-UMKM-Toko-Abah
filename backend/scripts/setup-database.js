@@ -67,8 +67,13 @@ async function setupDatabase() {
 
   const dumpPath = path.join(backendDirectory, 'database', 'toko_abah.sql');
   const dump = await fs.readFile(dumpPath, 'utf8');
-  const seedPath = path.join(backendDirectory, 'database', 'seed.sql');
-  const seed = await fs.readFile(seedPath, 'utf8');
+  let seed = '';
+  try {
+    const seedPath = path.join(backendDirectory, 'database', 'seed.sql');
+    seed = await fs.readFile(seedPath, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     port,
@@ -91,7 +96,9 @@ async function setupDatabase() {
     }
 
     await connection.query(dump);
-    await connection.query(seed);
+    if (seed.trim()) {
+      await connection.query(seed);
+    }
     const [createdTables] = await connection.query('SHOW TABLES');
     console.log(`Database "${database}" berhasil disiapkan (${createdTables.length} tabel) beserta data contoh.`);
   } finally {
