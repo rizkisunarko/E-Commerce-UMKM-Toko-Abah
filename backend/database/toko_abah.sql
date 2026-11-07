@@ -40,8 +40,8 @@ CREATE TABLE `admin` (
 --
 
 INSERT INTO `admin` (`id_admin`, `username`, `password`, `created_at`, `updated_at`) VALUES
-(1, 'admin', '$2b$10$QrYCXfOWIb6lBBM/CSJQH.L1q2hix4FjeS1GuurAtkOrz1zPSTxYG', '2026-11-07 19:56:36', '2026-11-07 20:07:40'),
-(2, 'admin_contoh', '$2b$10$74Knn/u0fAU6sNFTPPYlUuUVg4SnkQjEZ2dlUwka0BzqrnS1xHQ82', '2026-11-07 20:32:36', NULL);
+(1, 'admin', '$2b$10$g.YcWfo6b4RjHmw0nBOt4.cq4pAEWuWtD85ZfZhBCBkdDd2eLjRzG', '2026-11-07 19:56:36', '2026-11-07 20:07:40'),
+(2, 'admin_contoh', '$2b$10$g.YcWfo6b4RjHmw0nBOt4.cq4pAEWuWtD85ZfZhBCBkdDd2eLjRzG', '2026-11-07 20:32:36', NULL);
 
 -- --------------------------------------------------------
 
