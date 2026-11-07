@@ -1,20 +1,51 @@
-import { useEffect, useState } from 'react';
-import { apiGet } from './services/api';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import ProductListPage from './pages/ProductListPage';
+import PlaceholderPage from './pages/PlaceholderPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
-  const [status, setStatus] = useState('Memeriksa backend...');
-
-  useEffect(() => {
-    apiGet('/health')
-      .then((data) => setStatus(`Backend: ${data.status}, database: ${data.db}`))
-      .catch((err) => setStatus(`Gagal terhubung: ${err.message}`));
-  }, []);
-
   return (
-    <div>
-      <h1>Toko Abah</h1>
-      <p>{status}</p>
-    </div>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/produk" replace />} />
+        <Route path="produk" element={<ProductListPage />} />
+
+        {/* PPL-01.2: ganti PlaceholderPage dengan halaman form tambah produk */}
+        <Route
+          path="produk/tambah"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <PlaceholderPage title="Tambah Produk" kartu="PPL-01.2" />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* PPL-02.2: ganti PlaceholderPage dengan halaman form ubah produk */}
+        <Route
+          path="produk/:id/ubah"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <PlaceholderPage title="Ubah Produk" kartu="PPL-02.2" />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* PPL-03.2: ganti PlaceholderPage dengan halaman daftar dan pembaruan stok */}
+        <Route path="stok" element={<PlaceholderPage title="Daftar Stok" kartu="PPL-03.2" />} />
+      </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }
-
