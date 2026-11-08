@@ -5,7 +5,7 @@ import LoginPage from './pages/LoginPage';
 import ProductListPage from './pages/ProductListPage';
 import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
-import PlaceholderPage from './pages/PlaceholderPage';
+import StockPage from './pages/StockPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -43,8 +43,8 @@ export default function App() {
           }
         />
 
-        {/* PPL-03.2: ganti PlaceholderPage dengan halaman daftar dan pembaruan stok */}
-        <Route path="stok" element={<PlaceholderPage title="Daftar Stok" kartu="PPL-03.2" />} />
+        {/* PPL-03.2: Halaman daftar dan pembaruan stok */}
+        <Route path="stok" element={<StockPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
