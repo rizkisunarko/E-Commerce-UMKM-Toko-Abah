@@ -11,6 +11,7 @@ const PRODUCT_SELECT = `
          p.satuan,
          p.jumlah_stok AS stok,
          p.batas_stok_minimum AS batas_stok_kritis,
+         p.archived_at,
          CASE
            WHEN p.jumlah_stok <= p.batas_stok_minimum THEN 'Stok Kritis'
            ELSE 'Stok Aman'

@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import TextField from '../components/TextField';
 import { useAuth } from '../context/AuthContext';
 import { stockService } from '../services/stockService';
+import { formatStock } from '../utils/format';
 
 export default function StockPage() {
   const { user } = useAuth();
@@ -141,8 +142,8 @@ export default function StockPage() {
                 >
                   <td>{product.nama}</td>
                   <td>{product.kategori}</td>
-                  <td>{product.stok} {product.satuan}</td>
-                  <td>{product.batas_stok_kritis}</td>
+                  <td>{formatStock(product.stok)} {product.satuan}</td>
+                  <td>{formatStock(product.batas_stok_kritis)}</td>
                   <td><Badge status={product.status_stok} /></td>
                   <td>
                     <Button onClick={() => openUpdate(product)}>
@@ -164,13 +165,15 @@ export default function StockPage() {
         {selectedProduct && (
           <form onSubmit={handleSubmit}>
             <p>{selectedProduct.nama}</p>
-            <p className="muted">Stok saat ini: {selectedProduct.stok} {selectedProduct.satuan}</p>
+            <p className="muted">
+              Stok saat ini: {formatStock(selectedProduct.stok)} {selectedProduct.satuan}
+            </p>
             <TextField
               label="Stok baru"
               type="number"
               min="0"
-              max={isAdmin ? undefined : Number(selectedProduct.stok) - 0.001}
-              step="0.001"
+              max={isAdmin ? undefined : Number(selectedProduct.stok) - 1}
+              step="1"
               value={newStock}
               onChange={(event) => setNewStock(event.target.value)}
               helper={!isAdmin ? 'Pegawai hanya dapat mengurangi stok.' : undefined}

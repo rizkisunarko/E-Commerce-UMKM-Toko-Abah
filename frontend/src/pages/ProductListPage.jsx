@@ -1,37 +1,61 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import { productService } from '../services/productService';
-import { formatRupiah } from '../utils/format';
+import { formatRupiah, formatStock } from '../utils/format';
 
-// Contoh halaman yang sudah tersambung ke service.
-// Dasar untuk menyempurnakan "Daftar Produk" sesuai desain PPL-18.
 export default function ProductListPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const [search, setSearch] = useState('');
+  const [includeArchived, setIncludeArchived] = useState(false);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [savingArchiveId, setSavingArchiveId] = useState(null);
+
+  async function loadProducts(cancelled = () => false) {
+    setLoading(true);
+    try {
+      const response = await productService.list({
+        search,
+        include_archived: isAdmin && includeArchived ? 'true' : '',
+      });
+      if (cancelled()) return;
+      setRows(response.data);
+      setError('');
+    } catch (err) {
+      if (!cancelled()) setError(err.message);
+    } finally {
+      if (!cancelled()) setLoading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    productService
-      .list({ search })
-      .then((res) => {
-        if (!cancelled) {
-          setRows(res.data);
-          setError('');
-        }
-      })
-      .catch((err) => !cancelled && setError(err.message))
-      .finally(() => !cancelled && setLoading(false));
+    loadProducts(() => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [search]);
+  }, [search, includeArchived, isAdmin]);
+
+  async function toggleArchive(product) {
+    const archived = !product.archived_at;
+    const action = archived ? 'arsipkan' : 'pulihkan';
+    if (!window.confirm(`Yakin ingin ${action} produk "${product.nama}"?`)) return;
+    setSavingArchiveId(product.id);
+    setError('');
+    try {
+      await productService.archive(product.id, archived);
+      await loadProducts();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingArchiveId(null);
+    }
+  }
 
   return (
     <>
@@ -51,6 +75,16 @@ export default function ProductListPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
+      {isAdmin && (
+        <label className="archive-filter">
+          <input
+            type="checkbox"
+            checked={includeArchived}
+            onChange={(event) => setIncludeArchived(event.target.checked)}
+          />{' '}
+          Tampilkan produk arsip
+        </label>
+      )}
 
       {error && <div className="alert-error">{error}</div>}
       {loading ? (
@@ -65,25 +99,36 @@ export default function ProductListPage() {
                 <th>Harga</th>
                 <th>Berat (gram)</th>
                 <th>Stok</th>
+                {isAdmin && <th>Status</th>}
                 {isAdmin && <th>Aksi</th>}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 6 : 5} className="muted">Produk tidak ditemukan.</td>
+                  <td colSpan={isAdmin ? 7 : 5} className="muted">Produk tidak ditemukan.</td>
                 </tr>
               )}
               {rows.map((p) => (
-                <tr key={p.id}>
+                <tr key={p.id} className={p.archived_at ? 'row-archived' : ''}>
                   <td>{p.nama}</td>
                   <td>{p.kategori}</td>
                   <td>{formatRupiah(p.harga)}</td>
                   <td>{p.berat}</td>
-                  <td>{p.stok}</td>
+                  <td>{formatStock(p.stok)}</td>
+                  {isAdmin && <td>{p.archived_at ? 'Diarsipkan' : 'Aktif'}</td>}
                   {isAdmin && (
-                    <td>
+                    <td className="product-actions">
                       <Link to={`/produk/${p.id}/ubah`}>Ubah</Link>
+                      <Button
+                        variant={p.archived_at ? 'secondary' : 'danger'}
+                        disabled={savingArchiveId === p.id}
+                        onClick={() => toggleArchive(p)}
+                      >
+                        {savingArchiveId === p.id
+                          ? 'Menyimpan...'
+                          : p.archived_at ? 'Pulihkan' : 'Arsipkan'}
+                      </Button>
                     </td>
                   )}
                 </tr>

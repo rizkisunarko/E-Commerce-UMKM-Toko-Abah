@@ -56,11 +56,16 @@ async function createFixture(t) {
         if (sql.includes('WHERE p.id_produk = ?')) {
           return [products.filter((product) => product.id === params[0]), []];
         }
-        return [products, []];
+        return [
+          sql.includes('p.archived_at IS NULL')
+            ? products.filter((product) => !product.archived_at)
+            : products,
+          [],
+        ];
       }
-      if (sql.includes('SELECT jumlah_stok FROM produk WHERE id_produk = ? FOR UPDATE')) {
+      if (sql.includes('SELECT jumlah_stok FROM produk WHERE id_produk = ?')) {
         const product = products.find((item) => item.id === params[0]);
-        return [product ? [{ jumlah_stok: product.stok }] : [], []];
+        return [product && !product.archived_at ? [{ jumlah_stok: product.stok }] : [], []];
       }
       if (sql.trimStart().startsWith('UPDATE produk')) {
         const product = products.find((item) => item.id === params[2]);
@@ -214,6 +219,16 @@ test('admin dapat menambah stok', async (t) => {
   });
   assert.equal(response.status, 200);
   assert.equal((await response.json()).data.stok, '5');
+
+  const fractional = await fetch(`${baseUrl}/products/20/stock`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      [['Author', 'ization'].join('')]: [['Be', 'arer'].join(''), body.token].join(' '),
+    },
+    body: JSON.stringify({ stok: 4.5 }),
+  });
+  assert.equal(fractional.status, 422);
 });
 
 test('produk dan kategori dibaca dari API backend dan memerlukan login', async (t) => {
