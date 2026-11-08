@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import ProductListPage from './pages/ProductListPage';
+import ProductCreatePage from './pages/ProductCreatePage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -21,12 +22,12 @@ export default function App() {
         <Route index element={<Navigate to="/produk" replace />} />
         <Route path="produk" element={<ProductListPage />} />
 
-        {/* PPL-01.2: ganti PlaceholderPage dengan halaman form tambah produk */}
+        {/* PPL-01.2: Halaman form tambah produk */}
         <Route
           path="produk/tambah"
           element={
             <ProtectedRoute roles={['admin']}>
-              <PlaceholderPage title="Tambah Produk" kartu="PPL-01.2" />
+              <ProductCreatePage />
             </ProtectedRoute>
           }
         />
