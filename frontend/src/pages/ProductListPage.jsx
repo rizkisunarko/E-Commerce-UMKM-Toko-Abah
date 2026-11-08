@@ -52,7 +52,10 @@ export default function ProductListPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const location = useLocation();
-  const pesan = location.state?.pesan;
+  const [showNotification, setShowNotification] = useState(true);
+  const notifState = location.state;
+  const pesan = notifState?.pesan;
+  const judul = notifState?.judul || 'Operasi Berhasil!';
 
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState([]);
@@ -188,10 +191,36 @@ export default function ProductListPage() {
         </div>
       </header>
 
-      {/* Notifikasi Pesan Sukses jika ada redirect dari Form Tambah / Ubah */}
-      {pesan && (
-        <div className="alert-success" role="status" style={{ marginBottom: 16 }}>
-          {pesan}
+      {/* Notifikasi Konfirmasi Sukses jika ada redirect dari Form Tambah / Ubah */}
+      {pesan && showNotification && (
+        <div className="alert-success alert-success-banner" role="status" style={{ marginBottom: 18 }}>
+          <div className="alert-success-icon-wrap">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#15803d"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <div className="alert-success-content">
+            <div className="alert-success-title">{judul}</div>
+            <div className="alert-success-desc">{pesan}</div>
+          </div>
+          <button
+            type="button"
+            className="alert-success-close-btn"
+            onClick={() => setShowNotification(false)}
+            title="Tutup pemberitahuan"
+          >
+            &times;
+          </button>
         </div>
       )}
 

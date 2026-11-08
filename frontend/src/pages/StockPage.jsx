@@ -19,7 +19,7 @@ export default function StockPage() {
   const [summary, setSummary] = useState({ stok_kritis: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [successNotif, setSuccessNotif] = useState(null);
   const [reload, setReload] = useState(0);
 
   // State Modal Perbarui Stok
@@ -91,8 +91,12 @@ export default function StockPage() {
     setSaving(true);
     setFieldError('');
     try {
-      await stockService.update(editing.id, n);
-      setMessage(`Stok ${editing.nama} berhasil diperbarui`);
+      const res = await stockService.update(editing.id, n);
+      const updated = res?.data || editing;
+      setSuccessNotif({
+        judul: 'Stok Berhasil Diperbarui!',
+        pesan: `Jumlah stok fisik "${updated.nama}" berhasil diperbarui menjadi ${n} ${updated.satuan || 'unit'}. Data inventaris Toko Abah telah diperbarui.`,
+      });
       setEditing(null);
       setReload((x) => x + 1);
     } catch (err) {
@@ -211,10 +215,36 @@ export default function StockPage() {
         </div>
       </div>
 
-      {/* Pesan Sukses / Error Global */}
-      {message && (
-        <div className="alert-success" role="status">
-          {message}
+      {/* Pesan Konfirmasi Sukses / Error Global */}
+      {successNotif && (
+        <div className="alert-success alert-success-banner" role="status" style={{ marginBottom: 18 }}>
+          <div className="alert-success-icon-wrap">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#15803d"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <div className="alert-success-content">
+            <div className="alert-success-title">{successNotif.judul}</div>
+            <div className="alert-success-desc">{successNotif.pesan}</div>
+          </div>
+          <button
+            type="button"
+            className="alert-success-close-btn"
+            onClick={() => setSuccessNotif(null)}
+            title="Tutup pemberitahuan"
+          >
+            &times;
+          </button>
         </div>
       )}
       {error && (
