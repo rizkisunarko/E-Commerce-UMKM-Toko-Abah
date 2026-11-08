@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { productService } from '../services/productService';
 import { formatRupiah } from '../utils/format';
@@ -9,6 +9,8 @@ import { formatRupiah } from '../utils/format';
 export default function ProductListPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const location = useLocation();
+  const pesan = location.state?.pesan;
 
   const [search, setSearch] = useState('');
   const [rows, setRows] = useState([]);
@@ -43,6 +45,12 @@ export default function ProductListPage() {
           </Link>
         )}
       </div>
+
+      {pesan && (
+        <div className="alert-success" role="status">
+          {pesan}
+        </div>
+      )}
 
       <div className="field" style={{ maxWidth: 320 }}>
         <input
