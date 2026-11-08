@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { productService } from '../services/productService';
 import { formatRupiah } from '../utils/format';
@@ -52,8 +51,6 @@ function getUnitDisplay(product) {
 export default function ProductListPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const location = useLocation();
-  const pesan = location.state?.pesan;
   const location = useLocation();
   const pesan = location.state?.pesan;
 
