@@ -1,0 +1,1087 @@
+/* StockPage.css - Styling Halaman Pemantauan dan Pembaruan Stok Toko Abah */
+/* Mengikuti desain Stitch PPL-18 (layar 5 "Daftar Stok" dan layar 6 "Perbarui Stok") */
+
+.stock-page-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  color: #374151;
+}
+
+/* Header Navbar Atas */
+.stock-top-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.stock-navbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stock-navbar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stock-navbar-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.pill-store-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.stock-navbar-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.stock-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.date-pill-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.user-badge-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar-round {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-fullname {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.user-role-label {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Judul Halaman dan Aksi Utama */
+.stock-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.stock-page-header-left h1 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 4px;
+}
+
+.stock-page-header-left p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.stock-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-print-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-print-report:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-restock-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #15803d;
+  border: none;
+  color: #ffffff;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-restock-entry:hover {
+  background: #166534;
+}
+
+/* Kotak Peringatan Stok Kritis (Danger Banner) */
+.stock-critical-alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.alert-left-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.alert-triangle-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.alert-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alert-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert-title-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: #991b1b;
+}
+
+.badge-urgent-action {
+  background: #991b1b;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.alert-description-text {
+  font-size: 13px;
+  color: #b91c1c;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.btn-view-critical {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #991b1b;
+  color: #ffffff;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-view-critical:hover {
+  background: #7f1d1d;
+}
+
+/* Kartu Ringkasan Metrik (3 Kartu) */
+.stock-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .stock-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metric-card-box {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+.metric-card-box.critical-state {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.metric-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.metric-card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.metric-card-box.critical-state .metric-card-label {
+  color: #991b1b;
+}
+
+.metric-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.metric-card-box.critical-state .metric-card-icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.metric-card-box.safe-state .metric-card-icon {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.metric-card-number {
+  font-size: 26px;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.metric-card-box.critical-state .metric-card-number {
+  color: #991b1b;
+}
+
+.metric-card-footer {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metric-card-box.critical-state .metric-card-footer {
+  color: #b91c1c;
+}
+
+/* Toolbar Filter & Pencarian */
+.stock-filter-toolbar {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.search-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 240px;
+  max-width: 360px;
+}
+
+.search-input-icon {
+  position: absolute;
+  left: 12px;
+  color: #9ca3af;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.stock-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 38px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.stock-search-input:focus {
+  border-color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
+}
+
+.filter-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toggle-critical-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-switch-pill {
+  width: 36px;
+  height: 20px;
+  background: #e5e7eb;
+  border-radius: 9999px;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.toggle-switch-pill.is-active {
+  background: #15803d;
+}
+
+.toggle-switch-circle {
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch-pill.is-active .toggle-switch-circle {
+  transform: translateX(16px);
+}
+
+.toggle-text-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-text-main {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.toggle-text-sub {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.select-filter-dropdown {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #374151;
+  outline: none;
+  cursor: pointer;
+}
+
+.select-filter-dropdown:focus {
+  border-color: #15803d;
+}
+
+/* Tabel Pemantauan Stok Sembako */
+.stock-table-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+}
+
+.stock-table-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.table-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.table-header-icon {
+  color: #15803d;
+}
+
+.table-header-note {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.stock-table-wrap {
+  overflow-x: auto;
+}
+
+.stock-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stock-data-table th {
+  background: #f9fafb;
+  text-align: left;
+  padding: 12px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.stock-data-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.stock-data-table tr.row-critical {
+  background: #fff8f8;
+}
+
+.stock-data-table tr.row-critical:hover {
+  background: #feefef;
+}
+
+.stock-data-table tr:hover {
+  background: #f9fafb;
+}
+
+.product-cell-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-icon-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.product-icon-avatar.rice {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.product-icon-avatar.oil {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.product-icon-avatar.sugar {
+  background: #fce7f3;
+  color: #db2777;
+}
+
+.product-icon-avatar.egg {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.product-cell-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-cell-name {
+  font-weight: 700;
+  color: #111827;
+  font-size: 14px;
+}
+
+.product-cell-meta {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.stock-value-cell {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.stock-value-cell.is-critical {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.stock-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+.stock-badge-pill.critical {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.stock-badge-pill.safe {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.btn-update-stock-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-update-stock-row:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+/* Pagination Footer */
+.table-pagination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  font-size: 13px;
+  color: #6b7280;
+  border-top: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagination-pages-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-btn {
+  padding: 5px 10px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+}
+
+.pagination-btn.is-active {
+  background: #15803d;
+  color: #ffffff;
+  border-color: #15803d;
+}
+
+/* MODAL DIALOG PERBARUI STOK (Layar 6 Stitch) */
+.stock-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.stock-modal-window {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  padding: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.stock-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.stock-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-header-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-header-title-box h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 2px;
+}
+
+.modal-header-title-box p {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-modal:hover {
+  color: #374151;
+}
+
+/* Kartu Ringkasan Produk dalam Modal */
+.modal-product-summary-card {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.modal-product-summary-card.is-critical {
+  background: #fef2f2;
+  border-color: #fee2e2;
+}
+
+.summary-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.summary-product-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-product-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.badge-modal-critical {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.summary-sku-text {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.summary-warning-subtext {
+  font-size: 11px;
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.summary-current-stock-box {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px 14px;
+  text-align: center;
+  min-width: 80px;
+}
+
+.current-stock-label {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+}
+
+.current-stock-num {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.current-stock-num.is-critical {
+  color: #dc2626;
+}
+
+/* Metode Pembaruan Segmented Tabs */
+.modal-method-section {
+  margin-bottom: 18px;
+}
+
+.method-label-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.method-tabs-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.method-tab-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.method-tab-item.is-selected {
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.method-help-desc {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+/* Input Stepper Jumlah Stok Baru */
+.modal-input-group {
+  margin-bottom: 20px;
+}
+
+.modal-input-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.input-main-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.input-unit-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.modal-stepper-container {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 50px;
+  transition: border-color 0.15s ease;
+  position: relative;
+}
+
+.modal-stepper-container.has-field-error {
+  border-color: #dc2626 !important;
+  background: #fffafa;
+}
+
+.modal-stepper-btn {
+  width: 50px;
+  height: 100%;
+  background: #f3f4f6;
+  border: none;
+  font-size: 20px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.modal-stepper-btn:hover {
+  background: #e5e7eb;
+}
+
+.modal-stepper-btn.plus-btn {
+  background: #eff6ff;
+  color: #0284c7;
+}
+
+.modal-stepper-btn.plus-btn:hover {
+  background: #dbeafe;
+}
+
+.modal-stepper-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+  background: transparent;
+  min-width: 0;
+}
+
+.modal-stepper-error-icon {
+  position: absolute;
+  right: 58px;
+  color: #dc2626;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.modal-field-error-alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Modal Actions Footer */
+.modal-actions-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.btn-modal-cancel {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-modal-cancel:hover {
+  background: #f9fafb;
+}
+
+.btn-modal-submit {
+  background: #15803d;
+  border: none;
+  color: #ffffff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-modal-submit:hover:not(:disabled) {
+  background: #166534;
+}
+
+.btn-modal-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

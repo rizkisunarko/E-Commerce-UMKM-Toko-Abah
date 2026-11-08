@@ -4,7 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import ProductFormPage from './pages/ProductFormPage';
 import ProductListPage from './pages/ProductListPage';
-import StockPage from './pages/StockPage';
+import PlaceholderPage from './pages/PlaceholderPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -22,25 +22,28 @@ export default function App() {
         <Route index element={<Navigate to="/produk" replace />} />
         <Route path="produk" element={<ProductListPage />} />
 
+        {/* PPL-01.2: ganti PlaceholderPage dengan halaman form tambah produk */}
         <Route
           path="produk/tambah"
           element={
             <ProtectedRoute roles={['admin']}>
-              <ProductFormPage />
+              <PlaceholderPage title="Tambah Produk" kartu="PPL-01.2" />
             </ProtectedRoute>
           }
         />
 
+        {/* PPL-02.2: ganti PlaceholderPage dengan halaman form ubah produk */}
         <Route
           path="produk/:id/ubah"
           element={
             <ProtectedRoute roles={['admin']}>
-              <ProductFormPage />
+              <PlaceholderPage title="Ubah Produk" kartu="PPL-02.2" />
             </ProtectedRoute>
           }
         />
 
-        <Route path="stok" element={<StockPage />} />
+        {/* PPL-03.2: ganti PlaceholderPage dengan halaman daftar dan pembaruan stok */}
+        <Route path="stok" element={<PlaceholderPage title="Daftar Stok" kartu="PPL-03.2" />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
