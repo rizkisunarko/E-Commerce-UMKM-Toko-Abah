@@ -3,7 +3,6 @@ import shelfImage from '../assets/store-banner.jpg';
 import Badge from '../components/Badge';
 import { useAuth } from '../context/AuthContext';
 import { stockService } from '../services/stockService';
-import { formatStock } from '../utils/format';
 import './StockPage.css';
 
 const REQUIRED = 'Kolom ini wajib diisi';
@@ -82,27 +81,17 @@ export default function StockPage() {
       return setFieldError(REQUIRED);
     }
     const n = Number(newStock);
-    if (!Number.isSafeInteger(n) || n > 2147483647) {
+    if (!Number.isFinite(n)) {
       return setFieldError(INVALID_NUMBER);
     }
     if (n < 0) {
       return setFieldError('Jumlah stok tidak boleh negatif');
     }
-    if (!isAdmin && n >= Number(editing.stok)) {
-      return setFieldError('Pegawai hanya dapat mengurangi stok');
-    }
-
-    const targetStock = isAdmin && methodTab === 'restock'
-      ? Number(editing.stok) + n
-      : n;
-    if (!Number.isSafeInteger(targetStock) || targetStock > 2147483647) {
-      return setFieldError(INVALID_NUMBER);
-    }
 
     setSaving(true);
     setFieldError('');
     try {
-      await stockService.update(editing.id, targetStock);
+      await stockService.update(editing.id, n);
       setMessage(`Stok ${editing.nama} berhasil diperbarui`);
       setEditing(null);
       setReload((x) => x + 1);
@@ -391,13 +380,13 @@ export default function StockPage() {
                   <th>STOK FISIK</th>
                   <th>BATAS KRITIS</th>
                   <th>STATUS</th>
-                  <th>AKSI</th>
+                  {isAdmin && <th>AKSI</th>}
                 </tr>
               </thead>
               <tbody>
                 {displayRows.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="muted" style={{ textAlign: 'center', padding: '36px 20px' }}>
+                    <td colSpan={isAdmin ? 5 : 4} className="muted" style={{ textAlign: 'center', padding: '36px 20px' }}>
                       Produk tidak ditemukan.
                     </td>
                   </tr>
@@ -425,14 +414,14 @@ export default function StockPage() {
                         {/* Stok Fisik */}
                         <td>
                           <span className={`stock-value-cell${isCritical ? ' is-critical' : ''}`}>
-                            {formatStock(p.stok)} unit
+                            {p.stok} unit
                           </span>
                         </td>
 
                         {/* Batas Kritis */}
                         <td>
                           <span style={{ color: '#4b5563', fontWeight: 500 }}>
-                            {formatStock(p.batas_stok_kritis)} unit
+                            {p.batas_stok_kritis} unit
                           </span>
                         </td>
 
@@ -441,21 +430,23 @@ export default function StockPage() {
                           <Badge status={p.status_stok} />
                         </td>
 
-                        {/* Aksi */}
-                        <td>
-                          <button
-                            type="button"
-                            className="btn-update-stock-row"
-                            onClick={() => openModal(p)}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <line x1="3" y1="6" x2="21" y2="6" />
-                              <line x1="3" y1="12" x2="21" y2="12" />
-                              <line x1="3" y1="18" x2="21" y2="18" />
-                            </svg>
-                            <span>{isAdmin ? 'Perbarui Stok' : 'Kurangi Stok'}</span>
-                          </button>
-                        </td>
+                        {/* Aksi (Khusus Admin, Rule A8 & AC-03.1) */}
+                        {isAdmin && (
+                          <td>
+                            <button
+                              type="button"
+                              className="btn-update-stock-row"
+                              onClick={() => openModal(p)}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="3" y1="6" x2="21" y2="6" />
+                                <line x1="3" y1="12" x2="21" y2="12" />
+                                <line x1="3" y1="18" x2="21" y2="18" />
+                              </svg>
+                              <span>Perbarui Stok</span>
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })
@@ -554,7 +545,7 @@ export default function StockPage() {
                 <div className="summary-current-stock-box">
                   <span className="current-stock-label">Stok saat ini:</span>
                   <span className={`current-stock-num${editing.status_stok === 'Stok Kritis' ? ' is-critical' : ''}`}>
-                    {formatStock(editing.stok)} unit
+                    {editing.stok} unit
                   </span>
                 </div>
               </div>
@@ -566,32 +557,20 @@ export default function StockPage() {
                   <button
                     type="button"
                     className={`method-tab-item${methodTab === 'opname' ? ' is-selected' : ''}`}
-                    onClick={() => {
-                      setMethodTab('opname');
-                      setNewStock(String(editing.stok));
-                      setFieldError('');
-                    }}
+                    onClick={() => setMethodTab('opname')}
                   >
                     <span>✔</span> Hitung Ulang Fisik (Opname)
                   </button>
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      className={`method-tab-item${methodTab === 'restock' ? ' is-selected' : ''}`}
-                      onClick={() => {
-                        setMethodTab('restock');
-                        setNewStock('');
-                        setFieldError('');
-                      }}
-                    >
-                      <span>+</span> Tambah Stok Masuk (Restock)
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className={`method-tab-item${methodTab === 'restock' ? ' is-selected' : ''}`}
+                    onClick={() => setMethodTab('restock')}
+                  >
+                    <span>+</span> Tambah Stok Masuk (Restock)
+                  </button>
                 </div>
                 <div className="method-help-desc">
-                  {methodTab === 'restock'
-                    ? 'Jumlah yang dimasukkan akan ditambahkan ke stok saat ini.'
-                    : 'Angka yang dimasukkan akan menggantikan stok lama secara langsung.'}
+                  Angka yang dimasukkan akan menggantikan stok lama secara langsung.
                 </div>
               </div>
 
@@ -599,8 +578,7 @@ export default function StockPage() {
               <div className="modal-input-group">
                 <div className="modal-input-label-row">
                   <label htmlFor="new-stock-input" className="input-main-label">
-                    {methodTab === 'restock' ? 'Jumlah Stok Masuk' : 'Jumlah Stok Baru'}{' '}
-                    <span style={{ color: '#dc2626' }}>*</span>
+                    Jumlah Stok Baru <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <span className="input-unit-label">Satuan: unit</span>
                 </div>

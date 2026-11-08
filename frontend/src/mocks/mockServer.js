@@ -28,7 +28,7 @@ const products = [
   { id: 6, nama: 'Kopi Sachet', kategori: 'Minuman', harga: 1500, berat: 20, stok: 30, batas_stok_kritis: 5 },
   { id: 7, nama: 'Sabun Mandi', kategori: 'Kebutuhan Rumah', harga: 3500, berat: 100, stok: 12, batas_stok_kritis: 5 },
   { id: 8, nama: 'Teh Celup', kategori: 'Minuman', harga: 8000, berat: 100, stok: 15, batas_stok_kritis: 5 },
-].map((p) => ({ ...p, archived_at: null, created_at: now(), updated_at: now() }));
+].map((p) => ({ ...p, created_at: now(), updated_at: now() }));
 
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
@@ -40,7 +40,7 @@ function withStatus(p) {
   return { ...p, status_stok: p.stok <= p.batas_stok_kritis ? 'Stok Kritis' : 'Stok Aman' };
 }
 
-// Mode create mewajibkan stok; mode update memvalidasi stok bila dikirim.
+// mode 'create' mewajibkan stok; mode 'update' tidak memuat stok
 function validateProduct(body, mode) {
   const errors = {};
   if (isBlank(body.nama)) errors.nama = REQUIRED;
@@ -58,19 +58,13 @@ function validateProduct(body, mode) {
   if (mode === 'create') {
     const stok = toNumber(body.stok);
     if (isBlank(body.stok)) errors.stok = REQUIRED;
-    else if (!Number.isSafeInteger(stok) || stok > 2147483647) errors.stok = INVALID_NUMBER;
-    else if (stok < 0) errors.stok = 'Jumlah stok tidak boleh negatif';
-  } else if (mode === 'update' && !isBlank(body.stok)) {
-    const stok = toNumber(body.stok);
-    if (!Number.isSafeInteger(stok) || stok > 2147483647) errors.stok = INVALID_NUMBER;
+    else if (!Number.isFinite(stok)) errors.stok = INVALID_NUMBER;
     else if (stok < 0) errors.stok = 'Jumlah stok tidak boleh negatif';
   }
 
   if (!isBlank(body.batas_stok_kritis)) {
     const b = toNumber(body.batas_stok_kritis);
-    if (!Number.isSafeInteger(b) || b > 2147483647 || b < 0) {
-      errors.batas_stok_kritis = INVALID_NUMBER;
-    }
+    if (!Number.isFinite(b) || b < 0) errors.batas_stok_kritis = INVALID_NUMBER;
   }
   return errors;
 }
@@ -107,7 +101,7 @@ export async function mockRequest(method, fullPath, body = {}, token) {
 
   // Produk
   if (method === 'GET' && path === '/products') {
-    let rows = products.filter((p) => (isAdmin && query.include_archived === 'true') || !p.archived_at).map(withStatus);
+    let rows = products.map(withStatus);
     if (query.search) rows = rows.filter((p) => p.nama.toLowerCase().includes(query.search.toLowerCase()));
     if (query.kategori) rows = rows.filter((p) => p.kategori === query.kategori);
     const page = Number(query.page) || 1;
@@ -141,7 +135,6 @@ export async function mockRequest(method, fullPath, body = {}, token) {
   if (productMatch) {
     const product = products.find((p) => p.id === Number(productMatch[1]));
     if (!product) return reply(404, { message: 'Produk tidak ditemukan' });
-    if (product.archived_at && !isAdmin) return reply(404, { message: 'Produk tidak ditemukan' });
 
     if (method === 'GET') return reply(200, { data: withStatus(product) });
 
@@ -154,7 +147,6 @@ export async function mockRequest(method, fullPath, body = {}, token) {
         kategori: body.kategori,
         harga: Number(body.harga),
         berat: Number(body.berat),
-        ...(isBlank(body.stok) ? {} : { stok: Number(body.stok) }),
         batas_stok_kritis: isBlank(body.batas_stok_kritis) ? product.batas_stok_kritis : Number(body.batas_stok_kritis),
         updated_at: now(),
       });
@@ -162,42 +154,22 @@ export async function mockRequest(method, fullPath, body = {}, token) {
     }
   }
 
-  const archiveMatch = path.match(/^\/products\/(\d+)\/archive$/);
-  if (method === 'PATCH' && archiveMatch) {
-    if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
-    const product = products.find((p) => p.id === Number(archiveMatch[1]));
-    if (!product) return reply(404, { message: 'Produk tidak ditemukan' });
-    if (typeof body.archived !== 'boolean') {
-      return reply(422, {
-        message: 'Data tidak valid',
-        errors: { archived: 'Status arsip harus berupa true atau false' },
-      });
-    }
-    product.archived_at = body.archived ? product.archived_at || now() : null;
-    product.updated_at = now();
-    return reply(200, {
-      message: body.archived ? 'Produk berhasil diarsipkan' : 'Produk berhasil dipulihkan',
-    });
-  }
-
   // Stok
   if (method === 'GET' && path === '/stock') {
-    let rows = products.filter((p) => !p.archived_at).map(withStatus);
+    let rows = products.map(withStatus);
     if (query.search) rows = rows.filter((p) => p.nama.toLowerCase().includes(query.search.toLowerCase()));
     if (query.kritis === 'true') rows = rows.filter((p) => p.status_stok === 'Stok Kritis');
-    return reply(200, { data: rows, ringkasan: { stok_kritis: products.filter((p) => !p.archived_at && p.stok <= p.batas_stok_kritis).length } });
+    return reply(200, { data: rows, ringkasan: { stok_kritis: products.filter((p) => p.stok <= p.batas_stok_kritis).length } });
   }
 
   const stockMatch = path.match(/^\/products\/(\d+)\/stock$/);
   if (method === 'PATCH' && stockMatch) {
     if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
     const product = products.find((p) => p.id === Number(stockMatch[1]));
-    if (!product || product.archived_at) return reply(404, { message: 'Produk tidak ditemukan' });
+    if (!product) return reply(404, { message: 'Produk tidak ditemukan' });
     const stok = toNumber(body.stok);
     if (isBlank(body.stok)) return reply(422, { message: 'Data tidak valid', errors: { stok: REQUIRED } });
-    if (!Number.isSafeInteger(stok) || stok > 2147483647) {
-      return reply(422, { message: 'Data tidak valid', errors: { stok: INVALID_NUMBER } });
-    }
+    if (!Number.isFinite(stok)) return reply(422, { message: 'Data tidak valid', errors: { stok: INVALID_NUMBER } });
     if (stok < 0) return reply(422, { message: 'Data tidak valid', errors: { stok: 'Jumlah stok tidak boleh negatif' } });
     product.stok = stok;
     product.updated_at = now();

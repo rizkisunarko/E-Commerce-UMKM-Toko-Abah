@@ -172,15 +172,6 @@ h1 {
   border-color: var(--border);
 }
 
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
-}
-
-.btn-danger:hover {
-  background: #b71c1c;
-}
-
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -240,31 +231,6 @@ th {
 
 .row-critical {
   background: var(--danger-bg);
-}
-
-.row-archived {
-  color: var(--muted);
-  background: #f0f1f0;
-}
-
-.product-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.product-actions .btn {
-  padding: 6px 10px;
-  font-size: 14px;
-}
-
-.archive-filter {
-  display: inline-block;
-  margin: 0 0 16px;
-}
-
-.product-form {
-  max-width: 640px;
 }
 
 /* Modal */
