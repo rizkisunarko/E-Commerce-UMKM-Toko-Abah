@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Nov 07, 2026 at 02:11 PM
+-- Generation Time: Nov 08, 2026 at 08:28 AM
 -- Server version: 8.4.8
 -- PHP Version: 8.1.10
 
@@ -40,8 +40,8 @@ CREATE TABLE `admin` (
 --
 
 INSERT INTO `admin` (`id_admin`, `username`, `password`, `created_at`, `updated_at`) VALUES
-(1, 'admin', '$2b$10$g.YcWfo6b4RjHmw0nBOt4.cq4pAEWuWtD85ZfZhBCBkdDd2eLjRzG', '2026-11-07 19:56:36', '2026-11-07 20:07:40'),
-(2, 'admin_contoh', '$2b$10$g.YcWfo6b4RjHmw0nBOt4.cq4pAEWuWtD85ZfZhBCBkdDd2eLjRzG', '2026-11-07 20:32:36', NULL);
+(1, 'admin', '$2b$10$2u3Eqz7BnEa1nvwuAw3zTu0M2LP44puARYDN.FPU8sIOOyh/3Xu/S', '2026-11-07 19:56:36', '2026-11-08 14:40:02'),
+(2, 'admin_contoh', '$2b$10$74Knn/u0fAU6sNFTPPYlUuUVg4SnkQjEZ2dlUwka0BzqrnS1xHQ82', '2026-11-07 20:32:36', NULL);
 
 -- --------------------------------------------------------
 
@@ -223,8 +223,9 @@ CREATE TABLE `produk` (
   `satuan` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
   `foto_produk` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status_produk` enum('tersedia','habis') COLLATE utf8mb4_unicode_ci DEFAULT 'tersedia',
-  `jumlah_stok` decimal(12,3) NOT NULL DEFAULT '0.000',
-  `batas_stok_minimum` decimal(12,3) NOT NULL DEFAULT '0.000',
+  `archived_at` datetime DEFAULT NULL,
+  `jumlah_stok` int NOT NULL DEFAULT '0',
+  `batas_stok_minimum` int NOT NULL DEFAULT '0',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -233,15 +234,15 @@ CREATE TABLE `produk` (
 -- Dumping data for table `produk`
 --
 
-INSERT INTO `produk` (`id_produk`, `id_kategori`, `kode_produk`, `nama_produk`, `deskripsi`, `harga_beli`, `harga_jual`, `satuan`, `foto_produk`, `status_produk`, `jumlah_stok`, `batas_stok_minimum`, `created_at`, `updated_at`) VALUES
-(1, 1, 'CONTOH-001', 'Beras 5 kg', NULL, '0.00', '68000.00', '5 kg', NULL, 'tersedia', '3.990', '10.000', '2026-11-07 20:39:29', '2026-11-07 21:10:18'),
-(2, 3, 'CONTOH-003', 'Gula Pasir 1 kg', NULL, '0.00', '17000.00', '1 kg', NULL, 'tersedia', '5.000', '10.000', '2026-11-07 20:39:29', NULL),
-(3, 7, 'CONTOH-007', 'Sabun Mandi', NULL, '0.00', '3500.00', '100 g', NULL, 'tersedia', '12.000', '5.000', '2026-11-07 20:39:29', NULL),
-(4, 5, 'CONTOH-005', 'Mie Instan', NULL, '0.00', '3500.00', '80 g', NULL, 'tersedia', '48.000', '5.000', '2026-11-07 20:39:29', NULL),
-(5, 6, 'CONTOH-006', 'Kopi Sachet', NULL, '0.00', '1500.00', '20 g', NULL, 'tersedia', '30.000', '5.000', '2026-11-07 20:39:29', NULL),
-(6, 6, 'CONTOH-008', 'Teh Celup', NULL, '0.00', '8000.00', '100 g', NULL, 'tersedia', '15.000', '5.000', '2026-11-07 20:39:29', NULL),
-(7, 2, 'CONTOH-002', 'Minyak Goreng 1 L', NULL, '0.00', '18000.00', '1 L', NULL, 'tersedia', '3.000', '10.000', '2026-11-07 20:39:29', NULL),
-(8, 4, 'CONTOH-004', 'Telur Ayam 1 kg', NULL, '0.00', '30000.00', '1 kg', NULL, 'tersedia', '20.000', '5.000', '2026-11-07 20:39:29', NULL);
+INSERT INTO `produk` (`id_produk`, `id_kategori`, `kode_produk`, `nama_produk`, `deskripsi`, `harga_beli`, `harga_jual`, `satuan`, `foto_produk`, `status_produk`, `archived_at`, `jumlah_stok`, `batas_stok_minimum`, `created_at`, `updated_at`) VALUES
+(1, 1, 'CONTOH-001', 'Beras 5 kg', NULL, '0.00', '68000.00', '5 kg', NULL, 'tersedia', '2026-11-08 13:54:12', 3, 10, '2026-11-07 20:39:29', '2026-11-08 13:54:12'),
+(2, 3, 'CONTOH-003', 'Gula Pasir 1 kg', NULL, '0.00', '19000.00', '1000 g', NULL, 'tersedia', NULL, 25, 10, '2026-11-07 20:39:29', '2026-11-08 15:27:24'),
+(3, 7, 'CONTOH-007', 'Sabun Mandi', NULL, '0.00', '3500.00', '100 g', NULL, 'tersedia', NULL, 12, 5, '2026-11-07 20:39:29', NULL),
+(4, 5, 'CONTOH-005', 'Mie Instan', NULL, '0.00', '3500.00', '80 g', NULL, 'tersedia', NULL, 48, 5, '2026-11-07 20:39:29', NULL),
+(5, 6, 'CONTOH-006', 'Kopi Sachet', NULL, '0.00', '1500.00', '20 g', NULL, 'tersedia', NULL, 30, 5, '2026-11-07 20:39:29', NULL),
+(6, 6, 'CONTOH-008', 'Teh Celup', NULL, '0.00', '8000.00', '100 g', NULL, 'tersedia', NULL, 15, 5, '2026-11-07 20:39:29', NULL),
+(7, 2, 'CONTOH-002', 'Minyak Goreng 1 L', NULL, '0.00', '18000.00', '1 L', NULL, 'tersedia', NULL, 3, 10, '2026-11-07 20:39:29', NULL),
+(8, 4, 'CONTOH-004', 'Telur Ayam 1 kg', NULL, '0.00', '30000.00', '1 kg', NULL, 'tersedia', NULL, 20, 5, '2026-11-07 20:39:29', NULL);
 
 -- --------------------------------------------------------
 
@@ -255,9 +256,9 @@ CREATE TABLE `riwayat_stok` (
   `id_admin` int DEFAULT NULL,
   `id_user` int DEFAULT NULL,
   `jenis_perubahan` enum('masuk','keluar','penyesuaian') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `jumlah` decimal(12,3) NOT NULL,
-  `stok_sebelum` decimal(12,3) NOT NULL,
-  `stok_sesudah` decimal(12,3) NOT NULL,
+  `jumlah` int NOT NULL,
+  `stok_sebelum` int NOT NULL,
+  `stok_sesudah` int NOT NULL,
   `keterangan` text COLLATE utf8mb4_unicode_ci,
   `tanggal` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -267,23 +268,30 @@ CREATE TABLE `riwayat_stok` (
 --
 
 INSERT INTO `riwayat_stok` (`id_riwayat`, `id_produk`, `id_admin`, `id_user`, `jenis_perubahan`, `jumlah`, `stok_sebelum`, `stok_sesudah`, `keterangan`, `tanggal`) VALUES
-(1, 1, 2, NULL, 'keluar', '1.000', '4.000', '3.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:40:15'),
-(2, 1, 2, NULL, 'masuk', '1.000', '3.000', '4.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:40:15'),
-(5, 1, 2, NULL, 'keluar', '1.000', '4.000', '3.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:45:19'),
-(6, 1, 2, NULL, 'masuk', '1.000', '3.000', '4.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:45:19'),
-(8, 1, 1, NULL, 'masuk', '4.000', '0.000', '4.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
-(9, 7, 1, NULL, 'masuk', '3.000', '0.000', '3.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
-(10, 2, 1, NULL, 'masuk', '5.000', '0.000', '5.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
-(11, 8, 1, NULL, 'masuk', '20.000', '0.000', '20.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
-(12, 4, 1, NULL, 'masuk', '48.000', '0.000', '48.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
-(13, 5, 1, NULL, 'masuk', '30.000', '0.000', '30.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
-(14, 3, 1, NULL, 'masuk', '12.000', '0.000', '12.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
-(15, 6, 1, NULL, 'masuk', '15.000', '0.000', '15.000', 'Stok awal data contoh', '2026-11-07 20:45:56'),
-(23, 1, 2, NULL, 'keluar', '1.000', '4.000', '3.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:46:10'),
-(24, 1, 2, NULL, 'masuk', '1.000', '3.000', '4.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:46:10'),
-(26, 1, NULL, NULL, 'keluar', '1.000', '4.000', '3.000', 'Penyesuaian stok oleh pegawai Pegawai Toko (ID 2)', '2026-11-07 21:07:24'),
-(27, 1, 2, NULL, 'masuk', '1.000', '3.000', '4.000', 'Penyesuaian stok melalui aplikasi', '2026-11-07 21:07:24'),
-(28, 1, NULL, NULL, 'keluar', '0.010', '4.000', '3.990', 'Penyesuaian stok oleh pegawai Pegawai Toko (ID 2)', '2026-11-07 21:10:18');
+(1, 1, 2, NULL, 'keluar', 1, 4, 3, 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:40:15'),
+(2, 1, 2, NULL, 'masuk', 1, 3, 4, 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:40:15'),
+(5, 1, 2, NULL, 'keluar', 1, 4, 3, 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:45:19'),
+(6, 1, 2, NULL, 'masuk', 1, 3, 4, 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:45:19'),
+(8, 1, 1, NULL, 'masuk', 4, 0, 4, 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(9, 7, 1, NULL, 'masuk', 3, 0, 3, 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(10, 2, 1, NULL, 'masuk', 5, 0, 5, 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(11, 8, 1, NULL, 'masuk', 20, 0, 20, 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(12, 4, 1, NULL, 'masuk', 48, 0, 48, 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(13, 5, 1, NULL, 'masuk', 30, 0, 30, 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(14, 3, 1, NULL, 'masuk', 12, 0, 12, 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(15, 6, 1, NULL, 'masuk', 15, 0, 15, 'Stok awal data contoh', '2026-11-07 20:45:56'),
+(23, 1, 2, NULL, 'keluar', 1, 4, 3, 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:46:10'),
+(24, 1, 2, NULL, 'masuk', 1, 3, 4, 'Penyesuaian stok melalui aplikasi', '2026-11-07 20:46:10'),
+(26, 1, NULL, NULL, 'keluar', 1, 4, 3, 'Penyesuaian stok oleh pegawai Pegawai Toko (ID 2)', '2026-11-07 21:07:24'),
+(27, 1, 2, NULL, 'masuk', 1, 3, 4, 'Penyesuaian stok melalui aplikasi', '2026-11-07 21:07:24'),
+(28, 1, NULL, NULL, 'keluar', 0, 4, 3, 'Penyesuaian stok oleh pegawai Pegawai Toko (ID 2)', '2026-11-07 21:10:18'),
+(29, 2, 1, NULL, 'masuk', 194, 5, 199, 'Penyesuaian stok saat mengubah produk', '2026-11-08 14:57:16'),
+(30, 2, 1, NULL, 'keluar', 0, 199, 198, 'Penyesuaian stok saat mengubah produk', '2026-11-08 14:58:09'),
+(31, 2, NULL, NULL, 'keluar', 0, 198, 198, 'Penyesuaian stok oleh pegawai Pegawai Toko (ID 2)', '2026-11-08 14:59:25'),
+(32, 2, NULL, NULL, 'keluar', 182, 198, 16, 'Penyesuaian stok oleh pegawai Pegawai Toko (ID 2)', '2026-11-08 15:03:03'),
+(33, 2, 1, NULL, 'keluar', 8, 16, 8, 'Penyesuaian stok saat mengubah produk', '2026-11-08 15:17:22'),
+(34, 2, 1, NULL, 'masuk', 15, 8, 23, 'Penyesuaian stok saat mengubah produk', '2026-11-08 15:17:39'),
+(35, 2, 1, NULL, 'masuk', 2, 23, 25, 'Penyesuaian stok melalui aplikasi', '2026-11-08 15:18:04');
 
 -- --------------------------------------------------------
 
@@ -464,7 +472,7 @@ ALTER TABLE `detail_transaksi`
 -- AUTO_INCREMENT for table `kategori`
 --
 ALTER TABLE `kategori`
-  MODIFY `id_kategori` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id_kategori` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `kurir`
@@ -512,7 +520,7 @@ ALTER TABLE `produk`
 -- AUTO_INCREMENT for table `riwayat_stok`
 --
 ALTER TABLE `riwayat_stok`
-  MODIFY `id_riwayat` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id_riwayat` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `transaksi`

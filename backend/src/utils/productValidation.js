@@ -33,14 +33,19 @@ function validateProduct(body = {}, mode = 'create') {
   const stok = Number(body.stok);
   if (mode === 'create') {
     if (isBlank(body.stok)) errors.stok = REQUIRED;
-    else if (!Number.isFinite(stok)) errors.stok = INVALID_NUMBER;
+    else if (!Number.isSafeInteger(stok) || stok > 2147483647) errors.stok = INVALID_NUMBER;
+    else if (stok < 0) errors.stok = 'Jumlah stok tidak boleh negatif';
+  } else if (mode === 'update' && !isBlank(body.stok)) {
+    if (!Number.isSafeInteger(stok) || stok > 2147483647) errors.stok = INVALID_NUMBER;
     else if (stok < 0) errors.stok = 'Jumlah stok tidak boleh negatif';
   }
 
   let batas = 5; // nilai bawaan bila batas stok kritis kosong
   if (!isBlank(body.batas_stok_kritis)) {
     batas = Number(body.batas_stok_kritis);
-    if (!Number.isFinite(batas) || batas < 0) errors.batas_stok_kritis = INVALID_NUMBER;
+    if (!Number.isSafeInteger(batas) || batas > 2147483647 || batas < 0) {
+      errors.batas_stok_kritis = INVALID_NUMBER;
+    }
   }
 
   const hargaBeli = isBlank(body.harga_beli) ? 0 : Number(body.harga_beli);
@@ -56,7 +61,7 @@ function validateProduct(body = {}, mode = 'create') {
       harga,
       hargaBeli,
       berat,
-      stok: mode === 'create' ? stok : undefined,
+      stok: mode === 'create' || (mode === 'update' && !isBlank(body.stok)) ? stok : undefined,
       batas_stok_kritis: batas,
       satuan: body.satuan ? String(body.satuan).trim() : `${berat} g`,
     },
