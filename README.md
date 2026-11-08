@@ -69,6 +69,8 @@ Kata sandi di database tersimpan sebagai hash bcrypt.
 
 - Endpoint kategori, daftar/detail/tambah/ubah produk, daftar stok, dan pembaruan stok membaca/menulis MySQL.
 - Setiap perubahan jumlah stok memperbarui tabel `produk` dan mencatat perubahan pada `riwayat_stok` dalam transaksi database.
+- `GET /api/stock?search=beras&kritis=true` memerlukan login, mencari produk berdasarkan nama, dan dapat memfilter stok kritis. Respons berisi `data` dan ringkasan jumlah produk kritis.
+- `PATCH /api/products/:id/stock` menerima `{ "stok": 12 }`. Stok harus berupa bilangan bulat nonnegatif; admin dapat menaikkan atau menurunkan stok, sedangkan pegawai hanya dapat menguranginya. Perubahan produk dan riwayat stok disimpan dalam satu transaksi.
 - Admin dapat menaikkan atau menurunkan stok; pegawai dapat melihat dan hanya menurunkan stok melalui halaman Stok.
 - Form ubah produk admin dapat memperbarui stok. Jika stok berubah, API memperbarui produk dan mencatat riwayat stok dalam satu transaksi; setelah disimpan, aplikasi membuka halaman Daftar Stok dengan nilai terbaru.
 - Stok produk, batas stok minimum, dan jumlah pada riwayat menggunakan bilangan bulat. Migrasi `backend/database/migrations/002-convert-stock-to-integers.sql` membulatkan nilai pecahan yang sudah ada ke bawah (FLOOR); jalankan sekali pada database lama sebelum memakai versi ini. Data baru akan menolak stok pecahan.
