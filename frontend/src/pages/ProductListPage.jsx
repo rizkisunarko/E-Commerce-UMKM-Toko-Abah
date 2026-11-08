@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
-<<<<<<< HEAD
-import { Link } from 'react-router-dom';
-import Button from '../components/Button';
-=======
 import { Link, useLocation } from 'react-router-dom';
->>>>>>> b8625797fc729a643a19848b54d756a6603f9327
+import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import { productService } from '../services/productService';
 import { formatRupiah, formatStock } from '../utils/format';
