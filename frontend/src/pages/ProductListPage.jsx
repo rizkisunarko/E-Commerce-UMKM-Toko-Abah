@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { productService } from '../services/productService';
 import { formatRupiah } from '../utils/format';
@@ -53,6 +54,8 @@ export default function ProductListPage() {
   const isAdmin = user?.role === 'admin';
   const location = useLocation();
   const pesan = location.state?.pesan;
+  const location = useLocation();
+  const pesan = location.state?.pesan;
 
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState([]);
@@ -72,7 +75,7 @@ export default function ProductListPage() {
           setCategories(res.data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Muat daftar produk sesuai filter & halaman

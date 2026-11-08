@@ -74,6 +74,12 @@ export default function ProductForm({
   submitting = false,
   submitLabel = 'Simpan Produk',
   showStock = true,
+  hargaHelper,
+  isEdit = false,
+  currentStock,
+  pageTitle,
+  pageSubtitle,
+  lastUpdatedText,
   onSubmit,
   onCancel,
   user,
@@ -81,7 +87,7 @@ export default function ProductForm({
   const [values, setValues] = useState({ ...EMPTY, ...initialValues });
   const [clientErrors, setClientErrors] = useState({});
   const [showTips, setShowTips] = useState(true);
-  const [skuCode, setSkuCode] = useState('899276100123');
+  const [skuCode, setSkuCode] = useState(isEdit ? '8991002104509' : '899276100123');
   const [activeChips, setActiveChips] = useState(['Produk Terlaris']);
   const [testErrorMode, setTestErrorMode] = useState(false);
 
@@ -140,16 +146,19 @@ export default function ProductForm({
         kategori: '',
         harga: 'abc',
         berat: '-200',
-        stok: '0',
+        stok: showStock ? '0' : values.stok,
         batas_stok_kritis: '5',
       });
-      setClientErrors({
+      const testErrs = {
         nama: REQUIRED,
         kategori: REQUIRED,
         harga: INVALID_NUMBER,
         berat: INVALID_NUMBER,
-        stok: REQUIRED,
-      });
+      };
+      if (showStock) {
+        testErrs.stok = REQUIRED;
+      }
+      setClientErrors(testErrs);
     } else {
       setTestErrorMode(false);
       handleReset();
@@ -160,11 +169,11 @@ export default function ProductForm({
   const handleFillValidSample = () => {
     setTestErrorMode(false);
     setValues({
-      nama: 'Beras Ramos Premium 5 Kg',
-      kategori: categories[0] || 'Beras & Tepung',
-      harga: '65000',
+      nama: isEdit ? 'Beras Ramos Wangi 5 kg' : 'Beras Ramos Premium 5 Kg',
+      kategori: categories[0] || 'Beras & Pokok',
+      harga: isEdit ? '72000' : '65000',
       berat: '5000',
-      stok: '50',
+      stok: isEdit ? (currentStock !== undefined ? String(currentStock) : '42') : '50',
       batas_stok_kritis: '10',
     });
     setClientErrors({});
@@ -177,6 +186,8 @@ export default function ProductForm({
     if (Object.keys(found).length > 0) return;
     onSubmit(values);
   }
+
+  const effectiveStock = currentStock !== undefined ? currentStock : (values.stok !== '' && !isNaN(Number(values.stok)) ? Number(values.stok) : 42);
 
   return (
     <div className="product-create-container">
@@ -223,12 +234,23 @@ export default function ProductForm({
           <button type="button" className="btn-breadcrumb-back" onClick={onCancel}>
             ← Kembali ke Daftar Produk
           </button>
-          <span className="breadcrumb-separator">/</span>
-          <span className="breadcrumb-trail-title">KATALOG SEMBAKO</span>
+          {!isEdit && (
+            <>
+              <span className="breadcrumb-separator">/</span>
+              <span className="breadcrumb-trail-title">KATALOG SEMBAKO</span>
+            </>
+          )}
         </div>
 
         <div className="breadcrumb-right">
-          {hasErrors || testErrorMode ? (
+          {isEdit ? (
+            <>
+              <span className="badge-sku-code"># SKU: BER-ROJO-5K</span>
+              <span className="badge-active-sale">
+                <span style={{ fontSize: '7px' }}>●</span> Aktif Dijual
+              </span>
+            </>
+          ) : hasErrors || testErrorMode ? (
             <div className="badge-status-catalog error-state">
               <span>●</span> State: Validasi Gagal (Form Error)
             </div>
@@ -257,16 +279,31 @@ export default function ProductForm({
 
       {/* 3. Judul Halaman */}
       <div className="page-title-section">
-        <div className="page-title-row">
-          <h1>Tambah Produk Baru</h1>
-          {(hasErrors || testErrorMode) && (
-            <span className="badge-error-counter">
-              {Math.max(errorCount, 3)} GALAT DITEMUKAN
-            </span>
+        <div className="page-title-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1>{pageTitle || (isEdit ? `Ubah Produk: ${values.nama || 'Produk'}` : 'Tambah Produk Baru')}</h1>
+            {(hasErrors || testErrorMode) && (
+              <span className="badge-error-counter">
+                {Math.max(errorCount, 3)} GALAT DITEMUKAN
+              </span>
+            )}
+          </div>
+
+          {isEdit && (
+            <div className="time-updated-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{lastUpdatedText || 'Terakhir diperbarui: Hari ini, 09:30 WIB oleh Pak Abah'}</span>
+            </div>
           )}
         </div>
         <p className="page-title-desc">
-          Masukkan rincian informasi barang dagangan baru untuk ditambahkan ke katalog & inventaris Toko Abah.
+          {pageSubtitle ||
+            (isEdit
+              ? 'Perbarui informasi barang, penyesuaian harga jual, dan kontrol stok fisik untuk katalog Toko Abah.'
+              : 'Masukkan rincian informasi barang dagangan baru untuk ditambahkan ke katalog & inventaris Toko Abah.')}
         </p>
       </div>
 
@@ -282,7 +319,7 @@ export default function ProductForm({
             </p>
           </div>
         </div>
-      ) : showTips ? (
+      ) : showTips && !isEdit ? (
         <div className="alert-tips-banner">
           <div className="tips-icon-wrap">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -315,20 +352,29 @@ export default function ProductForm({
       <div className="product-content-grid">
         {/* Kolom Kiri: Form */}
         <form className="product-form-column" onSubmit={handleSubmit} noValidate>
-          {/* Card 1: Informasi & Detail Produk */}
+          {/* Card 1: Informasi Pokok Barang */}
           <div className="form-card-panel">
             <div className="form-card-header">
               <div className="form-card-header-left">
                 <span className="form-card-header-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                    <line x1="12" y1="22.08" x2="12" y2="12" />
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="9" y1="21" x2="9" y2="9" />
                   </svg>
                 </span>
-                <h3 className="form-card-header-title">Informasi & Detail Produk</h3>
+                <div>
+                  <h3 className="form-card-header-title">
+                    {isEdit ? 'Informasi Pokok Barang' : 'Informasi & Detail Produk'}
+                  </h3>
+                  {isEdit && (
+                    <div className="card-header-subtitle">
+                      Identitas utama sembako di kasir & pencarian POS
+                    </div>
+                  )}
+                </div>
               </div>
-              <span className="form-card-header-note">Tanda (*) wajib diisi</span>
+              {!isEdit && <span className="form-card-header-note">Tanda (*) wajib diisi</span>}
             </div>
 
             {/* Kolom: Nama Produk */}
@@ -340,7 +386,7 @@ export default function ProductForm({
                 {shown.nama ? (
                   <span className="label-error-badge">ⓘ Wajib Diisi</span>
                 ) : (
-                  <span className="label-extra-info">Maks. 80 karakter</span>
+                  <span className="label-extra-info">{isEdit ? 'Maks. 60 Karakter' : 'Maks. 80 karakter'}</span>
                 )}
               </div>
               <div className="input-with-addons">
@@ -366,11 +412,11 @@ export default function ProductForm({
               </div>
               {shown.nama ? (
                 <span className="field-error-message">ⓘ {shown.nama}</span>
-              ) : (
+              ) : !isEdit ? (
                 <span className="field-helper-message">
                   Sertakan merek, varian, dan ukuran kemasan agar memudahkan pencarian kasir.
                 </span>
-              )}
+              ) : null}
             </div>
 
             {/* Dua Kolom: Kategori & Barcode/SKU */}
@@ -415,15 +461,27 @@ export default function ProductForm({
               <div className="form-group-item">
                 <div className="form-label-row">
                   <label htmlFor="barcode_sku" className="form-field-label">
-                    Barcode / Kode SKU
+                    Kode Barcode / SKU
                   </label>
-                  <button type="button" className="label-action-btn" onClick={handleRandomizeSKU}>
-                    ↻ Acak SKU
-                  </button>
+                  {!isEdit ? (
+                    <button type="button" className="label-action-btn" onClick={handleRandomizeSKU}>
+                      ↻ Acak SKU
+                    </button>
+                  ) : (
+                    <span className="label-extra-info">Opsional</span>
+                  )}
                 </div>
                 <div className="input-with-addons">
-                  <span className="input-icon-prefix">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <input
+                    id="barcode_sku"
+                    type="text"
+                    className="form-text-input"
+                    placeholder="Contoh: 8991002104509"
+                    value={skuCode}
+                    onChange={(e) => setSkuCode(e.target.value)}
+                  />
+                  <span className="input-icon-prefix" style={{ left: 'auto', right: '12px' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="3" y1="5" x2="3" y2="19" />
                       <line x1="7" y1="5" x2="7" y2="19" />
                       <line x1="10" y1="5" x2="10" y2="19" />
@@ -432,28 +490,17 @@ export default function ProductForm({
                       <line x1="21" y1="5" x2="21" y2="19" />
                     </svg>
                   </span>
-                  <input
-                    id="barcode_sku"
-                    type="text"
-                    className="form-text-input has-icon"
-                    placeholder="Contoh: 899276100123"
-                    value={skuCode}
-                    onChange={(e) => setSkuCode(e.target.value)}
-                  />
-                  <span className="input-success-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </span>
                 </div>
-                <span className="field-helper-message">
-                  Opsional. Gunakan scanner barcode kasir atau biarkan kosong.
-                </span>
+                {!isEdit && (
+                  <span className="field-helper-message">
+                    Opsional. Gunakan scanner barcode kasir atau biarkan kosong.
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Card 2: Penetapan Harga & Bobot Barang */}
+          {/* Card 2: Harga Jual & Bobot Kemasan */}
           <div className="form-card-panel">
             <div className="form-card-header">
               <div className="form-card-header-left">
@@ -463,7 +510,16 @@ export default function ProductForm({
                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                   </svg>
                 </span>
-                <h3 className="form-card-header-title">Penetapan Harga & Bobot Barang</h3>
+                <div>
+                  <h3 className="form-card-header-title">
+                    {isEdit ? 'Harga Jual & Bobot Kemasan' : 'Penetapan Harga & Bobot Barang'}
+                  </h3>
+                  {isEdit && (
+                    <div className="card-header-subtitle">
+                      Penetapan harga kasir dan penimbangan kurir lokal
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -472,7 +528,7 @@ export default function ProductForm({
               <div className="form-group-item">
                 <div className="form-label-row">
                   <label htmlFor="harga" className="form-field-label">
-                    Harga Jual (Rp) <span className="required-asterisk">*</span>
+                    {isEdit ? 'Harga Jual Satuan (Rp)' : 'Harga Jual (Rp)'} <span className="required-asterisk">*</span>
                   </label>
                 </div>
                 <div className="input-with-addons">
@@ -498,6 +554,8 @@ export default function ProductForm({
                 </div>
                 {shown.harga ? (
                   <span className="field-error-message">ⓘ {shown.harga}</span>
+                ) : hargaHelper ? (
+                  <div className="price-info-note">ⓘ {hargaHelper}</div>
                 ) : (
                   <span className="field-helper-message">
                     Harga jual eceran resmi ke pembeli / warga.
@@ -537,33 +595,46 @@ export default function ProductForm({
                   <span className="field-error-message">ⓘ {shown.berat}</span>
                 ) : (
                   <span className="field-helper-message">
-                    Dipakai untuk menghitung ongkos kirim pesanan antar.
+                    {isEdit
+                      ? 'Dipakai untuk menghitung ongkos kirim pesanan antar toko & kurir becak/motor.'
+                      : 'Dipakai untuk menghitung ongkos kirim pesanan antar.'}
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Card 3: Manajemen & Kontrol Stok Fisik (Hanya tampil jika showStock=true) */}
-          {showStock && (
-            <div className="form-card-panel">
-              <div className="form-card-header">
-                <div className="form-card-header-left">
-                  <span className="form-card-header-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 3h18v18H3z" />
-                      <path d="M9 3v18" />
-                      <path d="M15 3v18" />
-                      <path d="M3 9h18" />
-                      <path d="M3 15h18" />
-                    </svg>
-                  </span>
-                  <h3 className="form-card-header-title">Manajemen & Kontrol Stok Fisik</h3>
+          {/* Card 3: Kontrol Stok Gudang & Rak */}
+          <div className="form-card-panel">
+            <div className="form-card-header">
+              <div className="form-card-header-left">
+                <span className="form-card-header-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 3h18v18H3z" />
+                    <path d="M9 3v18" />
+                    <path d="M15 3v18" />
+                    <path d="M3 9h18" />
+                    <path d="M3 15h18" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="form-card-header-title">
+                    {isEdit ? 'Kontrol Stok Gudang & Rak' : 'Manajemen & Kontrol Stok Fisik'}
+                  </h3>
+                  {isEdit && (
+                    <div className="card-header-subtitle">
+                      Penghitungan fisik real-time rak toko
+                    </div>
+                  )}
                 </div>
               </div>
+              {isEdit && <span className="status-pill-safe">Status: Cukup Aman</span>}
+            </div>
 
-              <div className="form-grid-columns">
-                {/* Stok Awal */}
+            <div className="form-grid-columns">
+              {/* Stok Field */}
+              {showStock ? (
+                /* Mode Tambah: Stok Awal Dapat Diinput */
                 <div className="form-group-item">
                   <div className="form-label-row">
                     <label htmlFor="stok" className="form-field-label">
@@ -605,59 +676,102 @@ export default function ProductForm({
                     </span>
                   )}
                 </div>
-
-                {/* Batas Stok Kritis */}
+              ) : (
+                /* Mode Ubah: Stok Saat Ini Tampil Sebagai Informasi (Rule A14 & B2) */
                 <div className="form-group-item">
                   <div className="form-label-row">
-                    <label htmlFor="batas_stok_kritis" className="form-field-label">
-                      Batas Stok Kritis
+                    <label className="form-field-label">
+                      Stok Saat Ini (Sak / Karung) <span className="required-asterisk">*</span>
                     </label>
-                    {values.batas_stok_kritis === '' || values.batas_stok_kritis === '5' ? (
-                      <span className="label-valid-badge">✓ Valid (Default)</span>
-                    ) : (
-                      <span className="label-extra-info" style={{ color: '#d97706', fontWeight: 600 }}>
-                        Peringatan Menipis
-                      </span>
-                    )}
                   </div>
-                  <div className={`stepper-container${shown.batas_stok_kritis ? ' is-error' : ''}`}>
+                  <div className="stepper-container" style={{ background: '#f8fafc' }}>
                     <button
                       type="button"
                       className="stepper-btn"
-                      onClick={() => handleStep('batas_stok_kritis', -1, 0, 5)}
-                      aria-label="Kurangi batas stok kritis"
+                      style={{ cursor: 'not-allowed', color: '#9ca3af' }}
+                      disabled
+                      title="Pengubahan stok dilakukan di halaman Stok"
                     >
                       −
                     </button>
                     <input
-                      id="batas_stok_kritis"
                       type="text"
                       className="stepper-number-input"
-                      value={values.batas_stok_kritis}
-                      onChange={change('batas_stok_kritis')}
-                      placeholder="5"
-                      aria-invalid={Boolean(shown.batas_stok_kritis)}
+                      readOnly
+                      value={effectiveStock}
+                      style={{ cursor: 'default' }}
                     />
                     <button
                       type="button"
-                      className="stepper-btn btn-plus"
-                      onClick={() => handleStep('batas_stok_kritis', 1, 0, 5)}
-                      aria-label="Tambah batas stok kritis"
+                      className="stepper-btn"
+                      style={{ cursor: 'not-allowed', color: '#9ca3af' }}
+                      disabled
+                      title="Pengubahan stok dilakukan di halaman Stok"
                     >
                       +
                     </button>
                   </div>
-                  {shown.batas_stok_kritis ? (
-                    <span className="field-error-message">ⓘ {shown.batas_stok_kritis}</span>
+                  <span className="field-helper-message">
+                    {effectiveStock} sak tersedia di rak depan dan gudang belakang.
+                  </span>
+                </div>
+              )}
+
+              {/* Batas Stok Kritis */}
+              <div className="form-group-item">
+                <div className="form-label-row">
+                  <label htmlFor="batas_stok_kritis" className="form-field-label">
+                    {isEdit ? 'Batas Stok Kritis (Alert)' : 'Batas Stok Kritis'}
+                  </label>
+                  {values.batas_stok_kritis === '' || values.batas_stok_kritis === '5' ? (
+                    <span className="label-valid-badge">✓ Valid (Default)</span>
                   ) : (
-                    <span className="field-helper-message">
-                      Kosongkan untuk memakai nilai bawaan 5. Disarankan 10 untuk barang cepat habis.
+                    <span className="label-extra-info" style={{ color: '#d97706', fontWeight: 600 }}>
+                      Peringatan Menipis
                     </span>
                   )}
                 </div>
+                <div className={`stepper-container${shown.batas_stok_kritis ? ' is-error' : ''}`}>
+                  <button
+                    type="button"
+                    className="stepper-btn"
+                    onClick={() => handleStep('batas_stok_kritis', -1, 0, 5)}
+                    aria-label="Kurangi batas stok kritis"
+                  >
+                    −
+                  </button>
+                  <input
+                    id="batas_stok_kritis"
+                    type="text"
+                    className="stepper-number-input"
+                    value={values.batas_stok_kritis}
+                    onChange={change('batas_stok_kritis')}
+                    placeholder="5"
+                    aria-invalid={Boolean(shown.batas_stok_kritis)}
+                  />
+                  <button
+                    type="button"
+                    className="stepper-btn btn-plus"
+                    onClick={() => handleStep('batas_stok_kritis', 1, 0, 5)}
+                    aria-label="Tambah batas stok kritis"
+                  >
+                    +
+                  </button>
+                </div>
+                {shown.batas_stok_kritis ? (
+                  <span className="field-error-message">ⓘ {shown.batas_stok_kritis}</span>
+                ) : (
+                  <span className="field-helper-message">
+                    {isEdit
+                      ? 'Kosongkan untuk memakai nilai bawaan 5. Disarankan 10 untuk barang cepat habis seperti beras.'
+                      : 'Kosongkan untuk memakai nilai bawaan 5. Disarankan 10 untuk barang cepat habis.'}
+                  </span>
+                )}
               </div>
+            </div>
 
-              {/* Label Cepat Toko (Opsional) */}
+            {/* Label Cepat Toko (Opsional untuk Tambah Produk) */}
+            {showStock && (
               <div className="quick-tags-section">
                 <div className="quick-tags-title">Label Cepat Toko (Opsional):</div>
                 <div className="quick-tags-wrapper">
@@ -681,28 +795,42 @@ export default function ProductForm({
                   })}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Actions Bar Footer */}
           <div className="form-actions-bar">
             <div className="actions-left-group">
-              <button
-                type="button"
-                className="btn-form-cancel"
-                onClick={onCancel}
-                disabled={submitting}
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                className="btn-form-reset"
-                onClick={handleReset}
-                disabled={submitting}
-              >
-                Reset Isian
-              </button>
+              {isEdit ? (
+                <div className="offline-sync-text">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                    <line x1="6" y1="6" x2="6.01" y2="6" />
+                    <line x1="6" y1="18" x2="6.01" y2="18" />
+                  </svg>
+                  <span>Data tersinkron otomatis ke mesin kasir toko offline</span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-form-cancel"
+                    onClick={onCancel}
+                    disabled={submitting}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-form-reset"
+                    onClick={handleReset}
+                    disabled={submitting}
+                  >
+                    Reset Isian
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="actions-right-group">
@@ -710,6 +838,16 @@ export default function ProductForm({
                 <span className="error-summary-inline">
                   ⓘ Perbaiki kesalahan sebelum menyimpan ke katalog
                 </span>
+              )}
+              {isEdit && (
+                <button
+                  type="button"
+                  className="btn-form-cancel"
+                  onClick={onCancel}
+                  disabled={submitting}
+                >
+                  Batal
+                </button>
               )}
               <button
                 type="submit"
@@ -725,15 +863,21 @@ export default function ProductForm({
           </div>
         </form>
 
-        {/* Kolom Kanan: Pratinjau Rak & Panduan */}
+        {/* Kolom Kanan: Pratinjau Rak & Panduan/Riwayat */}
         <aside className="sidebar-right-column">
           {/* Card: Pratinjau Kartu Rak */}
           <div className="rack-preview-card">
             <div className="rack-preview-header">
-              <span className="rack-preview-title">PRATINJAU KARTU RAK</span>
-              <span className="badge-rack-available">
-                <span style={{ fontSize: '7px' }}>●</span> Tersedia
+              <span className="rack-preview-title">
+                {isEdit ? 'Pratinjau Kartu Rak Toko' : 'PRATINJAU KARTU RAK'}
               </span>
+              {isEdit ? (
+                <span className="badge-pos-live">POS LIVE</span>
+              ) : (
+                <span className="badge-rack-available">
+                  <span style={{ fontSize: '7px' }}>●</span> Tersedia
+                </span>
+              )}
             </div>
 
             <div className="rack-image-container">
@@ -743,50 +887,92 @@ export default function ProductForm({
                 className="rack-preview-image"
               />
               <div className="rack-image-badges">
-                <span className="rack-sku-badge">SKU: {skuCode ? 'AUTO-GEN' : 'NONE'}</span>
-                <span className="rack-weight-badge">{values.berat ? `${values.berat} gr` : '0 gr'}</span>
+                {isEdit ? (
+                  <span className="badge-rack-available" style={{ background: '#dcfce7', color: '#15803d' }}>
+                    Tersedia di Rak
+                  </span>
+                ) : (
+                  <span className="rack-sku-badge">SKU: {skuCode ? 'AUTO-GEN' : 'NONE'}</span>
+                )}
+                <span className="rack-weight-badge">
+                  Berat: {values.berat ? Number(values.berat).toLocaleString('id-ID') : '0'} gr
+                </span>
               </div>
             </div>
 
             <div className="rack-body-content">
               <div className="rack-category-label">
-                {values.kategori ? values.kategori.toUpperCase() : 'KATEGORI BELUM DIPILIH'}
+                {values.kategori
+                  ? `${values.kategori} • ${isEdit ? 'Karung Plastik 5kg' : 'Katalog'}`
+                  : 'KATEGORI BELUM DIPILIH'}
               </div>
               <h4 className="rack-product-name">
                 {values.nama.trim() || 'Nama Produk Baru'}
               </h4>
 
+              {isEdit && (
+                <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '10px' }}>
+                  Barcode: {skuCode}
+                </div>
+              )}
+
               <div className="rack-stats-grid">
                 <div className="rack-stat-block">
-                  <span className="rack-stat-title">Harga Jual</span>
+                  <span className="rack-stat-title">{isEdit ? 'Harga Eceran' : 'Harga Jual'}</span>
                   <span className="rack-stat-price">
                     {formatRupiah(values.harga || 0)}
                   </span>
                 </div>
                 <div className="rack-stat-block">
-                  <span className="rack-stat-title">Stok Gudang</span>
+                  <span className="rack-stat-title">{isEdit ? 'Sisa Rak' : 'Stok Gudang'}</span>
                   <span className="rack-stat-stock">
-                    {values.stok !== '' && !isNaN(Number(values.stok))
-                      ? `${values.stok} unit`
-                      : '50 unit'}
+                    {effectiveStock} sak
                   </span>
                 </div>
               </div>
 
-              <div className="rack-pos-notice">
-                <div className="pos-notice-header">
-                  <span className="pos-notice-icon">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="4" width="20" height="16" rx="2" />
-                      <line x1="2" y1="10" x2="22" y2="10" />
-                    </svg>
-                  </span>
-                  <span>Siap masuk ke Mesin Kasir Toko</span>
+              {isEdit ? (
+                <>
+                  <div className="shelf-capacity-section">
+                    <div className="capacity-label-row">
+                      <span>Kapasitas Rak (Maks 50 sak)</span>
+                      <span style={{ fontWeight: 700, color: '#15803d' }}>84% Penuh</span>
+                    </div>
+                    <div className="capacity-progress-track">
+                      <div className="capacity-progress-fill" style={{ width: '84%' }} />
+                    </div>
+                  </div>
+
+                  <div className="print-label-bar">
+                    <div className="print-label-title">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                      </svg>
+                      <span>Cetak Label Rak / Harga</span>
+                    </div>
+                    <button type="button" className="btn-print-f9">
+                      Cetak (F9)
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="rack-pos-notice">
+                  <div className="pos-notice-header">
+                    <span className="pos-notice-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                      </svg>
+                    </span>
+                    <span>Siap masuk ke Mesin Kasir Toko</span>
+                  </div>
+                  <p className="pos-notice-text">
+                    Segera setelah disimpan, nama produk ini langsung dapat dicari oleh kasir shift pagi & malam.
+                  </p>
                 </div>
-                <p className="pos-notice-text">
-                  Segera setelah disimpan, nama produk ini langsung dapat dicari oleh kasir shift pagi & malam.
-                </p>
-              </div>
+              )}
             </div>
           </div>
 
@@ -880,8 +1066,56 @@ export default function ProductForm({
                 <span>🪄</span> Isi Data Contoh yang Benar
               </button>
             </div>
+          ) : isEdit ? (
+            /* Jika dalam state normal mode Ubah: Tampilkan "Riwayat Pembelian Grosir" */
+            <div className="wholesale-history-card">
+              <div className="wholesale-header">
+                <div className="wholesale-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="1" y="3" width="15" height="13" />
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                    <circle cx="5.5" cy="18.5" r="2.5" />
+                    <circle cx="18.5" cy="18.5" r="2.5" />
+                  </svg>
+                  <span>Riwayat Pembelian Grosir</span>
+                </div>
+                <a href="#riwayat" className="wholesale-link-more" onClick={(e) => e.preventDefault()}>
+                  Selengkapnya
+                </a>
+              </div>
+
+              <div className="wholesale-list">
+                <div className="wholesale-item">
+                  <div className="wholesale-item-top">
+                    <span>Restock 50 Sak</span>
+                    <span className="wholesale-item-time">3 hari lalu</span>
+                  </div>
+                  <div className="wholesale-item-desc">Dari: Agen Beras Berkah Cipinang</div>
+                  <div className="wholesale-item-desc">Modal: Rp 67.500 / sak</div>
+                </div>
+
+                <div className="wholesale-item" style={{ borderBottom: 'none' }}>
+                  <div className="wholesale-item-top">
+                    <span>Penyesuaian Fisik (-8 Sak)</span>
+                    <span className="wholesale-item-time">Kemarin</span>
+                  </div>
+                  <div className="wholesale-item-desc">Penjualan POS Shift Siang</div>
+                </div>
+              </div>
+
+              <div className="wholesale-margin-box">
+                <span className="margin-label">Margin Keuntungan Toko</span>
+                <span className="margin-value">
+                  Rp 4.500 / sak (6.25%)
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                    <polyline points="17 6 23 6 23 12" />
+                  </svg>
+                </span>
+              </div>
+            </div>
           ) : (
-            /* Jika dalam state normal: Tampilkan "Panduan Cepat Toko Abah" */
+            /* Jika dalam state normal mode Tambah: Tampilkan "Panduan Cepat Toko Abah" */
             <div className="quick-guide-card">
               <div className="guide-card-header">
                 <span className="guide-card-icon">
@@ -939,4 +1173,3 @@ export default function ProductForm({
     </div>
   );
 }
-
