@@ -1,26 +1,12 @@
 const express = require('express');
-const { randomBytes } = require('node:crypto');
 const { createAuthenticate } = require('../middleware/auth');
-
-const PRODUCT_SELECT = `
-  SELECT p.id_produk AS id,
-         p.nama_produk AS nama,
-         k.nama_kategori AS kategori,
-         p.harga_jual AS harga,
-         p.harga_beli,
-         p.satuan,
-         p.jumlah_stok AS stok,
-         p.batas_stok_minimum AS batas_stok_kritis,
-         CASE
-           WHEN p.jumlah_stok <= p.batas_stok_minimum THEN 'Stok Kritis'
-           ELSE 'Stok Aman'
-         END AS status_stok
-  FROM produk p
-  JOIN kategori k ON k.id_kategori = p.id_kategori
-`;
-
-const REQUIRED = 'Kolom ini wajib diisi';
-const INVALID_NUMBER = 'Masukkan angka yang valid';
+const { validateProduct, REQUIRED, INVALID_NUMBER } = require('../utils/productValidation');
+const {
+  createProductHandler,
+  formatProduct,
+  findCategoryId,
+  PRODUCT_SELECT,
+} = require('../controllers/product.controller');
 
 function isBlank(value) {
   return value === undefined || value === null || String(value).trim() === '';
@@ -28,62 +14,6 @@ function isBlank(value) {
 
 function toNumber(value) {
   return isBlank(value) ? NaN : Number(value);
-}
-
-function validateProduct(body, includeStock) {
-  const errors = {};
-  const nama = typeof body.nama === 'string' ? body.nama.trim() : '';
-  const kategori = typeof body.kategori === 'string' ? body.kategori.trim() : '';
-  const harga = toNumber(body.harga);
-  const berat = isBlank(body.berat) ? null : toNumber(body.berat);
-  const batasStok = isBlank(body.batas_stok_kritis)
-    ? (includeStock ? 5 : null)
-    : toNumber(body.batas_stok_kritis);
-  const stok = toNumber(body.stok);
-  const satuan = typeof body.satuan === 'string' ? body.satuan.trim() : '';
-
-  if (!nama) errors.nama = REQUIRED;
-  if (!kategori) errors.kategori = REQUIRED;
-  if (isBlank(body.harga)) errors.harga = REQUIRED;
-  else if (!Number.isFinite(harga) || harga <= 0) errors.harga = INVALID_NUMBER;
-  if (berat !== null && (!Number.isFinite(berat) || berat <= 0)) errors.berat = INVALID_NUMBER;
-  if (!satuan && berat === null) errors.satuan = REQUIRED;
-  if (isBlank(body.batas_stok_kritis) === false &&
-      (!Number.isFinite(batasStok) || batasStok < 0)) {
-    errors.batas_stok_kritis = INVALID_NUMBER;
-  }
-  if (includeStock) {
-    if (isBlank(body.stok)) errors.stok = REQUIRED;
-    else if (!Number.isFinite(stok)) errors.stok = INVALID_NUMBER;
-    else if (stok < 0) errors.stok = 'Jumlah stok tidak boleh negatif';
-  }
-  if (!isBlank(body.harga_beli)) {
-    const hargaBeli = toNumber(body.harga_beli);
-    if (!Number.isFinite(hargaBeli) || hargaBeli < 0) errors.harga_beli = INVALID_NUMBER;
-  }
-
-  return {
-    errors,
-    values: {
-      nama,
-      kategori,
-      harga,
-      hargaBeli: isBlank(body.harga_beli)
-        ? (includeStock ? 0 : null)
-        : toNumber(body.harga_beli),
-      satuan: satuan || `${berat} g`,
-      stok,
-      batasStok,
-    },
-  };
-}
-
-async function findCategoryId(connection, category) {
-  const [rows] = await connection.query(
-    'SELECT id_kategori FROM kategori WHERE nama_kategori = ?',
-    [category],
-  );
-  return rows.length ? rows[0].id_kategori : null;
 }
 
 function stockChangeType(change) {
@@ -94,6 +24,7 @@ function createProductsRoutes(db, jwtSecret) {
   const router = express.Router();
   const authenticate = createAuthenticate(db, jwtSecret);
 
+  // 1. GET /api/categories - Mengambil daftar kategori
   router.get('/categories', authenticate, async (req, res, next) => {
     try {
       const [rows] = await db.query(
@@ -105,6 +36,7 @@ function createProductsRoutes(db, jwtSecret) {
     }
   });
 
+  // 2. GET /api/products - Mengambil daftar produk (dengan paginasi & filter)
   router.get('/products', authenticate, async (req, res, next) => {
     const page = Number(req.query.page || 1);
     const limit = Number(req.query.limit || 10);
@@ -139,7 +71,7 @@ function createProductsRoutes(db, jwtSecret) {
         params,
       );
       return res.json({
-        data: rows,
+        data: rows.map(formatProduct),
         pagination: { page, limit, total: Number(countRows[0].total) },
       });
     } catch (error) {
@@ -147,66 +79,12 @@ function createProductsRoutes(db, jwtSecret) {
     }
   });
 
-  router.post('/products', authenticate, async (req, res, next) => {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Akses ditolak' });
-    }
-
-    const { errors, values } = validateProduct(req.body || {}, true);
-    if (Object.keys(errors).length) {
-      return res.status(422).json({ message: 'Data tidak valid', errors });
-    }
-
-    let connection;
-    try {
-      connection = await db.getConnection();
-      await connection.beginTransaction();
-      const idKategori = await findCategoryId(connection, values.kategori);
-      if (!idKategori) {
-        await connection.rollback();
-        return res.status(422).json({
-          message: 'Data tidak valid',
-          errors: { kategori: 'Kategori tidak valid' },
-        });
-      }
-
-      const kodeProduk = `PRD-${randomBytes(8).toString('hex')}`;
-      const [result] = await connection.query(
-        `INSERT INTO produk (
-           id_kategori, kode_produk, nama_produk, harga_beli, harga_jual,
-           satuan, status_produk, jumlah_stok, batas_stok_minimum
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          idKategori,
-          kodeProduk,
-          values.nama,
-          values.hargaBeli,
-          values.harga,
-          values.satuan,
-          values.stok === 0 ? 'habis' : 'tersedia',
-          values.stok,
-          values.batasStok,
-        ],
-      );
-      if (values.stok > 0) {
-        await connection.query(
-          `INSERT INTO riwayat_stok (
-             id_produk, id_admin, jenis_perubahan, jumlah, stok_sebelum, stok_sesudah, keterangan
-           ) VALUES (?, ?, 'masuk', ?, 0, ?, 'Stok awal produk')`,
-          [result.insertId, req.user.id, values.stok, values.stok],
-        );
-      }
-      const [rows] = await connection.query(`${PRODUCT_SELECT} WHERE p.id_produk = ?`, [result.insertId]);
-      await connection.commit();
-      return res.status(201).json({ data: rows[0] });
-    } catch (error) {
-      if (connection) await connection.rollback();
-      return next(error);
-    } finally {
-      if (connection) connection.release();
-    }
+  // 3. POST /api/products - Tambah produk baru (PPL-01.1, Khusus Admin)
+  router.post('/products', authenticate, (req, res, next) => {
+    return createProductHandler(req, res, next, db);
   });
 
+  // 4. PUT /api/products/:id - Ubah data produk (Khusus Admin)
   router.put('/products/:id', authenticate, async (req, res, next) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Akses ditolak' });
@@ -216,7 +94,7 @@ function createProductsRoutes(db, jwtSecret) {
       return res.status(400).json({ message: 'ID produk tidak valid' });
     }
 
-    const { errors, values } = validateProduct(req.body || {}, false);
+    const { errors, values } = validateProduct(req.body || {}, 'update');
     if (Object.keys(errors).length) {
       return res.status(422).json({ message: 'Data tidak valid', errors });
     }
@@ -237,16 +115,17 @@ function createProductsRoutes(db, jwtSecret) {
              satuan = ?, batas_stok_minimum = COALESCE(?, batas_stok_minimum),
              updated_at = CURRENT_TIMESTAMP
          WHERE id_produk = ?`,
-        [idKategori, values.nama, values.harga, values.hargaBeli, satuan, values.batasStok, id],
+        [idKategori, values.nama, values.harga, values.hargaBeli, satuan, values.batas_stok_kritis, id],
       );
       const [rows] = await db.query(`${PRODUCT_SELECT} WHERE p.id_produk = ?`, [id]);
       if (!rows.length) return res.status(404).json({ message: 'Produk tidak ditemukan' });
-      return res.json({ data: rows[0] });
+      return res.json({ data: formatProduct(rows[0]) });
     } catch (error) {
       return next(error);
     }
   });
 
+  // 5. GET /api/products/:id - Detail produk berdasarkan ID
   router.get('/products/:id', authenticate, async (req, res, next) => {
     const id = Number(req.params.id);
     if (!Number.isSafeInteger(id) || id < 1) {
@@ -256,12 +135,13 @@ function createProductsRoutes(db, jwtSecret) {
     try {
       const [rows] = await db.query(`${PRODUCT_SELECT} WHERE p.id_produk = ?`, [id]);
       if (!rows.length) return res.status(404).json({ message: 'Produk tidak ditemukan' });
-      return res.json({ data: rows[0] });
+      return res.json({ data: formatProduct(rows[0]) });
     } catch (error) {
       return next(error);
     }
   });
 
+  // 6. GET /api/stock - Daftar stok produk (termasuk filter stok kritis)
   router.get('/stock', authenticate, async (req, res, next) => {
     const conditions = [];
     const params = [];
@@ -282,12 +162,16 @@ function createProductsRoutes(db, jwtSecret) {
       const [countRows] = await db.query(
         'SELECT COUNT(*) AS stok_kritis FROM produk WHERE jumlah_stok <= batas_stok_minimum',
       );
-      return res.json({ data: rows, ringkasan: { stok_kritis: Number(countRows[0].stok_kritis) } });
+      return res.json({
+        data: rows.map(formatProduct),
+        ringkasan: { stok_kritis: Number(countRows[0].stok_kritis) },
+      });
     } catch (error) {
       return next(error);
     }
   });
 
+  // 7. PATCH /api/products/:id/stock - Penyesuaian stok produk
   router.patch('/products/:id/stock', authenticate, async (req, res, next) => {
     if (!['admin', 'pegawai'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Akses ditolak' });
@@ -358,7 +242,7 @@ function createProductsRoutes(db, jwtSecret) {
       }
       const [rows] = await connection.query(`${PRODUCT_SELECT} WHERE p.id_produk = ?`, [id]);
       await connection.commit();
-      return res.json({ data: rows[0] });
+      return res.json({ data: formatProduct(rows[0]) });
     } catch (error) {
       if (connection) await connection.rollback();
       return next(error);
