@@ -24,6 +24,80 @@
   gap: 4px;
 }
 
+/* Banner Notifikasi Konfirmasi Sukses */
+.alert-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-left: 5px solid #16a34a;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 5px rgba(22, 163, 74, 0.08);
+  animation: slideDownFade 0.3s ease-out;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-success-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.alert-success-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.alert-success-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #14532d;
+}
+
+.alert-success-desc {
+  font-size: 13px;
+  color: #166534;
+  line-height: 1.4;
+}
+
+.alert-success-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  font-weight: bold;
+  color: #15803d;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.15s ease;
+}
+
+.alert-success-close-btn:hover {
+  background: #dcfce7;
+  color: #14532d;
+}
+
 .navbar-store-status-row {
   display: flex;
   align-items: center;
