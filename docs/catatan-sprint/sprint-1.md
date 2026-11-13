@@ -64,9 +64,9 @@ Aturan beban: maksimal dua tugas paralel per orang.
 | 1 | Prioritas dan pembagian sprint disepakati pada rapat tim 5 November 2026. | K-12 |
 | 2 | PPL-04 (penanda stok kritis) dipindah dari Sprint 1 ke Sprint 2 karena beban Sprint 1 terlalu padat. Disetujui Product Owner. | K-13 |
 | 3 | Sprint 1 adalah sprint paling padat. PPL-03 berisiko spillover ke Sprint 2. | Sprint Planning |
-| 4 | Story baru PPL-14: admin dapat mengarsipkan produk dan memulihkannya; arsip tidak menghapus riwayat transaksi/stok dan produk arsip tidak muncul di daftar aktif. Direncanakan di Sprint 3. | K-13 |
+| 4 | Story baru PPL-14 (arsip/hapus produk) dijadwalkan di Sprint 3. | K-13 |
 | 5 | Berat produk (gram) wajib ada pada data produk karena dipakai menghitung ongkos kirim. | K-08 |
-| 6 | Dua peran: pemilik sebagai admin penuh; istri dan teman sebagai pegawai yang dapat menggunakan kasir serta melihat stok/pesanan, tetapi tidak boleh mengubah harga, menambah, mengubah, mengarsipkan, atau menghapus produk (AC-02.3, AC-14.3). Pemeriksaan hak akses dilakukan di backend (NFR-02). | K-02, K-14 |
+| 6 | Hak akses: pegawai tidak boleh mengubah harga, menambah, atau menghapus produk. | K-02, K-14 |
 
 ### 1.7 Integrasi tools pada sprint ini
 

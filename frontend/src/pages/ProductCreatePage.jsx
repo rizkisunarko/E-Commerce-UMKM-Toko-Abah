@@ -43,8 +43,15 @@ export default function ProductCreatePage() {
     }
 
     try {
-      await productService.create(payload);
-      navigate('/produk', { state: { pesan: 'Produk berhasil ditambahkan' } });
+      const res = await productService.create(payload);
+      const namaProduk = res?.data?.nama || payload.nama;
+      navigate('/produk', {
+        state: {
+          sukses: true,
+          judul: 'Produk Berhasil Ditambahkan!',
+          pesan: `Produk "${namaProduk}" telah berhasil disimpan ke katalog dan database inventaris Toko Abah.`,
+        },
+      });
     } catch (err) {
       if (err.status === 422) {
         setServerErrors(err.errors || {});

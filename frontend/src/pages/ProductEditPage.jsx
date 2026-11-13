@@ -62,8 +62,15 @@ export default function ProductEditPage() {
     }
 
     try {
-      await productService.update(id, payload);
-      navigate('/produk', { state: { pesan: 'Perubahan produk berhasil disimpan' } });
+      const res = await productService.update(id, payload);
+      const namaProduk = res?.data?.nama || payload.nama;
+      navigate('/produk', {
+        state: {
+          sukses: true,
+          judul: 'Perubahan Produk Berhasil Disimpan!',
+          pesan: `Data dan harga produk "${namaProduk}" telah berhasil diperbarui di katalog Toko Abah.`,
+        },
+      });
     } catch (err) {
       if (err.status === 422) {
         setServerErrors(err.errors || {});

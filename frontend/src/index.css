@@ -172,15 +172,6 @@ h1 {
   border-color: var(--border);
 }
 
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
-}
-
-.btn-danger:hover {
-  background: #b71c1c;
-}
-
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -242,31 +233,6 @@ th {
   background: var(--danger-bg);
 }
 
-.row-archived {
-  color: var(--muted);
-  background: #f0f1f0;
-}
-
-.product-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.product-actions .btn {
-  padding: 6px 10px;
-  font-size: 14px;
-}
-
-.archive-filter {
-  display: inline-block;
-  margin: 0 0 16px;
-}
-
-.product-form {
-  max-width: 640px;
-}
-
 /* Modal */
 .modal-backdrop {
   position: fixed;
@@ -321,6 +287,80 @@ th {
   border-radius: var(--radius);
   margin-bottom: 16px;
   font-size: 14px;
+}
+
+/* Banner Konfirmasi Sukses Modern */
+.alert-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-left: 5px solid #16a34a;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 5px rgba(22, 163, 74, 0.08);
+  animation: slideDownFade 0.3s ease-out;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-success-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.alert-success-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.alert-success-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #14532d;
+}
+
+.alert-success-desc {
+  font-size: 13px;
+  color: #166534;
+  line-height: 1.4;
+}
+
+.alert-success-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  font-weight: bold;
+  color: #15803d;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.15s ease;
+}
+
+.alert-success-close-btn:hover {
+  background: #dcfce7;
+  color: #14532d;
 }
 
 .hint {

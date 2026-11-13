@@ -2,9 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
+import ProductListPage from './pages/ProductListPage';
 import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
-import ProductListPage from './pages/ProductListPage';
 import StockPage from './pages/StockPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -23,6 +23,7 @@ export default function App() {
         <Route index element={<Navigate to="/produk" replace />} />
         <Route path="produk" element={<ProductListPage />} />
 
+        {/* PPL-01.2: Halaman form tambah produk */}
         <Route
           path="produk/tambah"
           element={
@@ -32,6 +33,7 @@ export default function App() {
           }
         />
 
+        {/* PPL-02.2: Halaman form ubah produk */}
         <Route
           path="produk/:id/ubah"
           element={
@@ -41,6 +43,7 @@ export default function App() {
           }
         />
 
+        {/* PPL-03.2: Halaman daftar dan pembaruan stok */}
         <Route path="stok" element={<StockPage />} />
       </Route>
 
