@@ -3,6 +3,7 @@ const { once } = require('node:events');
 const test = require('node:test');
 const bcrypt = require('bcryptjs');
 const createApp = require('../src/app');
+const { formatProduct } = require('../src/controllers/product.controller');
 const { validateProduct, INVALID_NUMBER } = require('../src/utils/productValidation');
 
 const JWT_SECRET = 'test-secret-that-is-at-least-32-characters';
@@ -39,6 +40,13 @@ test('productValidation: memvalidasi input produk sesuai kontrak', () => {
   assert.equal(valid.values.batas_stok_kritis, 5);
   assert.equal(valid.values.berat, 1000);
   assert.equal(valid.values.satuan, '1000 g');
+});
+
+test('formatProduct: status stok kritis berlaku saat stok sama atau di bawah batas', () => {
+  const product = { stok: '5', batas_stok_kritis: '5' };
+  assert.equal(formatProduct(product).status_stok, 'Stok Kritis');
+  assert.equal(formatProduct({ ...product, stok: '4' }).status_stok, 'Stok Kritis');
+  assert.equal(formatProduct({ ...product, stok: '6' }).status_stok, 'Stok Aman');
 });
 
 async function createFixture(t) {
