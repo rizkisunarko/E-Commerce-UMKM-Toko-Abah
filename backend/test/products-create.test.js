@@ -3,6 +3,7 @@ const { once } = require('node:events');
 const test = require('node:test');
 const bcrypt = require('bcryptjs');
 const createApp = require('../src/app');
+const { formatProduct } = require('../src/controllers/product.controller');
 const { validateProduct, INVALID_NUMBER } = require('../src/utils/productValidation');
 
 const JWT_SECRET = 'test-secret-that-is-at-least-32-characters';
@@ -41,6 +42,13 @@ test('productValidation: memvalidasi input produk sesuai kontrak', () => {
   assert.equal(valid.values.satuan, '1000 g');
 });
 
+test('formatProduct: status stok kritis berlaku saat stok sama atau di bawah batas', () => {
+  const product = { stok: '5', batas_stok_kritis: '5' };
+  assert.equal(formatProduct(product).status_stok, 'Stok Kritis');
+  assert.equal(formatProduct({ ...product, stok: '4' }).status_stok, 'Stok Kritis');
+  assert.equal(formatProduct({ ...product, stok: '6' }).status_stok, 'Stok Aman');
+});
+
 async function createFixture(t) {
   const accounts = [
     { id: 1, username: 'admin', password: bcrypt.hashSync('admin-pass', 4), nama: 'admin', role: 'admin' },
@@ -74,7 +82,7 @@ async function createFixture(t) {
       if (sql.includes('SELECT id_kategori FROM kategori WHERE nama_kategori = ?')) {
         return params[0] === 'Minuman' ? [[{ id_kategori: 6 }], []] : [[], []];
       }
-      if (sql.includes('SELECT jumlah_stok FROM produk WHERE id_produk = ? FOR UPDATE')) {
+      if (sql.includes('SELECT jumlah_stok FROM produk WHERE id_produk = ?')) {
         const product = products.find((item) => item.id === params[0]);
         return [product ? [{ jumlah_stok: product.stok }] : [], []];
       }
@@ -86,6 +94,11 @@ async function createFixture(t) {
       if (sql.trimStart().startsWith('UPDATE produk') && sql.includes('SET archived_at')) {
         const product = products.find((item) => item.id === params[1]);
         if (product) product.archived_at = params[0] ? '2026-11-08 12:00:00' : null;
+        return [{ affectedRows: product ? 1 : 0 }, []];
+      }
+      if (sql.trimStart().startsWith('UPDATE produk') && sql.includes('SET jumlah_stok =')) {
+        const product = products.find((item) => item.id === params[2]);
+        if (product) product.stok = params[0];
         return [{ affectedRows: product ? 1 : 0 }, []];
       }
       if (sql.includes('INSERT INTO produk')) {
@@ -146,12 +159,22 @@ async function createFixture(t) {
           const prod = products.find((item) => item.id === params[0]);
           return [prod ? [prod] : [], []];
         }
-        return [
-          sql.includes('p.archived_at IS NULL')
-            ? products.filter((item) => !item.archived_at)
-            : products,
-          [],
-        ];
+        let visibleProducts = sql.includes('p.archived_at IS NULL')
+          ? products.filter((item) => !item.archived_at)
+          : products;
+        const searchTerm = params.find(
+          (param) => typeof param === 'string' && param.startsWith('%') && param.endsWith('%'),
+        );
+        if (searchTerm) {
+          const search = searchTerm.slice(1, -1).toLowerCase();
+          visibleProducts = visibleProducts.filter((item) => item.nama.toLowerCase().includes(search));
+        }
+        if (sql.includes('AND p.jumlah_stok <= p.batas_stok_minimum')) {
+          visibleProducts = visibleProducts.filter(
+            (item) => item.stok <= item.batas_stok_kritis,
+          );
+        }
+        return [visibleProducts, []];
       }
       throw new Error(`Query test tidak dikenal: ${sql}`);
     },
@@ -351,6 +374,91 @@ test('PUT /api/products/:id: perubahan stok memperbarui stok dan mencatat riwaya
   const stockData = await stockResponse.json();
   assert.equal(stockResponse.status, 200);
   assert.equal(Number(stockData.data[0].stok), 18);
+});
+
+test('GET /api/stock: pencarian produk dan filter stok kritis', async (t) => {
+  const { baseUrl } = await createFixture(t);
+  const login = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'admin-pass' }),
+  });
+  const { token } = await login.json();
+  const headers = { Authorization: ['Bearer', token].join(' ') };
+
+  const searchResponse = await fetch(`${baseUrl}/stock?search=%20Susu%20`, { headers });
+  assert.equal(searchResponse.status, 200);
+  const searchResult = await searchResponse.json();
+  assert.deepEqual(searchResult.data.map((product) => product.nama), ['Susu UHT 1 L']);
+
+  const noMatchResponse = await fetch(`${baseUrl}/stock?search=Kopi`, { headers });
+  assert.equal((await noMatchResponse.json()).data.length, 0);
+
+  const criticalResponse = await fetch(`${baseUrl}/stock?kritis=true`, { headers });
+  assert.equal((await criticalResponse.json()).data.length, 0);
+});
+
+test('PATCH /api/products/:id/stock: validasi, update, dan riwayat stok transaksional', async (t) => {
+  const { baseUrl, stockHistory } = await createFixture(t);
+  const login = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'admin-pass' }),
+  });
+  const { token } = await login.json();
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: ['Bearer', token].join(' '),
+  };
+  const invalidCases = [
+    { id: 20, body: {}, error: 'Kolom ini wajib diisi' },
+    { id: 20, body: { stok: -1 }, error: 'Jumlah stok tidak boleh negatif' },
+    { id: 20, body: { stok: 2.5 }, error: INVALID_NUMBER },
+    { id: 20, body: { stok: 2147483648 }, error: INVALID_NUMBER },
+  ];
+
+  for (const { id, body, error } of invalidCases) {
+    const response = await fetch(`${baseUrl}/products/${id}/stock`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(body),
+    });
+    assert.equal(response.status, 422);
+    assert.equal((await response.json()).errors.stok, error);
+  }
+
+  const invalidId = await fetch(`${baseUrl}/products/invalid/stock`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ stok: 10 }),
+  });
+  assert.equal(invalidId.status, 400);
+
+  const missingProduct = await fetch(`${baseUrl}/products/999/stock`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ stok: 10 }),
+  });
+  assert.equal(missingProduct.status, 404);
+
+  const updateResponse = await fetch(`${baseUrl}/products/20/stock`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ stok: 0 }),
+  });
+  assert.equal(updateResponse.status, 200);
+  const updated = (await updateResponse.json()).data;
+  assert.equal(updated.stok, 0);
+  assert.equal(updated.status_stok, 'Stok Kritis');
+  assert.deepEqual(stockHistory.at(-1), {
+    id_produk: 20,
+    id_admin: 1,
+    jenis_perubahan: 'keluar',
+    jumlah: 24,
+    stok_sebelum: 24,
+    stok_sesudah: 0,
+    keterangan: 'Penyesuaian stok melalui aplikasi',
+  });
 });
 
 test('PATCH /api/products/:id/archive: hanya admin dapat mengarsipkan dan memulihkan produk', async (t) => {

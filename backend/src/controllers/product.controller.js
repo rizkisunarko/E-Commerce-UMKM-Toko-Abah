@@ -12,15 +12,15 @@ const PRODUCT_SELECT = `
          p.jumlah_stok AS stok,
          p.batas_stok_minimum AS batas_stok_kritis,
          p.archived_at,
-         CASE
-           WHEN p.jumlah_stok <= p.batas_stok_minimum THEN 'Stok Kritis'
-           ELSE 'Stok Aman'
-         END AS status_stok,
          p.created_at,
          p.updated_at
   FROM produk p
   JOIN kategori k ON k.id_kategori = p.id_kategori
 `;
+
+function getStockStatus(stok, batasStokKritis) {
+  return Number(stok) <= Number(batasStokKritis) ? 'Stok Kritis' : 'Stok Aman';
+}
 
 function parseGram(satuan) {
   if (typeof satuan !== 'string') return 0;
@@ -45,7 +45,7 @@ function formatProduct(row) {
     nama: row.nama,
     kategori: row.kategori,
     berat,
-    status_stok: Number(row.stok) <= Number(row.batas_stok_kritis) ? 'Stok Kritis' : 'Stok Aman',
+    status_stok: getStockStatus(row.stok, row.batas_stok_kritis),
   };
 }
 
@@ -135,6 +135,7 @@ module.exports = {
   createProduct: (req, res, next) => createProductHandler(req, res, next, defaultDb),
   createProductHandler,
   formatProduct,
+  getStockStatus,
   parseGram,
   findCategoryId,
   PRODUCT_SELECT,
