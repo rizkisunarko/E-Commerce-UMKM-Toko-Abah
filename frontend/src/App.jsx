@@ -6,6 +6,7 @@ import ProductListPage from './pages/ProductListPage';
 import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
 import StockPage from './pages/StockPage';
+import KasirPage from './pages/KasirPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -45,6 +46,9 @@ export default function App() {
 
         {/* PPL-03.2: Halaman daftar dan pembaruan stok */}
         <Route path="stok" element={<StockPage />} />
+
+        {/* PPL-05.2: Halaman kasir dan transaksi (admin dan pegawai) */}
+        <Route path="kasir" element={<KasirPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

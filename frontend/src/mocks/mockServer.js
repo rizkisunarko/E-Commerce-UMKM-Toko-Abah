@@ -30,6 +30,9 @@ const products = [
   { id: 8, nama: 'Teh Celup', kategori: 'Minuman', harga: 8000, berat: 100, stok: 15, batas_stok_kritis: 5 },
 ].map((p) => ({ ...p, created_at: now(), updated_at: now() }));
 
+let nextTransactionId = 1;
+const transactions = [];
+
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
 
@@ -174,6 +177,49 @@ export async function mockRequest(method, fullPath, body = {}, token) {
     product.stok = stok;
     product.updated_at = now();
     return reply(200, { data: withStatus(product) });
+  }
+
+  // Kasir (PPL-05): simpan transaksi dan kurangi stok. Admin dan pegawai boleh.
+  if (method === 'POST' && path === '/transactions') {
+    const errors = {};
+    if (!['tunai', 'qris'].includes(body.metode_bayar)) errors.metode_bayar = 'Pilih metode bayar terlebih dahulu';
+
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (items.length === 0) errors.items = 'Belum ada produk dipilih';
+
+    const lines = [];
+    items.forEach((it) => {
+      const key = `items.${it.product_id}`;
+      const product = products.find((p) => p.id === Number(it.product_id));
+      const jumlah = toNumber(it.jumlah);
+      if (!product) errors[key] = 'Produk tidak ditemukan';
+      else if (!Number.isInteger(jumlah) || jumlah < 1) errors[key] = INVALID_NUMBER;
+      else if (jumlah > product.stok) errors[key] = `Stok tidak mencukupi. Stok tersedia: ${product.stok}`;
+      else lines.push({ product, jumlah });
+    });
+
+    if (Object.keys(errors).length) return reply(422, { message: 'Data tidak valid', errors });
+
+    const detail = lines.map(({ product, jumlah }) => {
+      product.stok -= jumlah;
+      product.updated_at = now();
+      return {
+        product_id: product.id,
+        nama: product.nama,
+        harga: product.harga,
+        jumlah,
+        subtotal: product.harga * jumlah,
+      };
+    });
+    const transaction = {
+      id: nextTransactionId++,
+      tanggal: now(),
+      metode_bayar: body.metode_bayar,
+      items: detail,
+      total: detail.reduce((sum, d) => sum + d.subtotal, 0),
+    };
+    transactions.push(transaction);
+    return reply(201, { data: transaction });
   }
 
   return reply(404, { message: 'Endpoint tidak ditemukan' });
