@@ -259,21 +259,6 @@ export default function ProductForm({
               <span style={{ color: '#16a34a' }}>●</span> Katalog Aktif Toko
             </div>
           )}
-
-          <button
-            type="button"
-            className={`btn-toggle-mode${testErrorMode ? ' normal-mode' : ''}`}
-            onClick={handleToggleTestMode}
-            title="Klik untuk beralih mode tampilan sesuai screenshot desain"
-          >
-            {testErrorMode ? (
-              'Alihkan ke Normal'
-            ) : (
-              <>
-                <span>⚙</span> Uji Mode Validasi Error
-              </>
-            )}
-          </button>
         </div>
       </div>
 
