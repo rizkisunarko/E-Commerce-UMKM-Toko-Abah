@@ -16,7 +16,8 @@ export default function StockPage() {
   const [onlyCritical, setOnlyCritical] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [rows, setRows] = useState([]);
-  const [summary, setSummary] = useState({ stok_kritis: 0 });
+  const [allRows, setAllRows] = useState([]);
+  const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successNotif, setSuccessNotif] = useState(null);
@@ -53,6 +54,20 @@ export default function StockPage() {
       cancelled = true;
     };
   }, [search, onlyCritical, reload]);
+
+  // Data tanpa filter: dipakai untuk kartu ringkasan dan daftar kategori
+  useEffect(() => {
+    let cancelled = false;
+    stockService
+      .list()
+      .then((res) => {
+        if (!cancelled) setAllRows(res.data || []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [reload]);
 
   function openModal(product) {
     setEditing(product);
@@ -115,12 +130,13 @@ export default function StockPage() {
     ? rows.filter((r) => r.kategori === selectedCategory)
     : rows;
 
-  const totalSKU = rows.length;
-  const criticalCount = summary.stok_kritis;
+  const totalSKU = allRows.length;
+  const criticalCount =
+    summary.stok_kritis ?? allRows.filter((r) => r.status_stok === 'Stok Kritis').length;
   const safeCount = Math.max(0, totalSKU - criticalCount);
 
-  // Ambil daftar kategori unik dari data
-  const categoriesList = Array.from(new Set(rows.map((r) => r.kategori).filter(Boolean)));
+  // Daftar kategori diambil dari data tanpa filter agar tidak ikut menyempit
+  const categoriesList = Array.from(new Set(allRows.map((r) => r.kategori).filter(Boolean)));
 
   // Ikon dekoratif berdasarkan kategori / jenis produk
   const getProductIcon = (nama = '', kategori = '') => {
@@ -346,14 +362,26 @@ export default function StockPage() {
           <input
             type="text"
             className="stock-search-input"
-            placeholder="Cari nama produk, merek, atau..."
+            placeholder="Cari nama produk"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
         <div className="filter-actions-right">
-          <label className="toggle-critical-switch" onClick={() => setOnlyCritical(!onlyCritical)}>
+          <label
+            className="toggle-critical-switch"
+            role="switch"
+            aria-checked={onlyCritical}
+            tabIndex={0}
+            onClick={() => setOnlyCritical(!onlyCritical)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setOnlyCritical((v) => !v);
+              }
+            }}
+          >
             <div className={`toggle-switch-pill${onlyCritical ? ' is-active' : ''}`}>
               <div className="toggle-switch-circle" />
             </div>
@@ -435,7 +463,7 @@ export default function StockPage() {
                             <div className="product-cell-info">
                               <span className="product-cell-name">{p.nama}</span>
                               <span className="product-cell-meta">
-                                SKU: BER-ROJO-{p.id}K • {p.kategori}
+                                {p.kategori}
                               </span>
                             </div>
                           </div>
@@ -562,7 +590,7 @@ export default function StockPage() {
                       )}
                     </div>
                     <span className="summary-sku-text">
-                      SKU: BER-ROJO-{editing.id}K • Kategori: {editing.kategori}
+                      Kategori: {editing.kategori}
                     </span>
                     {editing.status_stok === 'Stok Kritis' && (
                       <span className="summary-warning-subtext">
