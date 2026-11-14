@@ -1,0 +1,1758 @@
+/* KasirPage.css - Terminal Kasir POS Toko Abah (Sesuai Stitch Desain) */
+
+.kasir-page-container {
+  margin: -24px -32px;
+  background-color: #f8fafc;
+  min-height: 100vh;
+  font-family: inherit;
+  color: #1f2937;
+}
+
+/* Toast Notifikasi Melayang */
+.kasir-toast-banner {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  animation: slideDownToast 0.25s ease-out;
+}
+
+.kasir-toast-banner svg {
+  color: #22c55e;
+}
+
+@keyframes slideDownToast {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 1. TOP NAVBAR PERSIS SEPERTI STITCH */
+.kasir-top-navbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.kasir-top-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kasir-status-pill.online {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  border-radius: 9999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kasir-dot-online {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  display: inline-block;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.kasir-shift-pill {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+  border-radius: 9999px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kasir-top-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kasir-sync-pill {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+  border-radius: 9999px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kasir-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kasir-user-text {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.kasir-user-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.kasir-user-role {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
+.kasir-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #166534;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 2. SUB-HEADER */
+.kasir-content-wrapper {
+  padding: 24px 32px 48px;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.kasir-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.kasir-title-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.kasir-heading {
+  font-size: 28px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.kasir-active-pill {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dot-online-active {
+  color: #16a34a;
+  font-size: 10px;
+}
+
+.kasir-faktur-pill {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kasir-subheading {
+  font-size: 13.5px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.kasir-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kasir-shortcut-header-pill {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Widgets Target & Item Kasir */
+.kasir-shift-widget {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shift-widget-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shift-widget-icon.green {
+  background: #f0fdf4;
+}
+
+.shift-widget-icon.orange {
+  background: #fff7ed;
+}
+
+.shift-widget-lbl {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+}
+
+.shift-widget-val {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #111827;
+  display: block;
+}
+
+/* 3. WORKSPACE 2 KOLOM */
+.kasir-pos-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(380px, 1.2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* KOLOM KIRI: KATALOG PRODUK */
+.kasir-catalog-section {
+  min-width: 0;
+}
+
+.kasir-search-container {
+  margin-bottom: 14px;
+}
+
+.kasir-search-box {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.kasir-search-box:focus-within {
+  border-color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15);
+}
+
+.kasir-search-input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  font-size: 14px;
+  color: #111827;
+  background: transparent;
+}
+
+.kasir-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.kasir-kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.kasir-kbd-hint kbd {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-weight: 700;
+  font-size: 11px;
+  color: #374151;
+}
+
+/* Kategori Navigasi */
+.kasir-cat-nav-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.kasir-cat-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kasir-cat-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.kasir-cat-btn:hover {
+  background: #f8fafc;
+  border-color: #d1d5db;
+}
+
+.kasir-cat-btn.active {
+  background: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.cat-count-badge {
+  background: #14532d;
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+/* Grid Kartu Produk (3 Kolom Sesuai Gambar 1) */
+.kasir-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.kasir-prod-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kasir-prod-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.kasir-prod-card.out {
+  opacity: 0.65;
+}
+
+.kasir-prod-img-box {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f3f4f6;
+  margin-bottom: 10px;
+}
+
+.kasir-prod-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.kasir-prod-card:hover .kasir-prod-img {
+  transform: scale(1.03);
+}
+
+.kasir-prod-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+}
+
+.kasir-stock-pill {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.kasir-stock-pill.safe {
+  background: #166534;
+}
+
+.kasir-stock-pill.critical {
+  background: #d97706;
+}
+
+.kasir-stock-pill.out {
+  background: #dc2626;
+}
+
+.kasir-prod-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.kasir-prod-subcat {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.kasir-prod-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 2px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kasir-prod-desc {
+  font-size: 11.5px;
+  color: #6b7280;
+  margin: 0 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kasir-prod-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.kasir-prod-price-lbl {
+  font-size: 10px;
+  color: #6b7280;
+  display: block;
+}
+
+.kasir-prod-price {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.btn-kasir-add-card {
+  background: #15803d;
+  color: #ffffff;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-kasir-add-card:hover:not(:disabled) {
+  background: #14532d;
+}
+
+.btn-kasir-add-card:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Bottom Help Card Sesuai Gambar 1 */
+.kasir-bottom-help-card {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  border-radius: 10px;
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.kasir-help-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kasir-info-circle-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.kasir-help-text {
+  font-size: 13px;
+  color: #166534;
+}
+
+.kasir-help-text b {
+  color: #14532d;
+}
+
+.kasir-pos-version-tag {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Loading & Empty states */
+.kasir-loading-state,
+.kasir-empty-catalog {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.kasir-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 12px 0 4px;
+}
+
+.kasir-empty-sub {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* KOLOM KANAN: KERANJANG KASIR */
+.kasir-cart-panel {
+  min-width: 0;
+}
+
+.kasir-cart-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kasir-cart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.kasir-cart-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cart-header-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kasir-cart-header-title h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.kasir-cart-header-sub {
+  font-size: 11.5px;
+  color: #6b7280;
+  font-weight: 500;
+  display: block;
+  margin-top: 1px;
+}
+
+.kasir-cart-empty-pill {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kasir-cart-count-pill {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* Empty State */
+.kasir-empty-cart-view {
+  text-align: center;
+  padding: 28px 16px 20px;
+}
+
+.kasir-empty-bag-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.kasir-empty-bag-circle {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  background: #e0edff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kasir-empty-orange-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #f97316;
+  box-shadow: 0 0 0 2.5px #ffffff;
+}
+
+.kasir-empty-hint-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #15803d;
+  font-weight: 500;
+}
+
+.kasir-empty-hint-pill svg {
+  color: #15803d;
+}
+
+.total-ppn-sub {
+  font-size: 11px;
+  color: #9ca3af;
+  display: block;
+  margin-top: 2px;
+}
+
+.total-belanja-zero-val {
+  font-size: 30px;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+}
+
+.kasir-empty-footer-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #6b7280;
+  margin-top: 14px;
+  text-align: center;
+}
+
+.kasir-empty-footer-hint b {
+  color: #374151;
+}
+
+/* Modern Items List di Keranjang Sesuai Gambar 1 */
+.kasir-cart-items-list.modern-style {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+  padding-right: 4px;
+}
+
+.kasir-cart-row-modern {
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cart-row-header-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cart-row-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cart-row-right-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-row-price-sub {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.btn-trash-outline {
+  background: transparent;
+  border: 0;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.btn-trash-outline:hover {
+  color: #ef4444;
+}
+
+.cart-row-rate-line {
+  font-size: 11.5px;
+  color: #6b7280;
+  margin: 1px 0 6px;
+}
+
+.cart-row-stepper-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stepper-kuantitas-lbl {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.kasir-stepper-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.stepper-btn {
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepper-btn:hover {
+  background: #e5e7eb;
+}
+
+.stepper-input {
+  width: 30px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  outline: none;
+}
+
+.kasir-cart-error-inline {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kasir-cart-error-text {
+  font-size: 11.5px;
+  color: #dc2626;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-set-stock-fix {
+  background: #dc2626;
+  color: #ffffff;
+  border: 0;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Rincian Ringkasan */
+.kasir-cart-summary-section {
+  padding: 12px 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 14px;
+}
+
+.kasir-summary-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.kasir-summary-line:last-child {
+  margin-bottom: 0;
+}
+
+.summary-lbl {
+  color: #6b7280;
+}
+
+.summary-val {
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Total Tagihan Banner Sesuai Gambar 1 */
+.kasir-total-tagihan-banner-g1 {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.total-tagihan-g1-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  display: block;
+}
+
+.total-tagihan-g1-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: #15803d;
+  display: block;
+  line-height: 1.2;
+}
+
+.total-tagihan-g1-badge {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 9999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Payment Option Radio Cards Sesuai Gambar 1 */
+.kasir-payment-option-section {
+  margin-bottom: 16px;
+}
+
+.payment-option-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.payment-option-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.payment-option-count {
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+.payment-radio-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all 0.15s;
+}
+
+.payment-radio-card:hover {
+  border-color: #cbd5e1;
+}
+
+.payment-radio-card.selected {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.custom-radio-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  display: inline-block;
+  position: relative;
+  margin-top: 2px;
+}
+
+.custom-radio-circle.checked {
+  border-color: #16a34a;
+}
+
+.custom-radio-circle.checked::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+.payment-radio-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  display: block;
+}
+
+.payment-radio-desc {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+}
+
+.payment-radio-card.qris-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.qris-card-top-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.qris-inner-features-box {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.qris-bold-label {
+  font-weight: 900;
+  font-size: 12.5px;
+  color: #111827;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.qris-inner-main-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.qris-otomatis-pill {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 9999px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.qris-inner-sub-text {
+  font-size: 10px;
+  color: #6b7280;
+  display: block;
+}
+
+.kasir-method-err-msg {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Tombol Selesaikan Transaksi G1 */
+.btn-selesaikan-g1 {
+  width: 100%;
+  background: #15803d;
+  color: #ffffff;
+  border: 0;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-selesaikan-g1:hover:not(:disabled) {
+  background: #14532d;
+}
+
+.btn-selesaikan-g1.disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.kasir-footer-actions-g1 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn-hold-action {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.btn-hold-action:hover {
+  background: #e5e7eb;
+}
+
+.btn-reset-action-g1 {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.btn-reset-action-g1:hover {
+  background: #fee2e2;
+}
+
+/* ==================================================
+   TAMPILAN RESI TRANSAKSI BERHASIL DISIMPAN (GAMBAR 2)
+   ================================================== */
+.kasir-receipt-panel-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.receipt-panel-header {
+  background: #15803d;
+  padding: 24px 20px;
+  text-align: center;
+  color: #ffffff;
+}
+
+.receipt-check-circle-white {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.receipt-panel-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 4px;
+}
+
+.receipt-panel-sub {
+  font-size: 11.5px;
+  color: #dcfce7;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.receipt-panel-body {
+  padding: 16px 20px 20px;
+}
+
+.receipt-meta-box {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  color: #6b7280;
+  margin-bottom: 14px;
+}
+
+.receipt-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.receipt-total-akhir-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 14px;
+}
+
+.total-akhir-lbl {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+}
+
+.total-akhir-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.receipt-total-right-col {
+  text-align: right;
+}
+
+.receipt-lunas-badge {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+
+.receipt-total-sub-qty {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+}
+
+.receipt-rincian-section {
+  margin-bottom: 14px;
+}
+
+.receipt-rincian-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.receipt-rincian-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.receipt-rincian-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 12.5px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.receipt-rincian-name {
+  font-weight: 600;
+  color: #111827;
+  display: block;
+}
+
+.receipt-rincian-math {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+}
+
+.receipt-rincian-subtotal {
+  font-weight: 700;
+  color: #111827;
+}
+
+.receipt-cash-calc-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.cash-calc-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+
+.cash-calc-line.kembalian {
+  margin-bottom: 0;
+}
+
+.calc-lbl {
+  color: #6b7280;
+}
+
+.calc-val-dark {
+  font-weight: 700;
+  color: #111827;
+}
+
+.calc-val-kembalian {
+  font-size: 16px;
+  font-weight: 800;
+  color: #c2410c;
+}
+
+.btn-transaksi-baru-main {
+  width: 100%;
+  background: #15803d;
+  color: #ffffff;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.15s;
+}
+
+.btn-transaksi-baru-main:hover {
+  background: #14532d;
+}
+
+.receipt-secondary-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.btn-receipt-secondary {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-receipt-secondary:hover {
+  background: #f8fafc;
+  border-color: #9ca3af;
+}
+
+.receipt-ready-status-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+.dot-ready {
+  color: #16a34a;
+  font-size: 10px;
+}
+
+/* ==================================================
+   VALIDASI ERROR STOK TIDAK MENCUKUPI (GAMBAR 1 / 5)
+   ================================================== */
+.kasir-global-stock-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  animation: fadeInKasir 0.2s ease-in;
+}
+
+@keyframes fadeInKasir {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stock-err-icon {
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.stock-err-text-col {
+  flex: 1;
+}
+
+.stock-err-main-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #b91c1c;
+  margin: 0 0 3px;
+  line-height: 1.25;
+}
+
+.stock-err-sub-msg {
+  font-size: 11.5px;
+  color: #991b1b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.kasir-cart-row-modern.has-stock-error {
+  background: #fff5f5;
+  border-radius: 10px;
+  padding: 12px 12px;
+  margin-left: -6px;
+  margin-right: -6px;
+  border: 1px solid #fee2e2;
+  margin-bottom: 10px;
+}
+
+.cart-row-title-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stok-kurang-badge {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kasir-cart-row-modern.has-stock-error .cart-row-price-sub {
+  color: #dc2626;
+}
+
+.stepper-with-unit-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepper-unit-lbl {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.item-stock-warning-box {
+  background: #ffffff;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.stock-warning-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.stock-warning-left svg {
+  flex-shrink: 0;
+}
+
+.btn-set-max-stock-red {
+  background: #b91c1c;
+  color: #ffffff;
+  border: 0;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.btn-set-max-stock-red:hover {
+  background: #991b1b;
+}
+
+.kasir-stock-error-helper {
+  font-size: 11.5px;
+  color: #dc2626;
+  text-align: center;
+  margin: 6px 0 0;
+  font-weight: 500;
+}
+
+/* ==================================================
+   VALIDASI ERROR METODE BAYAR (GAMBAR 2 / 6)
+   ================================================== */
+.kasir-payment-error-container {
+  border: 2px solid #dc2626;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);
+}
+
+.payment-error-red-banner {
+  background: #dc2626;
+  color: #ffffff;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-error-body {
+  padding: 14px 14px 12px;
+}
+
+.payment-error-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.payment-error-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.payment-error-wajib-badge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.payment-error-radio-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #ffffff;
+}
+
+.payment-error-radio-row:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.payment-error-radio-row.checked {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.payment-error-radio-text-col {
+  flex: 1;
+}
+
+.payment-error-radio-label-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payment-error-opt-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.kbd-shortcut-badge {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.payment-error-opt-desc {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+  margin-top: 2px;
+}
+
+.payment-error-pill-badges {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.pay-brand-pill {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.kasir-mohon-lengkapi-banner {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.btn-selesaikan-orange-g2 {
+  width: 100%;
+  background: #ea580c;
+  color: #ffffff;
+  border: 0;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  box-shadow: 0 2px 4px rgba(234, 88, 12, 0.2);
+}
+
+.btn-selesaikan-orange-g2:hover {
+  background: #c2410c;
+}
+
+.btn-f9-badge {
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+/* Responsiveness */
+@media (max-width: 1100px) {
+  .kasir-pos-workspace {
+    grid-template-columns: 1fr;
+  }
+  .kasir-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

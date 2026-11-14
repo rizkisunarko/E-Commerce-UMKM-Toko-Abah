@@ -82,13 +82,21 @@
 }
 
 .sidebar-link.active {
-  background: #2e7d32;
-  color: #ffffff;
+  background: #e8f0fe;
+  color: #15803d;
   font-weight: 600;
 }
 
 .sidebar-link.active .sidebar-icon {
-  stroke: #ffffff;
+  stroke: #15803d;
+}
+
+.sidebar-button {
+  color: #dc2626;
+}
+
+.sidebar-button .sidebar-icon {
+  stroke: #dc2626;
 }
 
 .sidebar-icon {
