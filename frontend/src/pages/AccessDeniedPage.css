@@ -1,0 +1,339 @@
+/* ==================================================
+   HALAMAN AKSES DITOLAK (AccessDeniedPage)
+   Sesuai desain Stitch "Toko Abah POS & Inventaris"
+   Semua kelas diawali dengan "akses-"
+   ================================================== */
+
+.akses-page-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg, #f7f9ff);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.akses-main-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+.akses-card {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  background-color: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Decorative background blur spots */
+.akses-blur-top {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 200px;
+  height: 200px;
+  background-color: rgba(252, 130, 12, 0.1);
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.akses-blur-bottom {
+  position: absolute;
+  bottom: -70px;
+  left: -70px;
+  width: 180px;
+  height: 180px;
+  background-color: rgba(46, 125, 50, 0.1);
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+/* Lencana atas */
+.akses-top-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background-color: #edf4ff;
+  border-radius: 9999px;
+  margin-bottom: 24px;
+}
+
+.akses-top-badge-icon {
+  color: var(--primary, #0d631b);
+}
+
+.akses-top-badge-brand {
+  font-size: 13px;
+  font-weight: 700;
+  color: #121d26;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.akses-top-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #bfcaba;
+}
+
+.akses-top-badge-sub {
+  font-size: 12px;
+  color: #40493d;
+  font-weight: 500;
+}
+
+/* Ikon perisai & gembok */
+.akses-icon-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.akses-shield-outer {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background-color: #ffdcc6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.akses-shield-inner {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #fc820c;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.akses-lock-circle {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: #ffdad6;
+  color: #ba1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  border: 2px solid #ffffff;
+}
+
+/* Judul */
+.akses-heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: #121d26;
+  letter-spacing: -0.01em;
+  margin: 0 0 10px;
+  line-height: 1.2;
+}
+
+/* Label merah */
+.akses-warning-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background-color: rgba(255, 218, 214, 0.7);
+  border-radius: 9999px;
+  margin-bottom: 20px;
+  color: #93000a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Kotak info */
+.akses-info-box {
+  width: 100%;
+  background-color: #edf4ff;
+  border: 1px solid #d9e3f1;
+  border-radius: 12px;
+  padding: 16px 20px;
+  text-align: left;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.akses-info-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.akses-info-icon {
+  color: #964900;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.akses-info-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.akses-status-line {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #121d26;
+  margin: 0;
+}
+
+.akses-status-role {
+  color: #964900;
+  font-weight: 800;
+}
+
+.akses-status-desc {
+  font-size: 13.5px;
+  color: #40493d;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Tombol aksi */
+.akses-actions-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.akses-btn-primary {
+  width: 100%;
+  height: 48px;
+  background-color: var(--primary, #0d631b);
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 700;
+  border: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.akses-btn-primary:hover {
+  background-color: var(--primary-dark, #256628);
+}
+
+.akses-btn-primary:active {
+  transform: scale(0.99);
+}
+
+/* Tautan keluar */
+.akses-logout-row {
+  margin-top: 20px;
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.akses-btn-logout {
+  background: transparent;
+  border: 0;
+  color: #ba1a1a;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.akses-btn-logout:hover {
+  text-decoration: underline;
+  background-color: rgba(186, 26, 26, 0.05);
+}
+
+/* Penyesuaian Responsif untuk layar kecil (360px) */
+@media (max-width: 480px) {
+  .akses-card {
+    padding: 24px 16px;
+  }
+
+  .akses-top-badge {
+    padding: 4px 12px;
+    gap: 6px;
+  }
+
+  .akses-top-badge-brand {
+    font-size: 12px;
+  }
+
+  .akses-top-badge-sub {
+    font-size: 11px;
+  }
+
+  .akses-heading {
+    font-size: 22px;
+  }
+
+  .akses-shield-outer {
+    width: 80px;
+    height: 80px;
+  }
+
+  .akses-shield-inner {
+    width: 52px;
+    height: 52px;
+  }
+
+  .akses-shield-inner svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .akses-info-box {
+    padding: 12px 14px;
+  }
+
+  .akses-info-content {
+    gap: 8px;
+  }
+
+  .akses-status-desc {
+    font-size: 12.5px;
+  }
+}
