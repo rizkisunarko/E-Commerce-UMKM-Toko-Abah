@@ -57,6 +57,7 @@ const transactions = [
   makeTransaction(6, daysAgo(3, 11, 10), 'tunai', [[2, 1], [5, 10]], { 2: 18000, 5: 3500 }),
 ];
 let nextTransactionId = transactions.length + 1;
+const orders = [];
 
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
@@ -137,6 +138,82 @@ export async function mockRequest(method, fullPath, body = {}, token) {
     return reply(200, { data, pagination: { page, limit, total: rows.length } });
   }
   if (method === 'GET' && path === '/categories') return reply(200, { data: CATEGORIES });
+
+  // Keranjang dan pesanan pelanggan (PPL-08): tanpa login. Harga selalu dari server.
+  // Stok TIDAK berkurang saat pesanan dibuat; stok berkurang saat pembayaran berhasil (Sprint 3).
+  if (method === 'POST' && path === '/cart/check') {
+    const items = Array.isArray(body.items) ? body.items : [];
+    const data = items
+      .map((it) => {
+        const product = products.find((p) => p.id === Number(it.product_id));
+        if (!product) return null;
+        return {
+          product_id: product.id,
+          nama: product.nama,
+          harga: product.harga,
+          stok: product.stok,
+          jumlah: Number(it.jumlah),
+          cukup: product.stok >= Number(it.jumlah) && product.stok > 0,
+        };
+      })
+      .filter(Boolean);
+    return reply(200, { data });
+  }
+  if (method === 'POST' && path === '/orders') {
+    const errors = {};
+    const nama = String(body.nama_pemesan || '').trim();
+    const hp = String(body.no_hp || '').replace(/[\s-]/g, '');
+    if (!nama) errors.nama_pemesan = REQUIRED;
+    if (!hp) errors.no_hp = REQUIRED;
+    else if (!/^(\+62|62|0)8\d{8,11}$/.test(hp)) errors.no_hp = 'Masukkan nomor HP yang valid (hanya angka)';
+    if (body.metode_penerimaan !== 'ambil_di_toko') errors.metode_penerimaan = 'Pilih cara menerima pesanan';
+
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (items.length === 0) errors.items = 'Keranjang masih kosong';
+    const lines = [];
+    items.forEach((it) => {
+      const key = `items.${it.product_id}`;
+      const product = products.find((p) => p.id === Number(it.product_id));
+      const jumlah = toNumber(it.jumlah);
+      if (!product) errors[key] = 'Produk tidak ditemukan';
+      else if (!Number.isInteger(jumlah) || jumlah < 1) errors[key] = INVALID_NUMBER;
+      else if (jumlah > product.stok) errors[key] = `Stok tidak mencukupi. Stok tersedia: ${product.stok}`;
+      else lines.push({ product, jumlah });
+    });
+    if (Object.keys(errors).length) return reply(422, { message: 'Data tidak valid', errors });
+
+    const tanggal = now();
+    const day = toWibDate(tanggal).replace(/-/g, '');
+    const seq = orders.filter((o) => o.nomor_pesanan.includes(day)).length + 1;
+    const detail = lines.map(({ product, jumlah }) => ({
+      product_id: product.id,
+      nama: product.nama,
+      harga: product.harga,
+      jumlah,
+      subtotal: product.harga * jumlah,
+    }));
+    const order = {
+      id: orders.length + 1,
+      nomor_pesanan: `TA-${day}-${String(seq).padStart(3, '0')}`,
+      status: 'Menunggu Pembayaran',
+      tanggal,
+      nama_pemesan: nama,
+      no_hp: hp,
+      catatan: String(body.catatan || '').trim(),
+      metode_penerimaan: 'ambil_di_toko',
+      items: detail,
+      ongkir: 0,
+      total: detail.reduce((sum, d) => sum + d.subtotal, 0),
+    };
+    orders.push(order);
+    return reply(201, { data: order });
+  }
+  const orderMatch = path.match(/^\/orders\/([^/]+)$/);
+  if (method === 'GET' && orderMatch) {
+    const order = orders.find((o) => o.nomor_pesanan === decodeURIComponent(orderMatch[1]));
+    if (!order) return reply(404, { message: 'Pesanan tidak ditemukan' });
+    return reply(200, { data: order });
+  }
 
   if (!user) return reply(401, { message: 'Silakan login terlebih dahulu' });
   const isAdmin = user.role === 'admin';

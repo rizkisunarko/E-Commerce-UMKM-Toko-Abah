@@ -83,7 +83,8 @@ function PublicHeader() {
             </a>
 
             {/* Keranjang Belanja */}
-            <div
+            <Link
+              to="/keranjang"
               className="katalog-cart-button"
               aria-label={`Keranjang berisi ${count} barang`}
               title={`Keranjang belanja (${count} barang)`}
@@ -94,7 +95,7 @@ function PublicHeader() {
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
               <span className="katalog-cart-badge">{count}</span>
-            </div>
+            </Link>
 
             {/* Tombol Login Staf */}
             <Link
