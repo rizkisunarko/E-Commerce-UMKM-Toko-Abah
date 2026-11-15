@@ -8,3 +8,4 @@ export const orderService = {
   create: (data) => api.post('/orders', data),
   get: (nomor) => api.get(`/orders/${encodeURIComponent(nomor)}`),
 };
+

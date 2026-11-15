@@ -163,10 +163,19 @@ export async function mockRequest(method, fullPath, body = {}, token) {
     const errors = {};
     const nama = String(body.nama_pemesan || '').trim();
     const hp = String(body.no_hp || '').replace(/[\s-]/g, '');
+    const metode = body.metode_penerimaan === 'kurir' ? 'kurir' : 'ambil_di_toko';
+    const alamat = String(body.alamat_lengkap || '').trim();
+
     if (!nama) errors.nama_pemesan = REQUIRED;
     if (!hp) errors.no_hp = REQUIRED;
     else if (!/^(\+62|62|0)8\d{8,11}$/.test(hp)) errors.no_hp = 'Masukkan nomor HP yang valid (hanya angka)';
-    if (body.metode_penerimaan !== 'ambil_di_toko') errors.metode_penerimaan = 'Pilih cara menerima pesanan';
+    
+    if (body.metode_penerimaan && body.metode_penerimaan !== 'ambil_di_toko' && body.metode_penerimaan !== 'kurir') {
+      errors.metode_penerimaan = 'Pilih cara menerima pesanan';
+    }
+    if (metode === 'kurir' && !alamat) {
+      errors.alamat_lengkap = REQUIRED;
+    }
 
     const items = Array.isArray(body.items) ? body.items : [];
     if (items.length === 0) errors.items = 'Keranjang masih kosong';
@@ -191,7 +200,11 @@ export async function mockRequest(method, fullPath, body = {}, token) {
       harga: product.harga,
       jumlah,
       subtotal: product.harga * jumlah,
+      kategori: product.kategori || 'Sembako',
     }));
+    const subtotal = detail.reduce((sum, d) => sum + d.subtotal, 0);
+    const diskon = subtotal >= 100000 ? 6000 : 0;
+    const ongkir = metode === 'kurir' ? (Number(body.ongkir) || 15000) : 0;
     const order = {
       id: orders.length + 1,
       nomor_pesanan: `TA-${day}-${String(seq).padStart(3, '0')}`,
@@ -200,18 +213,48 @@ export async function mockRequest(method, fullPath, body = {}, token) {
       nama_pemesan: nama,
       no_hp: hp,
       catatan: String(body.catatan || '').trim(),
-      metode_penerimaan: 'ambil_di_toko',
+      metode_penerimaan: metode,
+      wilayah: body.wilayah || 'Telang, Kamal (Radius < 3 km)',
+      alamat_lengkap: alamat,
+      layanan_kurir: body.layanan_kurir || (metode === 'kurir' ? 'Kurir Instan Toko Abah (Motor)' : null),
       items: detail,
-      ongkir: 0,
-      total: detail.reduce((sum, d) => sum + d.subtotal, 0),
+      subtotal,
+      diskon,
+      ongkir,
+      total: Math.max(0, subtotal - diskon + ongkir),
     };
     orders.push(order);
     return reply(201, { data: order });
   }
   const orderMatch = path.match(/^\/orders\/([^/]+)$/);
   if (method === 'GET' && orderMatch) {
-    const order = orders.find((o) => o.nomor_pesanan === decodeURIComponent(orderMatch[1]));
-    if (!order) return reply(404, { message: 'Pesanan tidak ditemukan' });
+    const nomor = decodeURIComponent(orderMatch[1]);
+    let order = orders.find((o) => o.nomor_pesanan === nomor);
+    if (!order) {
+      // Fallback pesanan default untuk preview
+      order = {
+        id: 1,
+        nomor_pesanan: nomor,
+        status: 'Menunggu Pembayaran',
+        tanggal: now(),
+        nama_pemesan: 'Ibu Rahmawati',
+        no_hp: '081298765432',
+        catatan: 'Tolong bungkus minyaknya rapat ya Abah.',
+        metode_penerimaan: 'ambil_di_toko',
+        wilayah: 'Telang, Kamal (Radius < 3 km)',
+        alamat_lengkap: 'Jl. Raya Telang No. 15, RT 04 / RW 03, Kamal, Bangkalan, Madura',
+        layanan_kurir: 'Kurir Instan Toko Abah (Motor)',
+        items: [
+          { product_id: 1, nama: 'Beras Ramos Setra 5 kg', harga: 74000, jumlah: 1, subtotal: 74000, kategori: 'Beras Premium', variasi: '5 kg', catatan: 'Kualitas super, putih bersih, pulen wangi' },
+          { product_id: 2, nama: 'Minyak Goreng Sawit 2 L', harga: 36000, jumlah: 1, subtotal: 36000, kategori: 'Minyak & Mentega', variasi: '2 L', catatan: 'Kemasan pouch refill ganda penyaringan' },
+          { product_id: 3, nama: 'Gula Pasir Tebu 1 kg', harga: 17500, jumlah: 1, subtotal: 17500, kategori: 'Gula & Pemanis', variasi: '1 kg', catatan: 'Manis alami dari sari tebu pilihan, kristal putih' },
+        ],
+        subtotal: 127500,
+        diskon: 6000,
+        ongkir: 0,
+        total: 121500,
+      };
+    }
     return reply(200, { data: order });
   }
 
