@@ -4,7 +4,57 @@ import { catalogService } from '../services/catalogService';
 import { formatRupiah } from '../utils/format';
 import './CatalogPage.css';
 
+// Import aset gambar lokal sesuai instruksi
+import berasImg from '../assets/Beras.jpg';
+import minyakImg from '../assets/Minyak-Goreng.jpg';
+import gulaImg from '../assets/Gula-Pasir.jpg';
+import telurImg from '../assets/Telur Ayam.jpg';
+import mieImg from '../assets/Mie-Instan.jpg';
+import kopiImg from '../assets/Kopi-Sachet.jpg';
+import bannerImg from '../assets/store-banner.jpg';
+import screenImg from '../assets/screen.png';
+
 const LIMIT = 12;
+
+function getProductImage(product = {}) {
+  const text = ((product.nama || '') + ' ' + (product.kategori || '')).toLowerCase();
+  if (text.includes('beras')) return berasImg;
+  if (text.includes('minyak')) return minyakImg;
+  if (text.includes('gula') || text.includes('manis')) return gulaImg;
+  if (text.includes('telur') || text.includes('lauk')) return telurImg;
+  if (text.includes('mie') || text.includes('indomie') || text.includes('instan')) return mieImg;
+  if (text.includes('kopi') || text.includes('teh')) return kopiImg;
+  if (text.includes('sabun') || text.includes('rumah')) return bannerImg;
+  return berasImg;
+}
+
+function getProductUnit(product = {}) {
+  const text = (product.nama || '').toLowerCase();
+  if (text.includes('beras')) return '/ sak';
+  if (text.includes('minyak')) return '/ pouch';
+  if (text.includes('gula')) return '/ bks';
+  if (text.includes('telur')) return '/ kg';
+  if (text.includes('mie')) return text.includes('dus') ? '/ dus' : '/ bks';
+  if (text.includes('kopi')) return text.includes('renceng') ? '/ renceng' : '/ bks';
+  if (text.includes('teh')) return '/ kotak';
+  if (text.includes('sabun')) return '/ batang';
+  if (text.includes('kecap')) return '/ botol';
+  return '/ item';
+}
+
+function getProductDescription(product = {}) {
+  const text = (product.nama || '').toLowerCase();
+  if (text.includes('beras')) return 'Kualitas super, pulen harum, putih alami';
+  if (text.includes('minyak')) return 'Kemasan pouch higienis, jernih 2x penyaringan';
+  if (text.includes('gula')) return 'Manis murni alami dari tebu pilihan nusantara';
+  if (text.includes('telur')) return 'Kondisi utuh, cangkang tebal, baru masuk kandang';
+  if (text.includes('mie')) return 'Paket hemat lezat gurih, pas dinikmati kapan saja';
+  if (text.includes('kopi')) return '10 sachet kopi bubuk plus gula mantap';
+  if (text.includes('teh')) return 'Aroma wangi melati alami menyegarkan';
+  if (text.includes('sabun')) return 'Bahan pembersih wangi dan higienis';
+  if (text.includes('kecap')) return 'Kedelai hitam mallika kental dan gurih harum';
+  return 'Produk sembako segar dan terpercaya Toko Abah';
+}
 
 function getCategoryIcon(catName = '') {
   const c = String(catName).toLowerCase();
@@ -85,70 +135,6 @@ function getCategoryIcon(catName = '') {
       <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
       <line x1="3" y1="6" x2="21" y2="6" />
       <path d="M16 10a4 4 0 0 1-8 0" />
-    </svg>
-  );
-}
-
-function getProductIcon(nama = '', kategori = '') {
-  const text = (nama + ' ' + kategori).toLowerCase();
-  if (text.includes('beras')) {
-    return (
-      <svg className="katalog-card-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 20h12a2 2 0 0 0 2-2V8l-4-4H8L4 8v10a2 2 0 0 0 2 2z" />
-        <line x1="10" y1="12" x2="14" y2="12" />
-        <line x1="12" y1="10" x2="12" y2="14" />
-      </svg>
-    );
-  }
-  if (text.includes('minyak')) {
-    return (
-      <svg className="katalog-card-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2v4" />
-        <path d="M12 18a6 6 0 0 0 6-6c0-4-6-10-6-10S6 8 6 12a6 6 0 0 0 6 6z" />
-      </svg>
-    );
-  }
-  if (text.includes('gula')) {
-    return (
-      <svg className="katalog-card-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 3v18" />
-        <path d="M3 12h18" />
-      </svg>
-    );
-  }
-  if (text.includes('telur')) {
-    return (
-      <svg className="katalog-card-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <ellipse cx="12" cy="13" rx="7" ry="9" />
-        <path d="M12 7c-2 2-2 5 0 7" />
-      </svg>
-    );
-  }
-  if (text.includes('mie') || text.includes('indomie')) {
-    return (
-      <svg className="katalog-card-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 11V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v5" />
-        <path d="M4 11h16a1 1 0 0 1 1 1c0 5-3.5 8-9 8s-9-3-9-8a1 1 0 0 1 1-1z" />
-      </svg>
-    );
-  }
-  if (text.includes('kopi') || text.includes('teh')) {
-    return (
-      <svg className="katalog-card-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-        <line x1="6" y1="1" x2="6" y2="4" />
-        <line x1="10" y1="1" x2="10" y2="4" />
-        <line x1="14" y1="1" x2="14" y2="4" />
-      </svg>
-    );
-  }
-  return (
-    <svg className="katalog-card-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-      <line x1="12" y1="22.08" x2="12" y2="12" />
     </svg>
   );
 }
@@ -236,8 +222,13 @@ export default function CatalogPage() {
 
   return (
     <div className="katalog-page-container">
-      {/* 1. Hero Feature Banner (Sesuai Stitch) */}
+      {/* 1. Hero Feature Banner (Kotak Hijau dengan Background Gambar screen.png) */}
       <section className="katalog-hero-banner">
+        <div className="katalog-hero-bg-wrapper" aria-hidden="true">
+          <img src={screenImg} alt="Sembako Toko Abah" className="katalog-hero-bg-img" />
+          <div className="katalog-hero-bg-overlay" />
+        </div>
+
         <div className="katalog-hero-blur-1" aria-hidden="true" />
         <div className="katalog-hero-blur-2" aria-hidden="true" />
 
@@ -336,11 +327,8 @@ export default function CatalogPage() {
               <span style={{ fontSize: 11, color: '#9ca3af', textDecoration: 'line-through' }}>Rp 45.000</span>
             </div>
           </div>
-          <div className="katalog-promo-icon-box">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 2v4" />
-              <path d="M12 18a6 6 0 0 0 6-6c0-4-6-10-6-10S6 8 6 12a6 6 0 0 0 6 6z" />
-            </svg>
+          <div className="katalog-promo-img-wrap">
+            <img src={minyakImg} alt="Minyak Goreng" className="katalog-promo-img" />
           </div>
         </div>
 
@@ -355,11 +343,8 @@ export default function CatalogPage() {
               </span>
             </div>
           </div>
-          <div className="katalog-promo-icon-box">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <ellipse cx="12" cy="13" rx="7" ry="9" />
-              <path d="M12 7c-2 2-2 5 0 7" />
-            </svg>
+          <div className="katalog-promo-img-wrap">
+            <img src={telurImg} alt="Telur Ayam" className="katalog-promo-img" />
           </div>
         </div>
 
@@ -374,8 +359,8 @@ export default function CatalogPage() {
               </span>
             </div>
           </div>
-          <div className="katalog-promo-icon-box" style={{ background: '#f0f9ff', borderColor: '#bae6fd', color: '#0284c7' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <div className="katalog-promo-icon-box">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="5.5" cy="17.5" r="3.5" />
               <circle cx="18.5" cy="17.5" r="3.5" />
               <path d="M15 6h4l3 6.5-1.5 1h-2" />
@@ -455,11 +440,17 @@ export default function CatalogPage() {
           <div className="katalog-product-grid">
             {sortedRows.map((p) => {
               const soldOut = p.stok <= 0;
+              const productImg = getProductImage(p);
+
               return (
                 <div key={p.id} className={`katalog-product-card${soldOut ? ' sold-out' : ''}`}>
-                  {/* Gambar / Ikon Placeholder Seragam */}
+                  {/* Gambar Produk dari assets */}
                   <div className="katalog-image-wrapper">
-                    {getProductIcon(p.nama, p.kategori)}
+                    <img
+                      src={productImg}
+                      alt={p.nama}
+                      className={`katalog-product-img${soldOut ? ' grayscale' : ''}`}
+                    />
                     <span className="katalog-badge-cat">{p.kategori}</span>
                     <span className={`katalog-badge-stock ${soldOut ? 'sold-out' : 'available'}`}>
                       <span className="katalog-badge-dot" aria-hidden="true" />
@@ -470,10 +461,11 @@ export default function CatalogPage() {
                   {/* Informasi Produk */}
                   <div className="katalog-card-body">
                     <div className="katalog-card-meta">
-                      <span className="katalog-card-category-sub">{p.kategori}</span>
                       <h3 className="katalog-card-title">{p.nama}</h3>
+                      <p className="katalog-card-desc">{getProductDescription(p)}</p>
                       <div className="katalog-card-price-row">
                         <span className="katalog-card-price">{formatRupiah(p.harga)}</span>
+                        <span className="katalog-card-unit">{getProductUnit(p)}</span>
                       </div>
                     </div>
 
@@ -485,7 +477,7 @@ export default function CatalogPage() {
                     >
                       {soldOut ? (
                         <>
-                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <circle cx="12" cy="12" r="10" />
                             <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
                           </svg>
@@ -493,14 +485,12 @@ export default function CatalogPage() {
                         </>
                       ) : (
                         <>
-                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                            <line x1="3" y1="6" x2="21" y2="6" />
-                            <path d="M16 10a4 4 0 0 1-8 0" />
-                            <line x1="12" y1="14" x2="12" y2="18" />
-                            <line x1="10" y1="16" x2="14" y2="16" />
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <circle cx="9" cy="21" r="1" />
+                            <circle cx="20" cy="21" r="1" />
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                           </svg>
-                          <span>Tambah ke Keranjang</span>
+                          <span>+ Tambah ke Keranjang</span>
                         </>
                       )}
                     </button>

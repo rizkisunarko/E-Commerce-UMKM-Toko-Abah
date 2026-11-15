@@ -15,3 +15,4 @@ export const catalogService = {
   list: (params) => api.get(`/catalog${toQuery(params)}`),
   categories: () => api.get('/categories'),
 };
+

@@ -3,7 +3,7 @@
 .katalog-page-container {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 24px 16px 40px;
+  padding: 24px 16px 48px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -16,33 +16,58 @@
   overflow: hidden;
   background: linear-gradient(135deg, #14532d 0%, #1b6d24 50%, #2e7d32 100%);
   color: #ffffff;
-  padding: 40px 24px;
+  padding: 44px 24px;
   text-align: center;
   box-shadow: 0 10px 25px -5px rgba(21, 128, 61, 0.3);
+}
+
+.katalog-hero-bg-wrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.katalog-hero-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.92;
+}
+
+.katalog-hero-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(15, 60, 30, 0.68) 0%, rgba(22, 101, 52, 0.45) 50%, rgba(20, 83, 45, 0.68) 100%);
 }
 
 .katalog-hero-blur-1 {
   position: absolute;
   top: -80px;
   right: -80px;
-  width: 320px;
-  height: 320px;
+  width: 340px;
+  height: 340px;
   border-radius: 9999px;
   background: rgba(52, 211, 153, 0.22);
   filter: blur(50px);
   pointer-events: none;
+  z-index: 2;
 }
 
 .katalog-hero-blur-2 {
   position: absolute;
   bottom: -60px;
   left: 20%;
-  width: 280px;
-  height: 280px;
+  width: 300px;
+  height: 300px;
   border-radius: 9999px;
   background: rgba(110, 231, 183, 0.18);
   filter: blur(40px);
   pointer-events: none;
+  z-index: 2;
 }
 
 .katalog-hero-content {
@@ -86,14 +111,16 @@
   letter-spacing: -0.02em;
   color: #ffffff;
   margin: 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
 }
 
 .katalog-hero-desc {
   font-size: clamp(14px, 2vw, 16px);
   line-height: 1.6;
-  color: rgba(236, 253, 245, 0.9);
+  color: rgba(236, 253, 245, 0.95);
   max-width: 640px;
   margin: 0;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.65);
 }
 
 .katalog-hero-price-tag {
@@ -163,7 +190,7 @@
 .katalog-category-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 20px;
+  padding: 20px 24px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
@@ -190,7 +217,7 @@
 .katalog-category-strip {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 20px;
   overflow-x: auto;
   padding-bottom: 8px;
   scrollbar-width: thin;
@@ -211,11 +238,11 @@
 }
 
 .katalog-chip-circle {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   border-radius: 9999px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: #edf4ff;
+  border: 1px solid #d9e3f1;
   color: #4b5563;
   display: flex;
   align-items: center;
@@ -224,7 +251,7 @@
 }
 
 .katalog-category-chip:hover .katalog-chip-circle {
-  background: #e5e7eb;
+  background: #e4effd;
   color: #15803d;
   transform: translateY(-2px);
 }
@@ -233,8 +260,8 @@
   background: #15803d;
   color: #ffffff;
   border-color: #15803d;
-  box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.2);
-  transform: scale(1.05);
+  box-shadow: 0 0 0 4px rgba(163, 246, 156, 0.55);
+  transform: scale(1.04);
 }
 
 .katalog-chip-label {
@@ -242,7 +269,7 @@
   font-weight: 500;
   color: #4b5563;
   text-align: center;
-  max-width: 80px;
+  max-width: 84px;
   line-height: 1.25;
   transition: color 0.15s;
 }
@@ -310,10 +337,26 @@
   margin: 0;
 }
 
+.katalog-promo-img-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.katalog-promo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .katalog-promo-icon-box {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 80px;
+  height: 80px;
+  border-radius: 10px;
   background: #f0fdf4;
   color: #15803d;
   display: flex;
@@ -536,7 +579,7 @@
 }
 
 .katalog-product-card.sold-out {
-  opacity: 0.85;
+  opacity: 0.88;
 }
 
 .katalog-image-wrapper {
@@ -550,31 +593,35 @@
   overflow: hidden;
 }
 
-.katalog-card-placeholder-icon {
-  width: 64px;
-  height: 64px;
-  color: #9ca3af;
-  opacity: 0.7;
+.katalog-product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
-.katalog-product-card:hover .katalog-card-placeholder-icon {
-  transform: scale(1.08);
-  transition: transform 0.2s;
-  color: #15803d;
+.katalog-product-card:hover .katalog-product-img {
+  transform: scale(1.05);
+}
+
+.katalog-product-img.grayscale {
+  filter: grayscale(100%) contrast(75%);
+  opacity: 0.8;
 }
 
 .katalog-badge-cat {
   position: absolute;
   top: 10px;
   left: 10px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(4px);
-  color: #4b5563;
+  color: #374151;
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 9999px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .katalog-badge-stock {
@@ -588,18 +635,18 @@
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 9999px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .katalog-badge-stock.available {
-  background: #dcfce7;
-  color: #166534;
+  background: #cbffc2;
+  color: #005312;
 }
 
 .katalog-badge-stock.sold-out {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background: #d9e3f1;
+  color: #707a6c;
+  border: 1px solid #bfcaba;
 }
 
 .katalog-badge-dot {
@@ -609,11 +656,11 @@
 }
 
 .available .katalog-badge-dot {
-  background: #16a34a;
+  background: #0d631b;
 }
 
 .sold-out .katalog-badge-dot {
-  background: #9ca3af;
+  background: #707a6c;
 }
 
 .katalog-card-body {
@@ -638,14 +685,20 @@
   margin: 0;
   line-height: 1.35;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.katalog-card-category-sub {
-  font-size: 12px;
+.katalog-card-desc {
+  font-size: 11.5px;
   color: #6b7280;
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .katalog-card-price-row {
@@ -661,9 +714,15 @@
   color: #15803d;
 }
 
+.katalog-card-unit {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
 .katalog-btn-card {
   width: 100%;
-  height: 42px;
+  height: 44px;
   border-radius: 9px;
   background: #15803d;
   color: #ffffff;
@@ -689,8 +748,8 @@
 
 .katalog-btn-card.disabled,
 .katalog-btn-card:disabled {
-  background: #e5e7eb;
-  color: #9ca3af;
+  background: #dfe9f7;
+  color: #707a6c;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
