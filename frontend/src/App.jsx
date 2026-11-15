@@ -7,6 +7,7 @@ import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
 import StockPage from './pages/StockPage';
 import KasirPage from './pages/KasirPage';
+import RiwayatPage from './pages/RiwayatPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -49,6 +50,16 @@ export default function App() {
 
         {/* PPL-05.2: Halaman kasir dan transaksi (admin dan pegawai) */}
         <Route path="kasir" element={<KasirPage />} />
+
+        {/* PPL-06.2: Halaman riwayat transaksi (hanya admin) */}
+        <Route
+          path="riwayat"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <RiwayatPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

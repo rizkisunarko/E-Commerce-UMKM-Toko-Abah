@@ -26,10 +26,37 @@ const products = [
   { id: 4, nama: 'Telur Ayam 1 kg', kategori: 'Sembako', harga: 28000, berat: 1000, stok: 12, batas_stok_kritis: 15 },
   { id: 5, nama: 'Mie Instan', kategori: 'Mie & Bumbu', harga: 3500, berat: 80, stok: 96, batas_stok_kritis: 10 },
   { id: 6, nama: 'Kopi Sachet', kategori: 'Minuman', harga: 1500, berat: 20, stok: 80, batas_stok_kritis: 10 },
+  { id: 7, nama: 'Sabun Mandi', kategori: 'Kebutuhan Rumah', harga: 3500, berat: 100, stok: 12, batas_stok_kritis: 5 },
+  { id: 8, nama: 'Teh Celup', kategori: 'Minuman', harga: 8000, berat: 100, stok: 15, batas_stok_kritis: 5 },
 ].map((p) => ({ ...p, created_at: now(), updated_at: now() }));
 
-let nextTransactionId = 1;
-const transactions = [];
+// Tanggal (YYYY-MM-DD) menurut WIB (UTC+7), dipakai untuk filter dan rekap harian
+const toWibDate = (iso) => new Date(new Date(iso).getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+
+// Data contoh riwayat transaksi (PPL-06). Tidak mengurangi stok.
+const daysAgo = (d, h, m) => {
+  const t = new Date();
+  t.setDate(t.getDate() - d);
+  t.setHours(h, m, 0, 0);
+  return t.toISOString();
+};
+const makeTransaction = (id, tanggal, metode_bayar, lines, customPrices = {}) => {
+  const items = lines.map(([productId, jumlah]) => {
+    const p = products.find((x) => x.id === productId) || { id: productId, nama: `Produk ${productId}`, harga: 10000 };
+    const price = customPrices[productId] !== undefined ? customPrices[productId] : p.harga;
+    return { product_id: p.id, nama: p.nama, harga: price, jumlah, subtotal: price * jumlah };
+  });
+  return { id, tanggal, metode_bayar, items, total: items.reduce((sum, i) => sum + i.subtotal, 0) };
+};
+const transactions = [
+  makeTransaction(1, daysAgo(0, 8, 15), 'tunai', [[1, 1], [2, 2]], { 1: 68000, 2: 18000 }),
+  makeTransaction(2, daysAgo(0, 9, 40), 'qris', [[5, 5], [6, 4]], { 5: 3500, 6: 1500 }),
+  makeTransaction(3, daysAgo(0, 13, 5), 'tunai', [[3, 2], [4, 1]], { 3: 17000, 4: 30000 }),
+  makeTransaction(4, daysAgo(1, 10, 20), 'qris', [[1, 2]], { 1: 68000 }),
+  makeTransaction(5, daysAgo(1, 16, 45), 'tunai', [[7, 3], [8, 2]], { 7: 3500, 8: 8000 }),
+  makeTransaction(6, daysAgo(3, 11, 10), 'tunai', [[2, 1], [5, 10]], { 2: 18000, 5: 3500 }),
+];
+let nextTransactionId = transactions.length + 1;
 
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
@@ -175,6 +202,52 @@ export async function mockRequest(method, fullPath, body = {}, token) {
     product.stok = stok;
     product.updated_at = now();
     return reply(200, { data: withStatus(product) });
+  }
+
+  // Riwayat transaksi (PPL-06): hanya admin. Urutan rute: rekap harus sebelum :id
+  if (method === 'GET' && path === '/transactions/rekap') {
+    if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
+    const tanggal = query.tanggal || toWibDate(now());
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
+      return reply(422, { message: 'Data tidak valid', errors: { tanggal: 'Masukkan tanggal yang valid' } });
+    }
+    const day = transactions.filter((t) => toWibDate(t.tanggal) === tanggal);
+    const sum = (metode) => day.filter((t) => t.metode_bayar === metode).reduce((acc, t) => acc + t.total, 0);
+    const tunai = sum('tunai');
+    const qris = sum('qris');
+    return reply(200, { data: { tanggal, tunai, qris, total: tunai + qris, jumlah_transaksi: day.length } });
+  }
+
+  if (method === 'GET' && path === '/transactions') {
+    if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
+    const errors = {};
+    const validDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+    if (query.dari && !validDate(query.dari)) errors.dari = 'Masukkan tanggal yang valid';
+    if (query.sampai && !validDate(query.sampai)) errors.sampai = 'Masukkan tanggal yang valid';
+    if (!errors.dari && !errors.sampai && query.dari && query.sampai && query.dari > query.sampai) {
+      errors.sampai = 'Tanggal akhir tidak boleh sebelum tanggal awal';
+    }
+    if (Object.keys(errors).length) return reply(422, { message: 'Data tidak valid', errors });
+
+    const rows = transactions
+      .filter((t) => (!query.dari || toWibDate(t.tanggal) >= query.dari) && (!query.sampai || toWibDate(t.tanggal) <= query.sampai))
+      .sort((a, b) => (a.tanggal < b.tanggal ? 1 : -1))
+      .map((t) => ({
+        id: t.id,
+        tanggal: t.tanggal,
+        metode_bayar: t.metode_bayar,
+        total: t.total,
+        jumlah_item: t.items.reduce((acc, i) => acc + i.jumlah, 0),
+      }));
+    return reply(200, { data: rows });
+  }
+
+  const trxMatch = path.match(/^\/transactions\/(\d+)$/);
+  if (method === 'GET' && trxMatch) {
+    if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
+    const found = transactions.find((t) => t.id === Number(trxMatch[1]));
+    if (!found) return reply(404, { message: 'Transaksi tidak ditemukan' });
+    return reply(200, { data: found });
   }
 
   // Kasir (PPL-05): simpan transaksi dan kurangi stok. Admin dan pegawai boleh.
