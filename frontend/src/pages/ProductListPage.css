@@ -365,6 +365,140 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-advanced-filter:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-advanced-filter.is-open {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.btn-advanced-filter.has-filter {
+  border-color: #059669;
+  font-weight: 600;
+  color: #047857;
+}
+
+/* Panel Filter & Pengurutan Lanjutan */
+.advanced-filter-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  animation: filterPanelSlide 0.2s ease-in-out;
+}
+
+@keyframes filterPanelSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.advanced-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 10px;
+}
+
+.advanced-filter-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.advanced-filter-title svg {
+  color: #059669;
+}
+
+.btn-reset-adv-filter {
+  background: none;
+  border: none;
+  color: #059669;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.btn-reset-adv-filter:hover {
+  background: #e6f4ea;
+  text-decoration: underline;
+}
+
+.advanced-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+.advanced-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.advanced-filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.advanced-filter-select,
+.advanced-filter-input {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  font-size: 13px;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.advanced-filter-select:focus,
+.advanced-filter-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+.price-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-range-inputs input {
+  flex: 1;
+  min-width: 0;
+}
+
+.price-range-sep {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* Tabel Produk */
