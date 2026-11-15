@@ -411,6 +411,18 @@ export async function mockRequest(method, fullPath, body = {}, token) {
 
     if (Object.keys(errors).length) return reply(422, { message: 'Data tidak valid', errors });
 
+    const total = lines.reduce((sum, { product, jumlah }) => sum + product.harga * jumlah, 0);
+    const received = body.metode_bayar === 'tunai' ? Number(body.jumlah_diterima) : total;
+    if (body.metode_bayar === 'tunai' &&
+        (!Number.isSafeInteger(received) || received < total)) {
+      return reply(422, {
+        message: 'Data tidak valid',
+        errors: {
+          jumlah_diterima: 'Uang diterima harus berupa angka bulat dan minimal sebesar total tagihan',
+        },
+      });
+    }
+
     const detail = lines.map(({ product, jumlah }) => {
       product.stok -= jumlah;
       product.updated_at = now();
@@ -427,7 +439,9 @@ export async function mockRequest(method, fullPath, body = {}, token) {
       tanggal: now(),
       metode_bayar: body.metode_bayar,
       items: detail,
-      total: detail.reduce((sum, d) => sum + d.subtotal, 0),
+      total,
+      jumlah_diterima: received,
+      kembalian: body.metode_bayar === 'tunai' ? received - total : 0,
     };
     transactions.push(transaction);
     return reply(201, { data: transaction });

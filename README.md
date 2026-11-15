@@ -82,6 +82,10 @@ Kata sandi di database tersimpan sebagai hash bcrypt.
 
 - `POST /api/auth/login` menerima `{ "username": "...", "password": "..." }` dan mengembalikan token Bearer serta data pengguna.
 - `GET /api/auth/me` memerlukan `Authorization: Bearer <token>` dan mengembalikan sesi pengguna yang masih aktif.
+- `POST /api/transactions` menerima metode `tunai`, `qris`, atau `debit` beserta `items: [{ "product_id": 1, "jumlah": 2 }]`. Untuk tunai, sertakan `jumlah_diterima` sebagai nominal uang bulat. Admin dan pegawai dapat membuat transaksi; server menghitung total dari harga database, mengunci dan mengurangi stok, serta menyimpan detail, riwayat stok, pembayaran, dan kembalian dalam satu transaksi database.
+- `GET /api/transactions?dari=YYYY-MM-DD&sampai=YYYY-MM-DD`, `GET /api/transactions/:id`, dan `GET /api/transactions/rekap?tanggal=YYYY-MM-DD` menyediakan daftar, detail, dan rekap transaksi kasir untuk admin. Rekap mengembalikan total terpisah untuk tunai, QRIS, dan debit.
+- Pembayaran tunai meminta jumlah uang diterima; server menolak nominal yang kurang dari total dan mengembalikan serta menyimpan nilai kembalian. Untuk QRIS, kasir mengonfirmasi secara manual setelah pembayaran diterima pada aplikasi merchant; aplikasi tidak membuat QR atau memverifikasi payment gateway.
+- Untuk database lama, jalankan sekali `backend/database/migrations/20261115_add_debit_payment_method.sql` untuk menambahkan metode debit dan kolom uang diterima/kembalian. Database baru memperoleh skema tersebut dari dump SQL.
 - `PATCH /api/transactions/:id/status` menerima `{ "status": "diproses" }`. Admin dapat mengatur status transaksi yang valid; pegawai hanya dapat mengatur `diproses`, `siap_diambil`, atau `siap_dikirim`. Status `batal` hanya dapat diatur admin.
 - Password pada tabel `admin` dan `pegawai` harus disimpan sebagai hash bcrypt. Akun pegawai dengan status selain `aktif` tidak dapat login dan tokennya tidak dapat dipakai.
 

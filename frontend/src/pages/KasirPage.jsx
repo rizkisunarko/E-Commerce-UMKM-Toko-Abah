@@ -113,6 +113,10 @@ export default function KasirPage() {
   const [serverErrors, setServerErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [cashReceived, setCashReceived] = useState('');
+  const [qrisConfirmed, setQrisConfirmed] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
 
   const showToast = (msg) => {
@@ -125,6 +129,17 @@ export default function KasirPage() {
   // Keyboard shortcut: F2 (Cari), F3 (Katalog), F7 (Cash), F8 (QRIS), F9 (Bayar/Cetak), Space (Transaksi Baru), Esc (Batal)
   useEffect(() => {
     function handleKeyDown(e) {
+      if (paymentOpen) {
+        if (e.key === 'Escape') {
+          setPaymentOpen(false);
+          setPaymentError('');
+        } else if (e.key === 'F9' && !submitting) {
+          e.preventDefault();
+          confirmPayment();
+        }
+        return;
+      }
+
       if (e.key === 'F2') {
         e.preventDefault();
         if (searchInputRef.current) {
@@ -166,7 +181,7 @@ export default function KasirPage() {
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [receipt, search, submitting, cart, metode]);
+  }, [receipt, search, submitting, cart, metode, paymentOpen]);
 
   // Load produk dari API / mock
   useEffect(() => {
@@ -249,6 +264,9 @@ export default function KasirPage() {
       setCart([]);
       setMetode('');
       setMetodeError('');
+      setCashReceived('');
+      setQrisConfirmed(false);
+      setPaymentError('');
       setServerErrors({});
       showToast('Keranjang telah direset');
     }
@@ -268,29 +286,56 @@ export default function KasirPage() {
 
   async function handleSubmit() {
     setServerErrors({});
+    setPaymentError('');
     if (!metode) {
       setMetodeError(METHOD_REQUIRED);
       return;
     }
     if (cart.length === 0 || hasItemError) return;
 
+    setCashReceived('');
+    setQrisConfirmed(false);
+    setPaymentOpen(true);
+  }
+
+  async function confirmPayment() {
+    setPaymentError('');
+    const received = metode === 'tunai' ? Number(cashReceived) : total;
+    if (metode === 'tunai' && (!Number.isSafeInteger(received) || received < total)) {
+      setPaymentError('Uang diterima harus berupa angka bulat dan minimal sebesar total tagihan');
+      return;
+    }
+    if (metode === 'qris' && !qrisConfirmed) {
+      setPaymentError('Konfirmasi pembayaran QRIS setelah pembayaran diterima');
+      return;
+    }
+    if (cart.length === 0 || hasItemError) {
+      setPaymentError('Periksa kembali produk dan stok sebelum melanjutkan');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await transactionService.create({
         metode_bayar: metode,
+        ...(metode === 'tunai' ? { jumlah_diterima: received } : {}),
         items: cart.map((it) => ({ product_id: it.product.id, jumlah: Number(it.jumlah) })),
       });
       setReceipt(res.data);
       setCart([]);
       setMetodeError('');
+      setPaymentOpen(false);
+      setCashReceived('');
+      setQrisConfirmed(false);
       setReload((x) => x + 1);
     } catch (err) {
       if (err.status === 422) {
         setServerErrors(err.errors || {});
         if (err.errors?.metode_bayar) setMetodeError(err.errors.metode_bayar);
+        if (err.errors?.jumlah_diterima) setPaymentError(err.errors.jumlah_diterima);
         setReload((x) => x + 1);
       } else {
-        setError(err.message || 'Gagal menyelesaikan transaksi');
+        setPaymentError(err.message || 'Gagal menyelesaikan transaksi');
       }
     } finally {
       setSubmitting(false);
@@ -302,6 +347,10 @@ export default function KasirPage() {
     setServerErrors({});
     setMetode('');
     setMetodeError('');
+    setCashReceived('');
+    setQrisConfirmed(false);
+    setPaymentOpen(false);
+    setPaymentError('');
     setCart([]);
   }
 
@@ -655,14 +704,12 @@ export default function KasirPage() {
                   <div className="receipt-cash-calc-box">
                     <div className="cash-calc-line">
                       <span className="calc-lbl">Uang Diterima:</span>
-                      <span className="calc-val-dark">
-                        {receipt.metode_bayar === 'qris' ? formatRupiah(receipt.total) : formatRupiah(Math.ceil(receipt.total / 50000) * 50000 || 150000)}
-                      </span>
+                      <span className="calc-val-dark">{formatRupiah(receipt.jumlah_diterima ?? receipt.total)}</span>
                     </div>
                     <div className="cash-calc-line kembalian">
                       <span className="calc-lbl">Kembalian Konsumen:</span>
                       <span className="calc-val-kembalian">
-                        {receipt.metode_bayar === 'qris' ? 'Rp 0' : formatRupiah((Math.ceil(receipt.total / 50000) * 50000 || 150000) - receipt.total)}
+                        {formatRupiah(receipt.kembalian ?? 0)}
                       </span>
                     </div>
                   </div>
@@ -997,7 +1044,7 @@ export default function KasirPage() {
                                 <span className="payment-error-opt-name">E-Wallet &amp; QRIS</span>
                                 <span className="kbd-shortcut-badge">F8</span>
                               </div>
-                              <span className="payment-error-opt-desc">Generate QR code and pay using e-money</span>
+                              <span className="payment-error-opt-desc">Bayar dengan QRIS resmi toko</span>
                               <div className="payment-error-pill-badges">
                                 <span className="pay-brand-pill">QRIS</span>
                                 <span className="pay-brand-pill">GoPay</span>
@@ -1043,7 +1090,7 @@ export default function KasirPage() {
                             </div>
                             <div className="payment-radio-text">
                               <span className="payment-radio-name">QRIS (Pembayaran Non-Tunai / E-Money)</span>
-                              <span className="payment-radio-desc">Scan kode QRIS instan dari semua bank &amp; e-wallet</span>
+                              <span className="payment-radio-desc">Bayar dengan QRIS resmi toko dari bank atau e-wallet</span>
                             </div>
                           </div>
 
@@ -1055,10 +1102,10 @@ export default function KasirPage() {
                               <div className="qris-inner-text-col">
                                 <div className="qris-inner-title-row">
                                   <span className="qris-inner-main-title">Standar QRIS Nasional</span>
-                                  <span className="qris-otomatis-pill">Otomatis</span>
+                                  <span className="qris-otomatis-pill">Konfirmasi kasir</span>
                                 </div>
                                 <span className="qris-inner-sub-text">
-                                  Mendukung BCA, Mandiri, BRI, GoPay, OVO, ShopeePay, DANA, LinkAja, dll
+                                  Pembayaran diverifikasi manual oleh kasir setelah diterima di aplikasi merchant.
                                 </span>
                               </div>
                             </div>
@@ -1134,7 +1181,7 @@ export default function KasirPage() {
                               <rect x="14" y="18" width="3" height="3" />
                               <rect x="18" y="18" width="3" height="3" />
                             </svg>
-                            <span>Buat Kode QRIS [F9]</span>
+                            <span>Konfirmasi Pembayaran QRIS [F9]</span>
                           </>
                         ) : (
                           <>
@@ -1182,6 +1229,95 @@ export default function KasirPage() {
           </aside>
         </div>
       </div>
+      {paymentOpen && (
+        <div className="kasir-payment-modal-backdrop">
+          <section
+            className="kasir-payment-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="kasir-payment-title"
+          >
+            <h2 id="kasir-payment-title">
+              {metode === 'qris' ? 'Konfirmasi Pembayaran QRIS' : 'Pembayaran Tunai'}
+            </h2>
+            <div className="kasir-payment-modal-total">
+              <span>Total tagihan</span>
+              <strong>{formatRupiah(total)}</strong>
+            </div>
+
+            {metode === 'tunai' ? (
+              <>
+                <label className="kasir-payment-field-label" htmlFor="cash-received">
+                  Uang diterima
+                </label>
+                <input
+                  id="cash-received"
+                  className="kasir-payment-cash-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  autoFocus
+                  value={cashReceived}
+                  onChange={(event) => {
+                    setCashReceived(event.target.value);
+                    setPaymentError('');
+                  }}
+                  placeholder="Masukkan nominal uang"
+                  aria-invalid={Boolean(paymentError)}
+                />
+                <div className="kasir-payment-change">
+                  <span>Kembalian</span>
+                  <strong>
+                    {Number.isSafeInteger(Number(cashReceived)) && Number(cashReceived) >= total
+                      ? formatRupiah(Number(cashReceived) - total)
+                      : formatRupiah(0)}
+                  </strong>
+                </div>
+              </>
+            ) : (
+              <div className="kasir-qris-confirmation">
+                <p>Minta pelanggan membayar menggunakan QRIS resmi toko. QR tidak dibuat oleh aplikasi ini.</p>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={qrisConfirmed}
+                    onChange={(event) => {
+                      setQrisConfirmed(event.target.checked);
+                      setPaymentError('');
+                    }}
+                  />
+                  <span>Saya sudah memastikan pembayaran diterima di aplikasi merchant.</span>
+                </label>
+              </div>
+            )}
+
+            {paymentError && <p className="kasir-payment-error" role="alert">{paymentError}</p>}
+
+            <div className="kasir-payment-modal-actions">
+              <button
+                type="button"
+                className="kasir-payment-cancel"
+                onClick={() => {
+                  setPaymentOpen(false);
+                  setPaymentError('');
+                }}
+                disabled={submitting}
+              >
+                Batalkan Pembayaran
+              </button>
+              <button
+                type="button"
+                className="kasir-payment-confirm"
+                onClick={confirmPayment}
+                disabled={submitting}
+              >
+                {submitting ? 'Memproses...' : 'Konfirmasi & Selesaikan'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
