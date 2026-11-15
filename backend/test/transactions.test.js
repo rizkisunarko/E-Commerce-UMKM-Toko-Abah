@@ -109,7 +109,21 @@ async function createFixture(t) {
         }), []];
     }
     if (sql.includes('SELECT t.id_transaksi AS id')) {
-      return [state.transactions.map((transaction) => {
+      const filters = [];
+      if (sql.includes('t.tanggal_transaksi >= ?')) filters.push(params[0].slice(0, 10));
+      if (sql.includes('t.tanggal_transaksi < ?')) {
+        filters.push(params[params.length - 1].slice(0, 10));
+      }
+      const start = filters[0];
+      const endExclusive = filters.length > 1 ? filters[1] : null;
+      const transactions = state.transactions.filter((transaction) => {
+        const date = transaction.tanggal_transaksi.toISOString().slice(0, 10);
+        return (!start || date >= start) && (!endExclusive || date < endExclusive);
+      }).sort((a, b) => (
+        b.tanggal_transaksi - a.tanggal_transaksi ||
+        b.id_transaksi - a.id_transaksi
+      ));
+      return [transactions.map((transaction) => {
         const payment = state.payments.find((item) => item.id_transaksi === transaction.id_transaksi);
         const items = state.details.filter((item) => item.id_transaksi === transaction.id_transaksi);
         return {
@@ -121,20 +135,29 @@ async function createFixture(t) {
         };
       }), []];
     }
-    if (sql.includes('COUNT(DISTINCT t.id_transaksi)')) {
-      const paid = state.transactions.map((transaction) => ({
-        transaction,
-        payment: state.payments.find((item) => item.id_transaksi === transaction.id_transaksi),
-      }));
-      const sumMethod = (method) => paid
-        .filter(({ payment }) => payment && payment.metode_pembayaran === method)
+    if (sql.includes('AS jumlah_transaksi_tunai')) {
+      const date = params[0].slice(0, 10);
+      const paid = state.transactions
+        .filter((transaction) => transaction.tanggal_transaksi.toISOString().slice(0, 10) === date)
+        .map((transaction) => ({
+          transaction,
+          payment: state.payments.find((item) => item.id_transaksi === transaction.id_transaksi),
+        }))
+        .filter(({ payment }) => payment);
+      const sumMethod = (methods) => paid
+        .filter(({ payment }) => methods.includes(payment.metode_pembayaran))
         .reduce((sum, { payment }) => sum + Number(payment.jumlah_bayar), 0);
+      const countMethod = (methods) => paid
+        .filter(({ payment }) => methods.includes(payment.metode_pembayaran)).length;
       return [[{
-        tunai: sumMethod('tunai'),
-        qris: sumMethod('QRIS'),
-        debit: sumMethod('debit'),
-        total: paid.reduce((sum, { payment }) => sum + Number(payment?.jumlah_bayar || 0), 0),
+        tunai: sumMethod(['tunai']),
+        qris: sumMethod(['QRIS']),
+        debit: sumMethod(['debit', 'payment_gateway']),
+        total: paid.reduce((sum, { payment }) => sum + Number(payment.jumlah_bayar), 0),
         jumlah_transaksi: paid.length,
+        jumlah_transaksi_tunai: countMethod(['tunai']),
+        jumlah_transaksi_qris: countMethod(['QRIS']),
+        jumlah_transaksi_debit: countMethod(['debit', 'payment_gateway']),
       }], []];
     }
     throw new Error(`Query test tidak dikenal: ${sql}`);
@@ -279,29 +302,65 @@ test('transaksi gagal tanpa mengubah stok saat jumlah melebihi stok tersedia', a
   assert.equal(state.payments.length, 0);
 });
 
-test('riwayat admin menerima daftar, detail, dan rekap transaksi dengan metode konsisten', async (t) => {
-  const { baseUrl, tokenFor } = await createFixture(t);
+test('riwayat admin memfilter tanggal, memberi detail, dan merekap tiap metode bayar', async (t) => {
+  const { baseUrl, tokenFor, state } = await createFixture(t);
   const adminToken = tokenFor({ id: 1, nama: 'Admin Toko', role: 'admin' });
   const headers = { Authorization: `Bearer ${adminToken}` };
-  const created = await fetch(`${baseUrl}/transactions`, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      metode_bayar: 'qris',
-      items: [{ product_id: 20, jumlah: 1 }],
-    }),
-  });
-  assert.equal(created.status, 201);
-  const { data: createdData } = await created.json();
+  const createTransaction = async (method) => {
+    const response = await fetch(`${baseUrl}/transactions`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        metode_bayar: method,
+        ...(method === 'tunai' ? { jumlah_diterima: 70000 } : {}),
+        items: [{ product_id: 20, jumlah: 1 }],
+      }),
+    });
+    assert.equal(response.status, 201);
+    return (await response.json()).data;
+  };
+  const qrisTransaction = await createTransaction('qris');
+  await createTransaction('tunai');
+  await createTransaction('debit');
+  state.payments.find((payment) => payment.metode_pembayaran === 'debit')
+    .metode_pembayaran = 'payment_gateway';
+  const today = new Date().toISOString().slice(0, 10);
 
   const listResponse = await fetch(`${baseUrl}/transactions`, { headers });
   const list = await listResponse.json();
   assert.equal(listResponse.status, 200);
-  assert.equal(list.data[0].metode_bayar, 'qris');
+  assert.equal(list.data.length, 3);
+  assert.equal(list.data[0].metode_bayar, 'debit');
   assert.equal(list.data[0].total, 68000);
   assert.equal(list.data[0].jumlah_item, 1);
 
-  const detailResponse = await fetch(`${baseUrl}/transactions/${createdData.id}`, { headers });
+  const dateFilteredResponse = await fetch(
+    `${baseUrl}/transactions?dari=${today}&sampai=${today}`,
+    { headers },
+  );
+  assert.equal(dateFilteredResponse.status, 200);
+  assert.equal((await dateFilteredResponse.json()).data.length, 3);
+
+  const outOfRangeDate = new Date(`${today}T00:00:00.000Z`);
+  outOfRangeDate.setUTCDate(outOfRangeDate.getUTCDate() - 1);
+  const emptyRangeResponse = await fetch(
+    `${baseUrl}/transactions?dari=${outOfRangeDate.toISOString().slice(0, 10)}&sampai=${outOfRangeDate.toISOString().slice(0, 10)}`,
+    { headers },
+  );
+  assert.equal(emptyRangeResponse.status, 200);
+  assert.equal((await emptyRangeResponse.json()).data.length, 0);
+
+  const invalidRangeResponse = await fetch(
+    `${baseUrl}/transactions?dari=2026-11-16&sampai=2026-11-15`,
+    { headers },
+  );
+  assert.equal(invalidRangeResponse.status, 422);
+  assert.equal((await invalidRangeResponse.json()).errors.sampai, 'Tanggal akhir tidak boleh sebelum tanggal awal');
+
+  const invalidDateResponse = await fetch(`${baseUrl}/transactions?dari=2026-02-30`, { headers });
+  assert.equal(invalidDateResponse.status, 422);
+
+  const detailResponse = await fetch(`${baseUrl}/transactions/${qrisTransaction.id}`, { headers });
   const detail = await detailResponse.json();
   assert.equal(detailResponse.status, 200);
   assert.equal(detail.data.metode_bayar, 'qris');
@@ -309,10 +368,37 @@ test('riwayat admin menerima daftar, detail, dan rekap transaksi dengan metode k
   assert.equal(detail.data.kembalian, 0);
   assert.equal(detail.data.items[0].nama, 'Beras 5 kg');
 
-  const rekapResponse = await fetch(`${baseUrl}/transactions/rekap?tanggal=2026-11-15`, { headers });
+  const missingDetail = await fetch(`${baseUrl}/transactions/999`, { headers });
+  assert.equal(missingDetail.status, 404);
+  const invalidDetail = await fetch(`${baseUrl}/transactions/0`, { headers });
+  assert.equal(invalidDetail.status, 400);
+
+  const rekapResponse = await fetch(`${baseUrl}/transactions/rekap?tanggal=${today}`, { headers });
   const rekap = await rekapResponse.json();
   assert.equal(rekapResponse.status, 200);
   assert.equal(rekap.data.qris, 68000);
-  assert.equal(rekap.data.total, 68000);
-  assert.equal(rekap.data.jumlah_transaksi, 1);
+  assert.equal(rekap.data.tunai, 68000);
+  assert.equal(rekap.data.debit, 68000);
+  assert.equal(rekap.data.total, 204000);
+  assert.equal(rekap.data.jumlah_transaksi, 3);
+  assert.equal(rekap.data.jumlah_transaksi_tunai, 1);
+  assert.equal(rekap.data.jumlah_transaksi_qris, 1);
+  assert.equal(rekap.data.jumlah_transaksi_debit, 1);
+
+  const invalidRecap = await fetch(`${baseUrl}/transactions/rekap?tanggal=2026-02-30`, { headers });
+  assert.equal(invalidRecap.status, 422);
+
+  const employeeToken = tokenFor({ id: 2, nama: 'Pegawai Toko', role: 'pegawai' });
+  assert.equal((await fetch(`${baseUrl}/transactions`, {
+    headers: { Authorization: `Bearer ${employeeToken}` },
+  })).status, 403);
+  assert.equal((await fetch(`${baseUrl}/transactions/${qrisTransaction.id}`, {
+    headers: { Authorization: `Bearer ${employeeToken}` },
+  })).status, 403);
+  assert.equal((await fetch(`${baseUrl}/transactions/rekap?tanggal=${today}`, {
+    headers: { Authorization: `Bearer ${employeeToken}` },
+  })).status, 403);
+  assert.equal((await fetch(`${baseUrl}/transactions`)).status, 401);
+
+  assert.equal(state.transactions.length, 3);
 });

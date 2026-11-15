@@ -19,6 +19,12 @@ function isValidDate(value) {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+function nextDate(value) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 function normalizePaymentMethod(method) {
   if (method === 'QRIS') return 'qris';
   if (method === 'payment_gateway') return 'debit';
@@ -257,16 +263,29 @@ function createTransactionsRoutes(db, jwtSecret) {
     try {
       const [rows] = await db.query(
         `SELECT
-           COALESCE(SUM(CASE WHEN p.metode_pembayaran = 'tunai' THEN p.jumlah_bayar ELSE 0 END), 0) AS tunai,
-           COALESCE(SUM(CASE WHEN p.metode_pembayaran = 'QRIS' THEN p.jumlah_bayar ELSE 0 END), 0) AS qris,
-           COALESCE(SUM(CASE WHEN p.metode_pembayaran = 'debit' THEN p.jumlah_bayar ELSE 0 END), 0) AS debit,
-           COALESCE(SUM(p.jumlah_bayar), 0) AS total,
-           COUNT(DISTINCT t.id_transaksi) AS jumlah_transaksi
+           COALESCE(SUM(p.tunai), 0) AS tunai,
+           COALESCE(SUM(p.qris), 0) AS qris,
+           COALESCE(SUM(p.debit), 0) AS debit,
+           COALESCE(SUM(p.total), 0) AS total,
+           COUNT(p.id_transaksi) AS jumlah_transaksi,
+           COALESCE(SUM(p.tunai > 0), 0) AS jumlah_transaksi_tunai,
+           COALESCE(SUM(p.qris > 0), 0) AS jumlah_transaksi_qris,
+           COALESCE(SUM(p.debit > 0), 0) AS jumlah_transaksi_debit
          FROM transaksi t
-         LEFT JOIN pembayaran p
-           ON p.id_transaksi = t.id_transaksi AND p.status_pembayaran = 'berhasil'
-         WHERE t.jenis_transaksi = 'kasir' AND DATE(t.tanggal_transaksi) = ?`,
-        [tanggal],
+         JOIN (
+           SELECT id_transaksi,
+                  SUM(CASE WHEN metode_pembayaran = 'tunai' THEN jumlah_bayar ELSE 0 END) AS tunai,
+                  SUM(CASE WHEN metode_pembayaran = 'QRIS' THEN jumlah_bayar ELSE 0 END) AS qris,
+                  SUM(CASE WHEN metode_pembayaran IN ('debit', 'payment_gateway')
+                           THEN jumlah_bayar ELSE 0 END) AS debit,
+                  SUM(jumlah_bayar) AS total
+           FROM pembayaran
+           WHERE status_pembayaran = 'berhasil'
+           GROUP BY id_transaksi
+         ) p ON p.id_transaksi = t.id_transaksi
+         WHERE t.jenis_transaksi = 'kasir'
+           AND t.tanggal_transaksi >= ? AND t.tanggal_transaksi < ?`,
+        [`${tanggal} 00:00:00`, `${nextDate(tanggal)} 00:00:00`],
       );
       const row = rows[0];
       return res.json({
@@ -277,6 +296,9 @@ function createTransactionsRoutes(db, jwtSecret) {
           debit: Number(row.debit),
           total: Number(row.total),
           jumlah_transaksi: Number(row.jumlah_transaksi),
+          jumlah_transaksi_tunai: Number(row.jumlah_transaksi_tunai),
+          jumlah_transaksi_qris: Number(row.jumlah_transaksi_qris),
+          jumlah_transaksi_debit: Number(row.jumlah_transaksi_debit),
         },
       });
     } catch (error) {
@@ -299,25 +321,29 @@ function createTransactionsRoutes(db, jwtSecret) {
     const conditions = ["t.jenis_transaksi = 'kasir'"];
     const params = [];
     if (dari) {
-      conditions.push('DATE(t.tanggal_transaksi) >= ?');
-      params.push(dari);
+      conditions.push('t.tanggal_transaksi >= ?');
+      params.push(`${dari} 00:00:00`);
     }
     if (sampai) {
-      conditions.push('DATE(t.tanggal_transaksi) <= ?');
-      params.push(sampai);
+      conditions.push('t.tanggal_transaksi < ?');
+      params.push(`${nextDate(sampai)} 00:00:00`);
     }
 
     try {
       const [rows] = await db.query(
         `SELECT t.id_transaksi AS id, t.tanggal_transaksi AS tanggal,
-                p.metode_pembayaran AS metode_bayar, t.total_bayar AS total,
+                p.metode_bayar, t.total_bayar AS total,
                 COALESCE((
                   SELECT SUM(dt.jumlah) FROM detail_transaksi dt
                   WHERE dt.id_transaksi = t.id_transaksi
                 ), 0) AS jumlah_item
          FROM transaksi t
-         LEFT JOIN pembayaran p
-           ON p.id_transaksi = t.id_transaksi AND p.status_pembayaran = 'berhasil'
+         LEFT JOIN (
+           SELECT id_transaksi, MAX(metode_pembayaran) AS metode_bayar
+           FROM pembayaran
+           WHERE status_pembayaran = 'berhasil'
+           GROUP BY id_transaksi
+         ) p ON p.id_transaksi = t.id_transaksi
          WHERE ${conditions.join(' AND ')}
          ORDER BY t.tanggal_transaksi DESC, t.id_transaksi DESC`,
         params,
@@ -344,11 +370,17 @@ function createTransactionsRoutes(db, jwtSecret) {
     try {
       const [transactions] = await db.query(
         `SELECT t.id_transaksi AS id, t.tanggal_transaksi AS tanggal,
-                p.metode_pembayaran AS metode_bayar, t.total_bayar AS total,
+                p.metode_bayar, t.total_bayar AS total,
                 p.jumlah_diterima, p.kembalian
          FROM transaksi t
-         LEFT JOIN pembayaran p
-           ON p.id_transaksi = t.id_transaksi AND p.status_pembayaran = 'berhasil'
+         LEFT JOIN (
+           SELECT id_transaksi, MAX(metode_pembayaran) AS metode_bayar,
+                  MAX(jumlah_diterima) AS jumlah_diterima,
+                  MAX(kembalian) AS kembalian
+           FROM pembayaran
+           WHERE status_pembayaran = 'berhasil'
+           GROUP BY id_transaksi
+         ) p ON p.id_transaksi = t.id_transaksi
          WHERE t.id_transaksi = ? AND t.jenis_transaksi = 'kasir'`,
         [id],
       );

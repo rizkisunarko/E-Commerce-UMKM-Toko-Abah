@@ -32,6 +32,11 @@ const products = [
 
 // Tanggal (YYYY-MM-DD) menurut WIB (UTC+7), dipakai untuk filter dan rekap harian
 const toWibDate = (iso) => new Date(new Date(iso).getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+const isValidDate = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
 
 // Data contoh riwayat transaksi (PPL-06). Tidak mengurangi stok.
 const daysAgo = (d, h, m) => {
@@ -208,22 +213,35 @@ export async function mockRequest(method, fullPath, body = {}, token) {
   if (method === 'GET' && path === '/transactions/rekap') {
     if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
     const tanggal = query.tanggal || toWibDate(now());
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
+    if (!isValidDate(tanggal)) {
       return reply(422, { message: 'Data tidak valid', errors: { tanggal: 'Masukkan tanggal yang valid' } });
     }
     const day = transactions.filter((t) => toWibDate(t.tanggal) === tanggal);
     const sum = (metode) => day.filter((t) => t.metode_bayar === metode).reduce((acc, t) => acc + t.total, 0);
+    const count = (metode) => day.filter((t) => t.metode_bayar === metode).length;
     const tunai = sum('tunai');
     const qris = sum('qris');
-    return reply(200, { data: { tanggal, tunai, qris, total: tunai + qris, jumlah_transaksi: day.length } });
+    const debit = sum('debit');
+    return reply(200, {
+      data: {
+        tanggal,
+        tunai,
+        qris,
+        debit,
+        total: tunai + qris + debit,
+        jumlah_transaksi: day.length,
+        jumlah_transaksi_tunai: count('tunai'),
+        jumlah_transaksi_qris: count('qris'),
+        jumlah_transaksi_debit: count('debit'),
+      },
+    });
   }
 
   if (method === 'GET' && path === '/transactions') {
     if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
     const errors = {};
-    const validDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
-    if (query.dari && !validDate(query.dari)) errors.dari = 'Masukkan tanggal yang valid';
-    if (query.sampai && !validDate(query.sampai)) errors.sampai = 'Masukkan tanggal yang valid';
+    if (query.dari !== undefined && !isValidDate(query.dari)) errors.dari = 'Masukkan tanggal yang valid';
+    if (query.sampai !== undefined && !isValidDate(query.sampai)) errors.sampai = 'Masukkan tanggal yang valid';
     if (!errors.dari && !errors.sampai && query.dari && query.sampai && query.dari > query.sampai) {
       errors.sampai = 'Tanggal akhir tidak boleh sebelum tanggal awal';
     }
