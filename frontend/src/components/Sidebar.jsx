@@ -8,13 +8,12 @@ const MENU = {
     { to: '/produk', label: 'Produk' },
     { to: '/stok', label: 'Stok' },
     { to: '/kasir', label: 'Kasir' },
-    { to: '#riwayat', label: 'Riwayat' },
+    { to: '/riwayat', label: 'Riwayat' },
   ],
   pegawai: [
     { to: '/kasir', label: 'Kasir' },
     { to: '/stok', label: 'Stok' },
     { to: '/produk', label: 'Produk' },
-    { to: '#riwayat', label: 'Riwayat' },
   ],
 };
 
