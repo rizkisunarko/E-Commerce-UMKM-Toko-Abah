@@ -51,17 +51,26 @@ async function createFixture(t) {
           (product) => Number(product.stok) <= Number(product.batas_stok_kritis),
         ).length }], []];
       }
-      if (sql.includes('COUNT(*) AS total')) return [[{ total: products.length }], []];
       if (sql.includes('FROM produk p')) {
         if (sql.includes('WHERE p.id_produk = ?')) {
           return [products.filter((product) => product.id === params[0]), []];
         }
-        return [
-          sql.includes('p.archived_at IS NULL')
-            ? products.filter((product) => !product.archived_at)
-            : products,
-          [],
-        ];
+        let rows = sql.includes('p.archived_at IS NULL')
+          ? products.filter((product) => !product.archived_at)
+          : [...products];
+        if (sql.includes('p.nama_produk LIKE ?')) {
+          const search = params.find((param) => typeof param === 'string' && param.startsWith('%'))
+            .slice(1, -1).toLowerCase();
+          rows = rows.filter((product) => product.nama.toLowerCase().includes(search));
+        }
+        if (sql.includes('k.nama_kategori = ?')) {
+          const category = params.find((param) => param === 'Beras & Tepung');
+          rows = rows.filter((product) => product.kategori === category);
+        }
+        if (sql.includes('COUNT(*) AS total')) return [[{ total: rows.length }], []];
+        const limit = params.at(-2);
+        const offset = params.at(-1);
+        return [rows.slice(offset, offset + limit), []];
       }
       if (sql.includes('SELECT jumlah_stok FROM produk WHERE id_produk = ?')) {
         const product = products.find((item) => item.id === params[0]);
@@ -243,8 +252,44 @@ test('produk dan kategori dibaca dari API backend dan memerlukan login', async (
   const products = await productResponse.json();
   assert.equal(products.data[0].nama, 'Beras 5 kg');
   assert.equal(products.data[0].satuan, 'karung');
-  assert.deepEqual(products.pagination, { page: 1, limit: 10, total: 1 });
+  assert.deepEqual(products.pagination, {
+    page: 1,
+    limit: 10,
+    total: 1,
+    total_pages: 1,
+  });
+
+  const filteredResponse = await fetch(
+    `${baseUrl}/products?search=%20beras%20&kategori=${encodeURIComponent('Beras & Tepung')}&page=1&limit=1`,
+    { headers },
+  );
+  const filtered = await filteredResponse.json();
+  assert.equal(filteredResponse.status, 200);
+  assert.equal(filtered.data.length, 1);
+  assert.equal(filtered.pagination.total_pages, 1);
+  assert.equal(filtered.data[0].kategori, 'Beras & Tepung');
+
+  const emptyPageResponse = await fetch(`${baseUrl}/products?page=2&limit=1`, { headers });
+  const emptyPage = await emptyPageResponse.json();
+  assert.equal(emptyPageResponse.status, 200);
+  assert.equal(emptyPage.data.length, 0);
+  assert.equal(emptyPage.pagination.total, 1);
+  assert.equal(emptyPage.pagination.total_pages, 1);
+
+  const invalidQuery = await fetch(`${baseUrl}/products?page=0&limit=101`, { headers });
+  assert.equal(invalidQuery.status, 422);
+  assert.deepEqual(Object.keys((await invalidQuery.json()).errors).sort(), ['limit', 'page']);
+
+  const repeatedSearch = await fetch(`${baseUrl}/products?search[]=beras&search[]=gula`, { headers });
+  assert.equal(repeatedSearch.status, 422);
+  assert.equal((await repeatedSearch.json()).errors.search, 'Pencarian harus berupa teks');
 
   const categoriesResponse = await fetch(`${baseUrl}/categories`, { headers });
   assert.deepEqual(await categoriesResponse.json(), { data: ['Beras & Tepung'] });
+
+  const { body: employee } = await login(baseUrl, 'pegawai', 'employee-pass');
+  const archivedResponse = await fetch(`${baseUrl}/products?include_archived=true`, {
+    headers: { Authorization: `Bearer ${employee.token}` },
+  });
+  assert.equal(archivedResponse.status, 403);
 });

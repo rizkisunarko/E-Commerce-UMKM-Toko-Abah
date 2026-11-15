@@ -68,6 +68,8 @@ Kata sandi di database tersimpan sebagai hash bcrypt.
 ### Login dan hak akses backend
 
 - Endpoint kategori, daftar/detail/tambah/ubah produk, daftar stok, dan pembaruan stok membaca/menulis MySQL.
+- `GET /api/products?page=1&limit=10&search=beras&kategori=Beras%20%26%20Tepung` memerlukan token login, menggabungkan pencarian nama dan filter kategori, lalu mengembalikan `data` serta `pagination` (`page`, `limit`, `total`, `total_pages`). `limit` maksimum 100; parameter berulang/berformat salah ditolak. `GET /api/categories` menyediakan opsi kategori untuk filter.
+- Produk arsip tidak disertakan secara default. Hanya admin dapat meminta `include_archived=true`; pegawai menerima `403`.
 - Setiap perubahan jumlah stok memperbarui tabel `produk` dan mencatat perubahan pada `riwayat_stok` dalam transaksi database.
 - `GET /api/stock?search=beras&kritis=true` memerlukan login, mencari produk berdasarkan nama, dan dapat memfilter stok kritis. Respons berisi `data` dan ringkasan jumlah produk kritis.
 - `PATCH /api/products/:id/stock` menerima `{ "stok": 12 }`. Stok harus berupa bilangan bulat nonnegatif; admin dapat menaikkan atau menurunkan stok, sedangkan pegawai hanya dapat menguranginya. Perubahan produk dan riwayat stok disimpan dalam satu transaksi.

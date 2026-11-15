@@ -20,6 +20,66 @@ function stockChangeType(change) {
   return change > 0 ? 'masuk' : 'keluar';
 }
 
+function parseProductListQuery(query) {
+  const errors = {};
+  const parsePositiveInteger = (value, field, fallback, maximum) => {
+    if (value === undefined) return fallback;
+    if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+      errors[field] = 'Masukkan bilangan bulat positif';
+      return fallback;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed)) {
+      errors[field] = 'Nilai terlalu besar';
+      return fallback;
+    }
+    if (parsed < 1) {
+      errors[field] = 'Masukkan bilangan bulat positif';
+      return fallback;
+    }
+    if (maximum !== undefined && parsed > maximum) {
+      errors[field] = `Nilai harus antara 1 dan ${maximum}`;
+      return fallback;
+    }
+    return parsed;
+  };
+
+  const page = parsePositiveInteger(query.page, 'page', 1);
+  const limit = parsePositiveInteger(query.limit, 'limit', 10, 100);
+  const search = query.search === undefined ? '' : query.search;
+  const kategori = query.kategori === undefined ? '' : query.kategori;
+
+  if (typeof search !== 'string') {
+    errors.search = 'Pencarian harus berupa teks';
+  } else if (search.trim().length > 150) {
+    errors.search = 'Pencarian maksimal 150 karakter';
+  }
+  if (typeof kategori !== 'string') {
+    errors.kategori = 'Kategori harus berupa teks';
+  } else if (kategori.trim().length > 100) {
+    errors.kategori = 'Kategori maksimal 100 karakter';
+  }
+  if (query.include_archived !== undefined &&
+      !['true', 'false'].includes(query.include_archived)) {
+    errors.include_archived = 'Nilai harus true atau false';
+  }
+
+  const offset = (page - 1) * limit;
+  if (!Number.isSafeInteger(offset)) {
+    errors.page = 'Nomor halaman terlalu besar';
+  }
+
+  return {
+    errors,
+    page,
+    limit,
+    offset,
+    search: typeof search === 'string' ? search.trim() : '',
+    kategori: typeof kategori === 'string' ? kategori.trim() : '',
+  };
+}
+
 function createProductsRoutes(db, jwtSecret) {
   const router = express.Router();
   const authenticate = createAuthenticate(db, jwtSecret);
@@ -38,32 +98,33 @@ function createProductsRoutes(db, jwtSecret) {
 
   // 2. GET /api/products - Mengambil daftar produk (dengan paginasi & filter)
   router.get('/products', authenticate, async (req, res, next) => {
-    const page = Number(req.query.page || 1);
-    const limit = Number(req.query.limit || 10);
-    if (!Number.isSafeInteger(page) || page < 1 ||
-        !Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
-      return res.status(400).json({ message: 'Nomor halaman atau batas data tidak valid' });
+    const { errors, page, limit, offset, search, kategori } =
+      parseProductListQuery(req.query);
+    if (Object.keys(errors).length) {
+      return res.status(422).json({ message: 'Parameter daftar produk tidak valid', errors });
+    }
+    if (req.query.include_archived === 'true' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Hanya admin yang dapat melihat produk arsip' });
     }
 
     const conditions = [];
     const params = [];
-    if (typeof req.query.search === 'string' && req.query.search.trim()) {
+    if (search) {
       conditions.push('p.nama_produk LIKE ?');
-      params.push(`%${req.query.search.trim()}%`);
+      params.push(`%${search}%`);
     }
-    if (typeof req.query.kategori === 'string' && req.query.kategori.trim()) {
+    if (kategori) {
       conditions.push('k.nama_kategori = ?');
-      params.push(req.query.kategori.trim());
+      params.push(kategori);
     }
     if (!(req.user.role === 'admin' && req.query.include_archived === 'true')) {
       conditions.push('p.archived_at IS NULL');
     }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-    const offset = (page - 1) * limit;
 
     try {
       const [rows] = await db.query(
-        `${PRODUCT_SELECT} ${where} ORDER BY p.nama_produk LIMIT ? OFFSET ?`,
+        `${PRODUCT_SELECT} ${where} ORDER BY p.nama_produk, p.id_produk LIMIT ? OFFSET ?`,
         [...params, limit, offset],
       );
       const [countRows] = await db.query(
@@ -75,7 +136,12 @@ function createProductsRoutes(db, jwtSecret) {
       );
       return res.json({
         data: rows.map(formatProduct),
-        pagination: { page, limit, total: Number(countRows[0].total) },
+        pagination: {
+          page,
+          limit,
+          total: Number(countRows[0].total),
+          total_pages: Math.ceil(Number(countRows[0].total) / limit),
+        },
       });
     } catch (error) {
       return next(error);
