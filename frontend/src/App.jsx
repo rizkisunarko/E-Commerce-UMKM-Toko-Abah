@@ -5,6 +5,9 @@ import PublicLayout from './components/PublicLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import CatalogPage from './pages/CatalogPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import OrderPage from './pages/OrderPage';
 import ProductListPage from './pages/ProductListPage';
 import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
@@ -29,7 +32,10 @@ export default function App() {
       {/* Halaman pelanggan: tanpa login */}
       <Route element={<PublicLayout />}>
         <Route path="/katalog" element={<CatalogPage />} />
-        {/* PPL-08: rute keranjang dan checkout ditambahkan di sini */}
+        <Route path="/keranjang" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        {/* PPL-08.3: ganti OrderPage dengan halaman Pesanan Berhasil */}
+        <Route path="/pesanan/:nomor" element={<OrderPage />} />
       </Route>
 
       <Route

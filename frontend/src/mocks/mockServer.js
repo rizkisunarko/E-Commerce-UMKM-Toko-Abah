@@ -57,6 +57,7 @@ const transactions = [
   makeTransaction(6, daysAgo(3, 11, 10), 'tunai', [[2, 1], [5, 10]], { 2: 18000, 5: 3500 }),
 ];
 let nextTransactionId = transactions.length + 1;
+const orders = [];
 
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
@@ -137,6 +138,125 @@ export async function mockRequest(method, fullPath, body = {}, token) {
     return reply(200, { data, pagination: { page, limit, total: rows.length } });
   }
   if (method === 'GET' && path === '/categories') return reply(200, { data: CATEGORIES });
+
+  // Keranjang dan pesanan pelanggan (PPL-08): tanpa login. Harga selalu dari server.
+  // Stok TIDAK berkurang saat pesanan dibuat; stok berkurang saat pembayaran berhasil (Sprint 3).
+  if (method === 'POST' && path === '/cart/check') {
+    const items = Array.isArray(body.items) ? body.items : [];
+    const data = items
+      .map((it) => {
+        const product = products.find((p) => p.id === Number(it.product_id));
+        if (!product) return null;
+        return {
+          product_id: product.id,
+          nama: product.nama,
+          harga: product.harga,
+          stok: product.stok,
+          jumlah: Number(it.jumlah),
+          cukup: product.stok >= Number(it.jumlah) && product.stok > 0,
+        };
+      })
+      .filter(Boolean);
+    return reply(200, { data });
+  }
+  if (method === 'POST' && path === '/orders') {
+    const errors = {};
+    const nama = String(body.nama_pemesan || '').trim();
+    const hp = String(body.no_hp || '').replace(/[\s-]/g, '');
+    const metode = body.metode_penerimaan === 'kurir' ? 'kurir' : 'ambil_di_toko';
+    const alamat = String(body.alamat_lengkap || '').trim();
+
+    if (!nama) errors.nama_pemesan = REQUIRED;
+    if (!hp) errors.no_hp = REQUIRED;
+    else if (!/^(\+62|62|0)8\d{8,11}$/.test(hp)) errors.no_hp = 'Masukkan nomor HP yang valid (hanya angka)';
+    
+    if (body.metode_penerimaan && body.metode_penerimaan !== 'ambil_di_toko' && body.metode_penerimaan !== 'kurir') {
+      errors.metode_penerimaan = 'Pilih cara menerima pesanan';
+    }
+    if (metode === 'kurir' && !alamat) {
+      errors.alamat_lengkap = REQUIRED;
+    }
+
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (items.length === 0) errors.items = 'Keranjang masih kosong';
+    const lines = [];
+    items.forEach((it) => {
+      const key = `items.${it.product_id}`;
+      const product = products.find((p) => p.id === Number(it.product_id));
+      const jumlah = toNumber(it.jumlah);
+      if (!product) errors[key] = 'Produk tidak ditemukan';
+      else if (!Number.isInteger(jumlah) || jumlah < 1) errors[key] = INVALID_NUMBER;
+      else if (jumlah > product.stok) errors[key] = `Stok tidak mencukupi. Stok tersedia: ${product.stok}`;
+      else lines.push({ product, jumlah });
+    });
+    if (Object.keys(errors).length) return reply(422, { message: 'Data tidak valid', errors });
+
+    const tanggal = now();
+    const day = toWibDate(tanggal).replace(/-/g, '');
+    const seq = orders.filter((o) => o.nomor_pesanan.includes(day)).length + 1;
+    const detail = lines.map(({ product, jumlah }) => ({
+      product_id: product.id,
+      nama: product.nama,
+      harga: product.harga,
+      jumlah,
+      subtotal: product.harga * jumlah,
+      kategori: product.kategori || 'Sembako',
+    }));
+    const subtotal = detail.reduce((sum, d) => sum + d.subtotal, 0);
+    const diskon = subtotal >= 100000 ? 6000 : 0;
+    const ongkir = metode === 'kurir' ? (Number(body.ongkir) || 15000) : 0;
+    const order = {
+      id: orders.length + 1,
+      nomor_pesanan: `TA-${day}-${String(seq).padStart(3, '0')}`,
+      status: 'Menunggu Pembayaran',
+      tanggal,
+      nama_pemesan: nama,
+      no_hp: hp,
+      catatan: String(body.catatan || '').trim(),
+      metode_penerimaan: metode,
+      wilayah: body.wilayah || 'Telang, Kamal (Radius < 3 km)',
+      alamat_lengkap: alamat,
+      layanan_kurir: body.layanan_kurir || (metode === 'kurir' ? 'Kurir Instan Toko Abah (Motor)' : null),
+      items: detail,
+      subtotal,
+      diskon,
+      ongkir,
+      total: Math.max(0, subtotal - diskon + ongkir),
+    };
+    orders.push(order);
+    return reply(201, { data: order });
+  }
+  const orderMatch = path.match(/^\/orders\/([^/]+)$/);
+  if (method === 'GET' && orderMatch) {
+    const nomor = decodeURIComponent(orderMatch[1]);
+    let order = orders.find((o) => o.nomor_pesanan === nomor);
+    if (!order) {
+      // Fallback pesanan default untuk preview
+      order = {
+        id: 1,
+        nomor_pesanan: nomor,
+        status: 'Menunggu Pembayaran',
+        tanggal: now(),
+        nama_pemesan: 'Ibu Rahmawati',
+        no_hp: '081298765432',
+        catatan: 'Tolong bungkus minyaknya rapat ya Abah.',
+        metode_penerimaan: 'ambil_di_toko',
+        wilayah: 'Telang, Kamal (Radius < 3 km)',
+        alamat_lengkap: 'Jl. Raya Telang No. 15, RT 04 / RW 03, Kamal, Bangkalan, Madura',
+        layanan_kurir: 'Kurir Instan Toko Abah (Motor)',
+        items: [
+          { product_id: 1, nama: 'Beras Ramos Setra 5 kg', harga: 74000, jumlah: 1, subtotal: 74000, kategori: 'Beras Premium', variasi: '5 kg', catatan: 'Kualitas super, putih bersih, pulen wangi' },
+          { product_id: 2, nama: 'Minyak Goreng Sawit 2 L', harga: 36000, jumlah: 1, subtotal: 36000, kategori: 'Minyak & Mentega', variasi: '2 L', catatan: 'Kemasan pouch refill ganda penyaringan' },
+          { product_id: 3, nama: 'Gula Pasir Tebu 1 kg', harga: 17500, jumlah: 1, subtotal: 17500, kategori: 'Gula & Pemanis', variasi: '1 kg', catatan: 'Manis alami dari sari tebu pilihan, kristal putih' },
+        ],
+        subtotal: 127500,
+        diskon: 6000,
+        ongkir: 0,
+        total: 121500,
+      };
+    }
+    return reply(200, { data: order });
+  }
 
   if (!user) return reply(401, { message: 'Silakan login terlebih dahulu' });
   const isAdmin = user.role === 'admin';
