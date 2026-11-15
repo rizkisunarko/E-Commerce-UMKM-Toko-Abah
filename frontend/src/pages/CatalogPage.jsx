@@ -60,78 +60,100 @@ function getCategoryIcon(catName = '') {
   const c = String(catName).toLowerCase();
   if (!catName || c === 'semua') {
     return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" />
-        <rect x="14" y="3" width="7" height="7" />
-        <rect x="14" y="14" width="7" height="7" />
-        <rect x="3" y="14" width="7" height="7" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="4" y="4" width="4" height="4" rx="1.2" />
+        <rect x="10" y="4" width="4" height="4" rx="1.2" />
+        <rect x="16" y="4" width="4" height="4" rx="1.2" />
+        <rect x="4" y="10" width="4" height="4" rx="1.2" />
+        <rect x="10" y="10" width="4" height="4" rx="1.2" />
+        <rect x="16" y="10" width="4" height="4" rx="1.2" />
+        <rect x="4" y="16" width="4" height="4" rx="1.2" />
+        <rect x="10" y="16" width="4" height="4" rx="1.2" />
+        <rect x="16" y="16" width="4" height="4" rx="1.2" />
       </svg>
     );
   }
   if (c.includes('beras') || c.includes('tepung') || c.includes('sembako')) {
     return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3" />
-        <line x1="6" y1="21" x2="18" y2="21" />
-        <line x1="12" y1="16" x2="12" y2="21" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 2v20" />
+        <path d="M12 5c2-2 5-2 6 1s-2 5-6 4" />
+        <path d="M12 5c-2-2-5-2-6 1s2 5 6 4" />
+        <path d="M12 10c2-2 5-2 6 1s-2 5-6 4" />
+        <path d="M12 10c-2-2-5-2-6 1s2 5 6 4" />
+        <path d="M12 15c2-2 5-2 6 1s-2 5-6 4" />
+        <path d="M12 15c-2-2-5-2-6 1s2 5 6 4" />
       </svg>
     );
   }
   if (c.includes('minyak') || c.includes('bumbu')) {
     return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 2v4" />
-        <path d="M12 18a6 6 0 0 0 6-6c0-4-6-10-6-10S6 8 6 12a6 6 0 0 0 6 6z" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M10 2h4" />
+        <path d="M10 4h4" />
+        <path d="M12 4v3" />
+        <rect x="7" y="7" width="10" height="14" rx="2.5" />
+        <path d="M12 11c-1.2 1.5-1.8 2.3-1.8 3.2a1.8 1.8 0 0 0 3.6 0c0-.9-.6-1.7-1.8-3.2z" fill="currentColor" />
       </svg>
     );
   }
   if (c.includes('gula') || c.includes('pemanis')) {
     return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" />
-        <line x1="12" y1="8" x2="12.01" y2="8" />
-        <line x1="8" y1="12" x2="8.01" y2="12" />
-        <line x1="16" y1="12" x2="16.01" y2="12" />
-        <line x1="12" y1="16" x2="12.01" y2="16" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5z" />
+        <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" />
+        <circle cx="7.5" cy="14" r="1.2" fill="currentColor" />
+        <circle cx="12" cy="16.5" r="1.2" fill="currentColor" />
+        <circle cx="15.5" cy="12.5" r="1.2" fill="currentColor" />
       </svg>
     );
   }
   if (c.includes('telur') || c.includes('lauk')) {
     return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <ellipse cx="12" cy="13" rx="7" ry="9" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 2C7.5 2 4.5 7.5 4.5 14c0 4.2 3.4 7.5 7.5 7.5s7.5-3.3 7.5-7.5C19.5 7.5 16.5 2 12 2z" />
+        <path d="M14.5 8.5a3.5 3.5 0 0 0-3-2.5" />
       </svg>
     );
   }
   if (c.includes('instan') || c.includes('mie')) {
     return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M18 11V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v5" />
-        <path d="M4 11h16a1 1 0 0 1 1 1c0 5-3.5 8-9 8s-9-3-9-8a1 1 0 0 1 1-1z" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 12h18a1 1 0 0 1 1 1 9 9 0 0 1-9 9 9 9 0 0 1-9-9 1 1 0 0 1 1-1z" />
+        <line x1="8" y1="22" x2="16" y2="22" strokeWidth="2.5" />
+        <path d="M8 8V4" />
+        <path d="M12 7V3" />
+        <path d="M16 8V4" />
+        <line x1="2" y1="9" x2="22" y2="9" strokeWidth="1.8" />
       </svg>
     );
   }
   if (c.includes('minuman') || c.includes('kopi') || c.includes('teh')) {
     return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-        <line x1="6" y1="1" x2="6" y2="4" />
-        <line x1="10" y1="1" x2="10" y2="4" />
-        <line x1="14" y1="1" x2="14" y2="4" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
+        <path d="M3 8h14v7a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8z" />
+        <line x1="6" y1="2" x2="6" y2="5" />
+        <line x1="10" y1="2" x2="10" y2="5" />
+        <line x1="14" y1="2" x2="14" y2="5" />
+        <line x1="2" y1="21" x2="18" y2="21" strokeWidth="2" />
       </svg>
     );
   }
   if (c.includes('rumah') || c.includes('sabun')) {
     return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M7 21h10a2 2 0 0 0 2-2V9l-7-7-7 7v10a2 2 0 0 0 2 2z" />
-        <path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="6" y="9" width="12" height="12" rx="2.5" />
+        <path d="M12 9V5" />
+        <path d="M9 5h6" />
+        <path d="M15 5l-2-2" />
+        <circle cx="12" cy="15" r="1.8" fill="currentColor" />
+        <path d="M19 4l.5 1.5L21 6l-1.5.5L19 8l-.5-1.5L17 6l1.5-.5L19 4z" fill="currentColor" />
       </svg>
     );
   }
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
       <line x1="3" y1="6" x2="21" y2="6" />
       <path d="M16 10a4 4 0 0 1-8 0" />
@@ -243,7 +265,7 @@ export default function CatalogPage() {
           </h1>
 
           <p className="katalog-hero-desc">
-            Beras pulen, minyak goreng higienis, gula pasir, dan aneka sembako langsung diantar cepat dan timbangan pas 100% dari Pasar Minggu.
+            Beras pulen, minyak goreng higienis, gula pasir, dan aneka sembako langsung diantar cepat dan timbangan pas 100% dari Jalan Raya Telang-Kamal.
           </p>
 
           <div className="katalog-hero-price-tag">
@@ -279,39 +301,41 @@ export default function CatalogPage() {
           <span>Pilih kategori untuk memfilter</span>
         </div>
 
-        <div className="katalog-category-strip" role="group" aria-label="Filter Kategori">
-          {/* Chip Semua */}
-          <button
-            type="button"
-            className="katalog-category-chip"
-            onClick={() => chooseCategory('')}
-            aria-pressed={kategori === ''}
-          >
-            <div className={`katalog-chip-circle${kategori === '' ? ' active' : ''}`}>
-              {getCategoryIcon('semua')}
-            </div>
-            <span className={`katalog-chip-label${kategori === '' ? ' active' : ''}`}>Semua</span>
-          </button>
+        <div className="katalog-category-strip-wrapper">
+          <div className="katalog-category-strip" role="group" aria-label="Filter Kategori">
+            {/* Chip Semua */}
+            <button
+              type="button"
+              className="katalog-category-chip"
+              onClick={() => chooseCategory('')}
+              aria-pressed={kategori === ''}
+            >
+              <div className={`katalog-chip-circle${kategori === '' ? ' active' : ''}`}>
+                {getCategoryIcon('semua')}
+              </div>
+              <span className={`katalog-chip-label${kategori === '' ? ' active' : ''}`}>Semua</span>
+            </button>
 
-          {/* Chip Kategori Dinamis */}
-          {categories.map((c) => {
-            const name = c.nama ?? c;
-            const isSelected = kategori === name;
-            return (
-              <button
-                key={name}
-                type="button"
-                className="katalog-category-chip"
-                onClick={() => chooseCategory(name)}
-                aria-pressed={isSelected}
-              >
-                <div className={`katalog-chip-circle${isSelected ? ' active' : ''}`}>
-                  {getCategoryIcon(name)}
-                </div>
-                <span className={`katalog-chip-label${isSelected ? ' active' : ''}`}>{name}</span>
-              </button>
-            );
-          })}
+            {/* Chip Kategori Dinamis */}
+            {categories.map((c) => {
+              const name = c.nama ?? c;
+              const isSelected = kategori === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  className="katalog-category-chip"
+                  onClick={() => chooseCategory(name)}
+                  aria-pressed={isSelected}
+                >
+                  <div className={`katalog-chip-circle${isSelected ? ' active' : ''}`}>
+                    {getCategoryIcon(name)}
+                  </div>
+                  <span className={`katalog-chip-label${isSelected ? ' active' : ''}`}>{name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -550,7 +574,7 @@ export default function CatalogPage() {
         </div>
         <a
           className="katalog-help-btn"
-          href="https://wa.me/6281234567890?text=Halo%20Abah,%20saya%20mau%20tanya%20produk%20sembako%20khusus"
+          href="https://wa.me/6285708350575?text=Halo%20Abah,%20saya%20mau%20tanya%20produk%20sembako%20khusus"
           target="_blank"
           rel="noopener noreferrer"
         >
