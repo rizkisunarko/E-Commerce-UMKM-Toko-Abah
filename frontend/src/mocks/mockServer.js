@@ -118,6 +118,26 @@ export async function mockRequest(method, fullPath, body = {}, token) {
     });
   }
 
+  // Katalog publik (PPL-07): tanpa login. Hanya field yang aman untuk pelanggan.
+  // Produk arsip (PPL-14, Sprint 3) nantinya tidak ikut ditampilkan.
+  if (method === 'GET' && path === '/catalog') {
+    let rows = products.slice();
+    if (query.search) rows = rows.filter((p) => p.nama.toLowerCase().includes(query.search.toLowerCase()));
+    if (query.kategori) rows = rows.filter((p) => p.kategori === query.kategori);
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 12;
+    const data = rows.slice((page - 1) * limit, page * limit).map((p) => ({
+      id: p.id,
+      nama: p.nama,
+      kategori: p.kategori,
+      harga: p.harga,
+      stok: p.stok,
+      tersedia: p.stok > 0,
+    }));
+    return reply(200, { data, pagination: { page, limit, total: rows.length } });
+  }
+  if (method === 'GET' && path === '/categories') return reply(200, { data: CATEGORIES });
+
   if (!user) return reply(401, { message: 'Silakan login terlebih dahulu' });
   const isAdmin = user.role === 'admin';
 
