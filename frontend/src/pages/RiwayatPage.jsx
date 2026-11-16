@@ -390,7 +390,9 @@ export default function RiwayatPage() {
                 </div>
               </div>
               <div className="kpi-card-footer">
-                <span className="kpi-count-badge green">{rekap.jumlah_transaksi || 0}</span>
+                <span className="kpi-count-badge green">
+                  {rekap.jumlah_transaksi_tunai ?? rekap.jumlah_transaksi ?? 0}
+                </span>
                 <span className="kpi-footer-text">transaksi uang tunai</span>
               </div>
             </div>
@@ -412,7 +414,9 @@ export default function RiwayatPage() {
                 </div>
               </div>
               <div className="kpi-card-footer">
-                <span className="kpi-count-badge blue">{rekap.jumlah_transaksi || 0}</span>
+                <span className="kpi-count-badge blue">
+                  {rekap.jumlah_transaksi_qris ?? rekap.jumlah_transaksi ?? 0}
+                </span>
                 <span className="kpi-footer-text">transaksi e-wallet / QRIS</span>
               </div>
             </div>
@@ -798,4 +802,3 @@ export default function RiwayatPage() {
     </div>
   );
 }
-
