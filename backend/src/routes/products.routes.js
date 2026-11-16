@@ -8,6 +8,17 @@ const {
   PRODUCT_SELECT,
 } = require('../controllers/product.controller');
 
+const CATALOG_PRODUCT_SELECT = `
+  SELECT p.id_produk AS id,
+         p.nama_produk AS nama,
+         k.nama_kategori AS kategori,
+         p.harga_jual AS harga,
+         p.satuan,
+         p.jumlah_stok AS stok
+  FROM produk p
+  JOIN kategori k ON k.id_kategori = p.id_kategori
+`;
+
 function isBlank(value) {
   return value === undefined || value === null || String(value).trim() === '';
 }
@@ -80,9 +91,95 @@ function parseProductListQuery(query) {
   };
 }
 
+function formatCatalogProduct(row) {
+  const product = formatProduct(row);
+  return {
+    id: product.id,
+    nama: product.nama,
+    kategori: product.kategori,
+    harga: Number(product.harga),
+    satuan: product.satuan,
+    berat: product.berat,
+    stok: Number(product.stok),
+    tersedia: Number(product.stok) > 0,
+  };
+}
+
+function createProductListHandler(db, { publicCatalog = false } = {}) {
+  return async (req, res, next) => {
+    const { errors, page, limit, offset, search, kategori } =
+      parseProductListQuery(req.query);
+    if (Object.keys(errors).length) {
+      return res.status(422).json({ message: 'Parameter daftar produk tidak valid', errors });
+    }
+    if (req.query.include_archived === 'true' &&
+        (publicCatalog || req.user.role !== 'admin')) {
+      return res.status(403).json({
+        message: publicCatalog
+          ? 'Produk arsip tidak dapat diakses melalui katalog publik'
+          : 'Hanya admin yang dapat melihat produk arsip',
+      });
+    }
+
+    const conditions = [];
+    const params = [];
+    if (search) {
+      conditions.push('p.nama_produk LIKE ?');
+      params.push(`%${search}%`);
+    }
+    if (kategori) {
+      conditions.push('k.nama_kategori = ?');
+      params.push(kategori);
+    }
+    const includeArchived = !publicCatalog &&
+      req.user.role === 'admin' &&
+      req.query.include_archived === 'true';
+    if (!includeArchived) conditions.push('p.archived_at IS NULL');
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const select = publicCatalog ? CATALOG_PRODUCT_SELECT : PRODUCT_SELECT;
+
+    try {
+      const [rows] = await db.query(
+        `${select} ${where} ORDER BY p.nama_produk, p.id_produk LIMIT ? OFFSET ?`,
+        [...params, limit, offset],
+      );
+      const [countRows] = await db.query(
+        `SELECT COUNT(*) AS total
+         FROM produk p
+         JOIN kategori k ON k.id_kategori = p.id_kategori
+         ${where}`,
+        params,
+      );
+      return res.json({
+        data: rows.map(publicCatalog ? formatCatalogProduct : formatProduct),
+        pagination: {
+          page,
+          limit,
+          total: Number(countRows[0].total),
+          total_pages: Math.ceil(Number(countRows[0].total) / limit),
+        },
+      });
+    } catch (error) {
+      return next(error);
+    }
+  };
+}
+
 function createProductsRoutes(db, jwtSecret) {
   const router = express.Router();
   const authenticate = createAuthenticate(db, jwtSecret);
+
+  router.get('/catalog/categories', async (req, res, next) => {
+    try {
+      const [rows] = await db.query(
+        'SELECT nama_kategori FROM kategori ORDER BY nama_kategori',
+      );
+      return res.json({ data: rows.map((row) => row.nama_kategori) });
+    } catch (error) {
+      return next(error);
+    }
+  });
+  router.get('/catalog', createProductListHandler(db, { publicCatalog: true }));
 
   // 1. GET /api/categories - Mengambil daftar kategori
   router.get('/categories', authenticate, async (req, res, next) => {
@@ -97,56 +194,7 @@ function createProductsRoutes(db, jwtSecret) {
   });
 
   // 2. GET /api/products - Mengambil daftar produk (dengan paginasi & filter)
-  router.get('/products', authenticate, async (req, res, next) => {
-    const { errors, page, limit, offset, search, kategori } =
-      parseProductListQuery(req.query);
-    if (Object.keys(errors).length) {
-      return res.status(422).json({ message: 'Parameter daftar produk tidak valid', errors });
-    }
-    if (req.query.include_archived === 'true' && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Hanya admin yang dapat melihat produk arsip' });
-    }
-
-    const conditions = [];
-    const params = [];
-    if (search) {
-      conditions.push('p.nama_produk LIKE ?');
-      params.push(`%${search}%`);
-    }
-    if (kategori) {
-      conditions.push('k.nama_kategori = ?');
-      params.push(kategori);
-    }
-    if (!(req.user.role === 'admin' && req.query.include_archived === 'true')) {
-      conditions.push('p.archived_at IS NULL');
-    }
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    try {
-      const [rows] = await db.query(
-        `${PRODUCT_SELECT} ${where} ORDER BY p.nama_produk, p.id_produk LIMIT ? OFFSET ?`,
-        [...params, limit, offset],
-      );
-      const [countRows] = await db.query(
-        `SELECT COUNT(*) AS total
-         FROM produk p
-         JOIN kategori k ON k.id_kategori = p.id_kategori
-         ${where}`,
-        params,
-      );
-      return res.json({
-        data: rows.map(formatProduct),
-        pagination: {
-          page,
-          limit,
-          total: Number(countRows[0].total),
-          total_pages: Math.ceil(Number(countRows[0].total) / limit),
-        },
-      });
-    } catch (error) {
-      return next(error);
-    }
-  });
+  router.get('/products', authenticate, createProductListHandler(db));
 
   // 3. POST /api/products - Tambah produk baru (PPL-01.1, Khusus Admin)
   router.post('/products', authenticate, (req, res, next) => {

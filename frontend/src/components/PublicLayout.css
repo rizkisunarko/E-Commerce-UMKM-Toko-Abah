@@ -1,0 +1,348 @@
+/* PublicLayout.css - Desain Publik Toko Abah (Awalan: katalog-) */
+
+.katalog-public-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f7f9fc;
+  color: #1f2937;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 1. Pengumuman / Announcement Strip */
+.katalog-top-strip {
+  background-color: #0d631b;
+  color: #ffffff;
+  font-size: 12px;
+  padding: 6px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.katalog-strip-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.katalog-strip-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.katalog-strip-right {
+  display: none;
+  align-items: center;
+  gap: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+}
+
+@media (min-width: 768px) {
+  .katalog-strip-right {
+    display: flex;
+  }
+}
+
+.katalog-strip-link {
+  color: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s ease;
+}
+
+.katalog-strip-link:hover {
+  color: #a3f69c;
+}
+
+/* 2. Header Utama (Sticky) */
+.katalog-main-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+}
+
+.katalog-header-inner {
+  height: 72px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.katalog-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.katalog-brand-logo-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #15803d;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  box-shadow: 0 2px 4px rgba(21, 128, 61, 0.25);
+  flex-shrink: 0;
+}
+
+.katalog-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.katalog-brand-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #15803d;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.katalog-brand-subtitle {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Navigasi & Aksi Kanan */
+.katalog-header-nav {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (min-width: 900px) {
+  .katalog-header-nav {
+    display: flex;
+  }
+}
+
+.katalog-nav-link {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #4b5563;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.katalog-nav-link:hover {
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.katalog-nav-link.active {
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.katalog-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.katalog-wa-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+@media (min-width: 640px) {
+  .katalog-wa-btn {
+    display: inline-flex;
+  }
+}
+
+.katalog-wa-btn:hover {
+  background: #dcfce7;
+}
+
+/* Keranjang Icon & Badge */
+.katalog-cart-button {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.katalog-cart-button:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.katalog-cart-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ea580c;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.katalog-login-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #15803d;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background 0.15s;
+}
+
+.katalog-login-btn:hover {
+  background: #166534;
+}
+
+/* 3. Konten Utama */
+.katalog-public-main {
+  flex: 1;
+  width: 100%;
+}
+
+/* 4. Footer Publik */
+.katalog-footer {
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 48px;
+  padding: 48px 16px 24px;
+}
+
+.katalog-footer-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.katalog-footer-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+
+@media (min-width: 640px) {
+  .katalog-footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .katalog-footer-grid {
+    grid-template-columns: 1.4fr 1.2fr 1fr 1.2fr;
+  }
+}
+
+.katalog-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.katalog-footer-col h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+}
+
+.katalog-footer-col p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6b7280;
+  margin: 0;
+}
+
+.katalog-footer-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.katalog-footer-item svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.katalog-payment-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.katalog-payment-chip {
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.katalog-footer-bottom {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #f3f4f6;
+  text-align: center;
+  font-size: 12.5px;
+  color: #9ca3af;
+}
+

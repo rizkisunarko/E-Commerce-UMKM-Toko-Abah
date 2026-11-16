@@ -23,6 +23,8 @@ React (Vite), Node.js + Express, MySQL
    Jika ingin mengatur koneksi sebelum setup, buat `.env` dari templat dengan
    `Copy-Item .env.example .env` (hanya jika `.env` belum ada), lalu ubah `DB_USER`, `DB_PASSWORD`,
    dan bila perlu `DB_HOST`/`DB_PORT`.
+   Untuk tarif ongkir, isi `RAJAONGKIR_API_KEY` di `backend/.env` dengan key **Shipping Cost Sandbox**
+   dari dashboard Komerce. Jangan menaruh key di frontend atau mengirimkannya ke Git.
 3. Buat database dan tabel dari dump SQL (hanya untuk database kosong):
    ```bash
    npm run db:setup
@@ -49,6 +51,10 @@ React (Vite), Node.js + Express, MySQL
    ```
 6. Cek backend di http://localhost:5000/api/health dan buka alamat frontend yang ditampilkan Vite.
 
+Checkout mencari kecamatan/kota melalui backend, lalu menampilkan pilihan tarif dan layanan dari
+RajaOngkir berdasarkan berat produk di database. Permintaan ongkir memakai key yang disimpan di
+`backend/.env`; jika layanan gagal, pelanggan dapat mencoba lagi atau memilih ambil di toko.
+
 ### Reset password admin
 
 Jika password admin terlupa, buka terminal di folder `backend` dan jalankan:
@@ -67,6 +73,7 @@ Kata sandi di database tersimpan sebagai hash bcrypt.
 
 ### Login dan hak akses backend
 
+- Katalog pelanggan dapat diakses tanpa login melalui `GET /api/catalog?search=beras&kategori=Beras%20%26%20Tepung&page=1&limit=12` dan `GET /api/catalog/categories`. Katalog hanya mengembalikan produk aktif dan tidak menyertakan harga beli.
 - Endpoint kategori, daftar/detail/tambah/ubah produk, daftar stok, dan pembaruan stok membaca/menulis MySQL.
 - `GET /api/products?page=1&limit=10&search=beras&kategori=Beras%20%26%20Tepung` memerlukan token login, menggabungkan pencarian nama dan filter kategori, lalu mengembalikan `data` serta `pagination` (`page`, `limit`, `total`, `total_pages`). `limit` maksimum 100; parameter berulang/berformat salah ditolak. `GET /api/categories` menyediakan opsi kategori untuk filter.
 - Produk arsip tidak disertakan secara default. Hanya admin dapat meminta `include_archived=true`; pegawai menerima `403`.
