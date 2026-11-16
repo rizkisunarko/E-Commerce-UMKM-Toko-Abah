@@ -74,6 +74,7 @@ Kata sandi di database tersimpan sebagai hash bcrypt.
 ### Login dan hak akses backend
 
 - Katalog pelanggan dapat diakses tanpa login melalui `GET /api/catalog?search=beras&kategori=Beras%20%26%20Tepung&page=1&limit=12` dan `GET /api/catalog/categories`. Katalog hanya mengembalikan produk aktif dan tidak menyertakan harga beli.
+- `POST /api/cart/check` dapat digunakan tanpa login untuk memeriksa harga dan stok keranjang dari data produk aktif di database.
 - Endpoint kategori, daftar/detail/tambah/ubah produk, daftar stok, dan pembaruan stok membaca/menulis MySQL.
 - `GET /api/products?page=1&limit=10&search=beras&kategori=Beras%20%26%20Tepung` memerlukan token login, menggabungkan pencarian nama dan filter kategori, lalu mengembalikan `data` serta `pagination` (`page`, `limit`, `total`, `total_pages`). `limit` maksimum 100; parameter berulang/berformat salah ditolak. `GET /api/categories` menyediakan opsi kategori untuk filter.
 - Produk arsip tidak disertakan secara default. Hanya admin dapat meminta `include_archived=true`; pegawai menerima `403`.
