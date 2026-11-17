@@ -1,22 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import ProductIcon from '../components/ProductIcon';
 import { useAuth } from '../context/AuthContext';
 import { productService } from '../services/productService';
 import { formatRupiah } from '../utils/format';
 import './ProductListPage.css';
-
-function getProductBadgeInfo(nama = '', kategori = '') {
-  const text = (nama + ' ' + kategori).toLowerCase();
-  if (text.includes('beras')) return { icon: '🌾', className: 'beras' };
-  if (text.includes('minyak') || text.includes('goreng')) return { icon: '💧', className: 'minyak' };
-  if (text.includes('gula') || text.includes('manis')) return { icon: '🍬', className: 'gula' };
-  if (text.includes('telur')) return { icon: '🥚', className: 'telur' };
-  if (text.includes('mie') || text.includes('indomie')) return { icon: '🍜', className: 'mie' };
-  if (text.includes('kopi')) return { icon: '☕', className: 'kopi' };
-  if (text.includes('sabun') || text.includes('bersih')) return { icon: '🧼', className: 'sabun' };
-  if (text.includes('teh')) return { icon: '🍵', className: 'teh' };
-  return { icon: '📦', className: 'default' };
-}
 
 function formatSku(product) {
   if (product.kode_produk) return product.kode_produk;
@@ -552,7 +540,6 @@ export default function ProductListPage() {
                 </tr>
               ) : (
                 displayRows.map((p) => {
-                  const badgeInfo = getProductBadgeInfo(p.nama, p.kategori);
                   const isLow =
                     Number(p.stok) <= (p.batas_stok_kritis ?? 15) ||
                     Number(p.stok) < 20 ||
@@ -562,9 +549,7 @@ export default function ProductListPage() {
                     <tr key={p.id}>
                       <td>
                         <div className="product-title-cell">
-                          <div className={`product-avatar-badge ${badgeInfo.className}`}>
-                            {badgeInfo.icon}
-                          </div>
+                          <ProductIcon nama={p.nama} kategori={p.kategori} />
                           <div className="product-name-and-sku">
                             <span className="product-main-name">{p.nama}</span>
                             <span className="product-sku-code">
@@ -586,7 +571,8 @@ export default function ProductListPage() {
                       </td>
                       <td>
                         <span className={`stock-pill-tag ${isLow ? 'low' : 'safe'}`}>
-                          ● {p.stok} {getUnitDisplay(p)}
+                          <span className="stock-pill-dot" aria-hidden="true" />
+                          {p.stok} {getUnitDisplay(p)}
                         </span>
                       </td>
                       {isAdmin && (

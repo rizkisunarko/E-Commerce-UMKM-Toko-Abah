@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import { itemIssue, useCart } from '../context/CartContext';
@@ -81,6 +81,46 @@ const RECOMMENDED_PRODUCTS = [
     stok: 30,
   },
 ];
+
+function CartQuantityInput({ item, setJumlah, isError }) {
+  const [val, setVal] = useState(String(item.jumlah));
+
+  useEffect(() => {
+    setVal(String(item.jumlah));
+  }, [item.jumlah]);
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    setVal(raw);
+    const parsed = parseInt(raw, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      setJumlah(item.id, parsed);
+    }
+  };
+
+  const handleBlur = () => {
+    const parsed = parseInt(val, 10);
+    if (isNaN(parsed) || parsed < 1) {
+      setVal('1');
+      setJumlah(item.id, 1);
+    } else {
+      setVal(String(parsed));
+      setJumlah(item.id, parsed);
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min="1"
+      className={`ko-stepper-input${isError ? ' error' : ''}`}
+      value={val}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      aria-label={`Jumlah saat ini ${item.jumlah}`}
+    />
+  );
+}
 
 export default function CartPage() {
   const navigate = useNavigate();
@@ -561,12 +601,10 @@ export default function CartPage() {
                           </svg>
                         </button>
 
-                        <input
-                          type="number"
-                          className={`ko-stepper-input${issue ? ' error' : ''}`}
-                          readOnly
-                          value={it.jumlah}
-                          aria-label={`Jumlah saat ini ${it.jumlah}`}
+                        <CartQuantityInput
+                          item={it}
+                          setJumlah={setJumlah}
+                          isError={Boolean(issue)}
                         />
 
                         <button

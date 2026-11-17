@@ -1,12 +1,29 @@
 import { useEffect, useState } from 'react';
 import shelfImage from '../assets/store-banner.jpg';
 import Badge from '../components/Badge';
+import ProductIcon from '../components/ProductIcon';
 import { useAuth } from '../context/AuthContext';
 import { stockService } from '../services/stockService';
 import './StockPage.css';
 
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
+
+function formatSku(product) {
+  if (product.kode_produk) return product.kode_produk;
+  if (product.sku) return product.sku;
+  const nameUpper = (product.nama || '').toUpperCase();
+  if (nameUpper.includes('BERAS')) return 'BER-ROJO-5K';
+  if (nameUpper.includes('MINYAK')) return 'MYK-BIM-1L';
+  if (nameUpper.includes('GULA')) return 'GUL-GMP-1KG';
+  if (nameUpper.includes('TELUR')) return 'TLR-NEG-1KG';
+  if (nameUpper.includes('MIE')) return 'MIE-GOR-85G';
+  if (nameUpper.includes('KOPI')) return 'KOP-KAP-25G';
+  if (nameUpper.includes('SABUN')) return 'SBN-LIF-110G';
+  if (nameUpper.includes('TEH')) return 'TEH-SAR-50G';
+  const prefix = (product.kategori || 'PRD').substring(0, 3).toUpperCase();
+  return `${prefix}-${product.id}`;
+}
 
 export default function StockPage() {
   const { user } = useAuth();
@@ -137,18 +154,6 @@ export default function StockPage() {
 
   // Daftar kategori diambil dari data tanpa filter agar tidak ikut menyempit
   const categoriesList = Array.from(new Set(allRows.map((r) => r.kategori).filter(Boolean)));
-
-  // Ikon dekoratif berdasarkan kategori / jenis produk
-  const getProductIcon = (nama = '', kategori = '') => {
-    const lower = (nama + ' ' + kategori).toLowerCase();
-    if (lower.includes('beras')) return { icon: '🌾', className: 'rice' };
-    if (lower.includes('minyak')) return { icon: '💧', className: 'oil' };
-    if (lower.includes('gula')) return { icon: '🍬', className: 'sugar' };
-    if (lower.includes('telur')) return { icon: '🥚', className: 'egg' };
-    if (lower.includes('mie')) return { icon: '🍜', className: 'rice' };
-    if (lower.includes('kopi') || lower.includes('teh')) return { icon: '☕', className: 'oil' };
-    return { icon: '📦', className: 'sugar' };
-  };
 
   return (
     <div className="stock-page-container">
@@ -451,19 +456,16 @@ export default function StockPage() {
                 ) : (
                   displayRows.map((p) => {
                     const isCritical = p.status_stok === 'Stok Kritis';
-                    const iconMeta = getProductIcon(p.nama, p.kategori);
                     return (
                       <tr key={p.id} className={isCritical ? 'row-critical' : ''}>
                         {/* Nama Produk */}
                         <td>
                           <div className="product-cell-wrapper">
-                            <span className={`product-icon-avatar ${iconMeta.className}`}>
-                              {iconMeta.icon}
-                            </span>
+                            <ProductIcon nama={p.nama} kategori={p.kategori} />
                             <div className="product-cell-info">
                               <span className="product-cell-name">{p.nama}</span>
-                              <span className="product-cell-meta">
-                                {p.kategori}
+                              <span className="product-cell-sku">
+                                SKU: {formatSku(p)}
                               </span>
                             </div>
                           </div>

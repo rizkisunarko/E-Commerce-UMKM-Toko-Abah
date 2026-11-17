@@ -115,17 +115,19 @@ export function CartProvider({ children }) {
 
   // Hasil: 'ok', 'max' (jumlah sudah mencapai stok), atau 'habis' (stok 0)
   const addItem = useCallback(
-    (product) => {
+    (product, quantityToAdd = 1) => {
       if (product.stok <= 0) return 'habis';
+      const qty = Math.max(1, Number(quantityToAdd) || 1);
       const currentItems = itemsRef.current;
       const found = currentItems.find((it) => it.id === product.id);
       if (found && found.jumlah >= product.stok) return 'max';
+      const targetQty = found ? found.jumlah + qty : qty;
       updateItems(
         () =>
           found
             ? currentItems.map((it) =>
                 it.id === product.id
-                  ? { ...it, stok: product.stok, jumlah: it.jumlah + 1, cukup: it.jumlah + 1 <= product.stok }
+                  ? { ...it, stok: product.stok, jumlah: targetQty, cukup: targetQty <= product.stok }
                   : it,
               )
             : [...currentItems, {
@@ -133,8 +135,8 @@ export function CartProvider({ children }) {
               nama: product.nama,
               harga: product.harga,
               stok: product.stok,
-              jumlah: 1,
-              cukup: true,
+              jumlah: targetQty,
+              cukup: targetQty <= product.stok,
             }],
       );
       return 'ok';
@@ -142,14 +144,13 @@ export function CartProvider({ children }) {
     [updateItems],
   );
 
-  // Ubah jumlah. Tombol plus tidak melewati stok, tombol minus berhenti di 1.
+  // Ubah jumlah. Mendukung input manual dan tombol stepper.
   const setJumlah = useCallback((id, jumlah) => {
     updateItems((currentItems) =>
       currentItems.map((it) => {
         if (it.id !== id) return it;
-        const max = it.stok > 0 ? it.stok : it.jumlah;
-        const nextQuantity = Math.max(1, Math.min(jumlah, max));
-        return { ...it, jumlah: nextQuantity, cukup: nextQuantity <= it.stok };
+        const nextQuantity = Math.max(1, Number(jumlah) || 1);
+        return { ...it, jumlah: nextQuantity, cukup: it.stok > 0 ? nextQuantity <= it.stok : false };
       }),
     );
   }, [updateItems]);

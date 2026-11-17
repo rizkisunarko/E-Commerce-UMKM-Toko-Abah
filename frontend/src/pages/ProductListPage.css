@@ -548,101 +548,115 @@
 .product-title-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-.product-avatar-badge {
-  width: 36px;
-  height: 36px;
+.product-icon-box {
+  width: 48px;
+  height: 48px;
   border-radius: 8px;
+  background: #e4effd;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
   flex-shrink: 0;
-  background: #f3f4f6;
+  transition: transform 0.15s ease;
 }
 
-.product-avatar-badge.beras {
-  background: #fef3c7;
-  color: #d97706;
+.product-icon-box.beras {
+  color: #0d631b;
 }
 
-.product-avatar-badge.minyak {
-  background: #fee2e2;
-  color: #dc2626;
+.product-icon-box.minyak {
+  color: #964900;
 }
 
-.product-avatar-badge.gula {
-  background: #fce7f3;
-  color: #db2777;
+.product-icon-box.gula {
+  color: #00569f;
 }
 
-.product-avatar-badge.telur {
-  background: #ffedd5;
-  color: #ea580c;
+.product-icon-box.telur {
+  color: #fc820c;
 }
 
-.product-avatar-badge.mie {
-  background: #dcfce7;
-  color: #15803d;
+.product-icon-box.mie {
+  color: #0d631b;
 }
 
-.product-avatar-badge.kopi {
-  background: #f3e8ff;
-  color: #7c3aed;
+.product-icon-box.kopi {
+  color: #964900;
 }
 
-.product-avatar-badge.sabun {
-  background: #e0f2fe;
-  color: #0284c7;
+.product-icon-box.sabun {
+  color: #00569f;
 }
 
-.product-avatar-badge.teh {
-  background: #ecfdf5;
-  color: #059669;
+.product-icon-box.teh {
+  color: #0d631b;
+}
+
+.product-icon-box.bumbu {
+  color: #964900;
+}
+
+.product-icon-box.default {
+  color: #0d631b;
 }
 
 .product-name-and-sku {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .product-main-name {
-  font-weight: 700;
-  color: #111827;
-  font-size: 14px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #121d26;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-sku-code {
-  font-size: 11px;
-  color: #6b7280;
-  font-family: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  color: #40493d;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* Kolom Kategori */
 .category-badge-chip {
-  display: inline-block;
-  background: #f1f5f9;
-  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  background: #dfe9f7;
+  color: #121d26;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: 9999px;
   white-space: nowrap;
 }
 
 /* Kolom Harga & Berat */
 .product-price-text {
-  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: #121d26;
+  font-variant-numeric: tabular-nums;
 }
 
 .product-weight-text {
-  font-size: 13px;
-  color: #4b5563;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  color: #40493d;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Kolom Stok */
@@ -650,34 +664,62 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 9999px;
-  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.stock-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  flex-shrink: 0;
 }
 
 .stock-pill-tag.safe {
-  background: #f0fdf4;
-  color: #15803d;
+  background: #E8F5E9;
+  color: #1B5E20;
+}
+
+.stock-pill-tag.safe .stock-pill-dot {
+  background: #2e7d32;
 }
 
 .stock-pill-tag.low {
-  background: #fff7ed;
-  color: #ea580c;
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.stock-pill-tag.low .stock-pill-dot {
+  background: #fc820c;
+}
+
+.stock-pill-tag.empty {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.stock-pill-tag.empty .stock-pill-dot {
+  background: #ba1a1a;
 }
 
 /* Kolom Aksi */
 .btn-edit-action {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  color: #374151;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 12px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: #e4effd;
+  border: 1px solid transparent;
+  color: #121d26;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -685,9 +727,8 @@
 }
 
 .btn-edit-action:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
-  color: #111827;
+  background: #2e7d32;
+  color: #ffffff;
 }
 
 /* Pagination Footer */

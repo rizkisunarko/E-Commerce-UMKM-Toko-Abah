@@ -56,6 +56,106 @@ function getProductDescription(product = {}) {
   return 'Produk sembako segar dan terpercaya Toko Abah';
 }
 
+function getProductSold(product = {}) {
+  if (product.terjual !== undefined && product.terjual !== null) {
+    return product.terjual;
+  }
+  const seed = (Number(product.id) || 1) * 37 + (product.nama ? product.nama.length * 11 : 13);
+  return ((seed % 140) + 25);
+}
+
+function getProductDetailedDescription(product = {}) {
+  const text = (product.nama || '').toLowerCase();
+  if (text.includes('beras')) {
+    return {
+      deskripsi:
+        'Beras kualitas super pilihan langsung dari sentra lumbung padi petani binaan Toko Abah. Memiliki bulir utuh, putih bersih alami tanpa pemutih sintetis, beraroma harum alami, dan menghasilkan nasi yang pulen gurih saat dimasak. Sangat cocok untuk kebutuhan konsumsi harian keluarga maupun katering dan warung makan.',
+      spesifikasi: [
+        { label: 'Berat Bersih', value: '5 kg / sak' },
+        { label: 'Kualitas Bulir', value: 'Kepala Super Pulen (Derajat Sosoh 95%)' },
+        { label: 'Asal Daerah', value: 'Banyuwangi & Lumajang Pilihan' },
+        { label: 'Sertifikasi', value: 'KEMTAN & Bebas Pengawet / Pemutih' },
+        { label: 'Penyimpanan', value: 'Simpan di wadah kering, rapat & terlindung dari serangga' },
+      ],
+    };
+  }
+  if (text.includes('minyak')) {
+    return {
+      deskripsi:
+        'Minyak goreng sawit kelapa pilihan bermutu premium yang diproses dengan teknologi 2x penyaringan higienis. Menghasilkan warna minyak jernih, tahan panas, tidak mudah menghitam, serta membuat aneka gorengan lebih garing, renyah, dan lezat tanpa kolesterol berlebih.',
+      spesifikasi: [
+        { label: 'Isi Bersih', value: '2 Liter (Pouch Higienis)' },
+        { label: 'Kandungan', value: 'Kaya Vitamin A, D, & Omega 9 Alami' },
+        { label: 'Bahan Baku', value: '100% Buah Sawit Kelapa Segar Nusantara' },
+        { label: 'Standar Mutu', value: 'SNI Terverifikasi & Halal LPPOM MUI' },
+        { label: 'Keunggulan', value: 'Minyak bening, titik asap tinggi, hemat pemakaian' },
+      ],
+    };
+  }
+  if (text.includes('gula')) {
+    return {
+      deskripsi:
+        'Gula pasir kristal putih murni higienis yang dihasilkan dari tebu segar pilihan petani Indonesia. Kristal gula halus hingga sedang, mudah larut dalam minuman dingin maupun panas, dan memberikan rasa manis murni alami tanpa aftertaste getir atau pengawet kimia.',
+      spesifikasi: [
+        { label: 'Berat Bersih', value: '1 kg kemasan pack' },
+        { label: 'Bahan Baku', value: '100% Sari Tebu Murni Nusantara' },
+        { label: 'Kemasan', value: 'Plastik Polietilena Rapat Food-Grade Tebal' },
+        { label: 'Tingkat Kemurnian', value: 'ICUMSA Standard Food Grade' },
+        { label: 'Masa Simpan', value: '24 Bulan dalam wadah tertutup' },
+      ],
+    };
+  }
+  if (text.includes('telur')) {
+    return {
+      deskripsi:
+        'Telur ayam ras segar pilihan yang dipasok langsung setiap subuh dari peternakan terverifikasi di Jawa Timur. Telur diseleksi ketat satu per satu untuk menjamin cangkang utuh bersih, kuning telur kental bulat, serta bebas bakteri berbahaya demi asupan protein terbaik keluarga.',
+      spesifikasi: [
+        { label: 'Satuan Jual', value: '1 Tray (~30 butir / berat berkisar 1.8 - 1.9 kg)' },
+        { label: 'Kondisi Cangkang', value: 'Cokelat Bersih, Tebal & Tidak Retak' },
+        { label: 'Grade Kualitas', value: 'Grade A Segar Panen Hari Ini' },
+        { label: 'Kandungan Gizi', value: 'Tinggi Protein, Kolin, Asam Folat & Zat Besi' },
+        { label: 'Penyimpanan', value: 'Suhu ruangan 14 hari / Lemari pendingin s/d 30 hari' },
+      ],
+    };
+  }
+  if (text.includes('mie')) {
+    return {
+      deskripsi:
+        'Mie instan terfavorit masyarakat Indonesia dengan tekstur mie yang kenyal, gurih, dan dipadukan bumbu rempah otentik pilihan. Praktis dihidangkan hanya dalam waktu 3 menit untuk sarapan kilat, camilan malam, maupun bekal praktis keluarga.',
+      spesifikasi: [
+        { label: 'Berat Bersih', value: '85 gram / bungkus' },
+        { label: 'Komposisi Utama', value: 'Tepung Terigu Pilihan, Minyak Nabati & Rempah' },
+        { label: 'Waktu Rebus', value: '3 Menit pada air mendidih' },
+        { label: 'Kemasan', value: 'Aluminium Foil Seal Kedap Udara' },
+        { label: 'Legalitas', value: 'BPOM RI & Halal MUI' },
+      ],
+    };
+  }
+  if (text.includes('kopi')) {
+    return {
+      deskripsi:
+        'Paduan racikan biji kopi robusta pilihan dengan gula pasir alami berpadu pas menghadirkan aroma wangi semerbak dan sensasi rasa mantap. Memberikan suntikan semangat berenergi saat memulai aktivitas di pagi hari.',
+      spesifikasi: [
+        { label: 'Isi Paket', value: '1 Renceng (10 Sachet @ 25 gram)' },
+        { label: 'Komposisi', value: 'Biji Kopi Sangrai Halus + Gula Murni' },
+        { label: 'Penyajian', value: 'Seduh dengan 150ml air mendidih' },
+        { label: 'Kemasan', value: 'Sachet Praktis Anti Lembab' },
+      ],
+    };
+  }
+  return {
+    deskripsi:
+      product.deskripsi ||
+      'Produk sembako segar dan kebutuhan pokok berkualitas terpercaya dari Toko Abah. Selalu diperiksa tanggal kedaluwarsa dan keutuhan kemasan sebelum dikirim ke tangan pelanggan setia kami.',
+    spesifikasi: [
+      { label: 'Kategori', value: product.kategori || 'Sembako Pokok' },
+      { label: 'Kondisi Barang', value: 'Baru, Tersegel Rapih & Bersih' },
+      { label: 'Jaminan Toko', value: 'Garansi Timbangan Pas & Barang Segar' },
+      { label: 'Lokasi Pengiriman', value: 'Gudang Toko Abah, Jl. Raya Telang-Kamal' },
+    ],
+  };
+}
+
 function getCategoryIcon(catName = '') {
   const c = String(catName).toLowerCase();
   if (!catName || c === 'semua') {
@@ -176,6 +276,27 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [modalQty, setModalQty] = useState(1);
+
+  // Aksesibilitas: Tutup modal saat tombol ESC ditekan
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        setSelectedProduct(null);
+      }
+    }
+    if (selectedProduct) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [selectedProduct]);
 
   // 1. Muat kategori
   useEffect(() => {
@@ -220,11 +341,15 @@ export default function CatalogPage() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  function handleAdd(product) {
-    const result = addItem(product);
-    if (result === 'ok') setNotice(`${product.nama} ditambahkan ke keranjang`);
-    else if (result === 'max') setNotice('Jumlah di keranjang sudah mencapai stok tersedia');
-    else setNotice('Stok habis');
+  function handleAdd(product, quantity = 1) {
+    const result = addItem(product, quantity);
+    if (result === 'ok') {
+      setNotice(`${quantity > 1 ? `${quantity}x ` : ''}${product.nama} ditambahkan ke keranjang`);
+    } else if (result === 'max') {
+      setNotice('Jumlah di keranjang sudah mencapai stok tersedia');
+    } else {
+      setNotice('Stok habis');
+    }
   }
 
   function chooseCategory(value) {
@@ -465,9 +590,27 @@ export default function CatalogPage() {
             {sortedRows.map((p) => {
               const soldOut = p.stok <= 0;
               const productImg = getProductImage(p);
+              const soldCount = getProductSold(p);
 
               return (
-                <div key={p.id} className={`katalog-product-card${soldOut ? ' sold-out' : ''}`}>
+                <div
+                  key={p.id}
+                  className={`katalog-product-card${soldOut ? ' sold-out' : ''}`}
+                  onClick={() => {
+                    setSelectedProduct(p);
+                    setModalQty(1);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedProduct(p);
+                      setModalQty(1);
+                    }
+                  }}
+                  aria-label={`Lihat detail ${p.nama}`}
+                >
                   {/* Gambar Produk dari assets */}
                   <div className="katalog-image-wrapper">
                     <img
@@ -478,7 +621,7 @@ export default function CatalogPage() {
                     <span className="katalog-badge-cat">{p.kategori}</span>
                     <span className={`katalog-badge-stock ${soldOut ? 'sold-out' : 'available'}`}>
                       <span className="katalog-badge-dot" aria-hidden="true" />
-                      {soldOut ? 'Stok Habis' : 'Tersedia'}
+                      {soldOut ? 'Stok Habis' : `Stok: ${p.stok}`}
                     </span>
                   </div>
 
@@ -487,6 +630,23 @@ export default function CatalogPage() {
                     <div className="katalog-card-meta">
                       <h3 className="katalog-card-title">{p.nama}</h3>
                       <p className="katalog-card-desc">{getProductDescription(p)}</p>
+
+                      {/* Baris Stok & Terjual */}
+                      <div className="katalog-card-stats-row">
+                        <span className={`katalog-stat-pill ${soldOut ? 'sold-out' : 'stock'}`}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                          </svg>
+                          <span>{soldOut ? 'Stok Habis' : `Stok: ${p.stok}`}</span>
+                        </span>
+                        <span className="katalog-stat-pill sold">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          <span>{soldCount} terjual</span>
+                        </span>
+                      </div>
+
                       <div className="katalog-card-price-row">
                         <span className="katalog-card-price">{formatRupiah(p.harga)}</span>
                         <span className="katalog-card-unit">{getProductUnit(p)}</span>
@@ -496,7 +656,10 @@ export default function CatalogPage() {
                     <button
                       type="button"
                       className={`katalog-btn-card${soldOut ? ' disabled' : ''}`}
-                      onClick={() => handleAdd(p)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAdd(p);
+                      }}
                       disabled={soldOut}
                     >
                       {soldOut ? (
@@ -584,6 +747,209 @@ export default function CatalogPage() {
           <span>Hubungi WhatsApp Abah</span>
         </a>
       </section>
+
+      {/* 8. Modal Pop-up Detail & Deskripsi Produk */}
+      {selectedProduct && (
+        <div
+          className="katalog-modal-backdrop"
+          onClick={() => setSelectedProduct(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-product-title"
+        >
+          <div
+            className="katalog-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Tombol Tutup X */}
+            <button
+              type="button"
+              className="katalog-modal-close-btn"
+              onClick={() => setSelectedProduct(null)}
+              aria-label="Tutup jendela detail produk"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            <div className="katalog-modal-body">
+              {/* Kolom Kiri: Gambar & Badge Trust */}
+              <div className="katalog-modal-image-col">
+                <div className="katalog-modal-img-wrap">
+                  <img
+                    src={getProductImage(selectedProduct)}
+                    alt={selectedProduct.nama}
+                    className="katalog-modal-img"
+                  />
+                  <span className="katalog-modal-img-badge">
+                    {selectedProduct.kategori || 'Sembako'}
+                  </span>
+                </div>
+
+                <div className="katalog-modal-trust-box">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                  <div>
+                    <span className="katalog-modal-trust-title">Jaminan Mutu Toko Abah</span>
+                    <span className="katalog-modal-trust-sub">100% Produk Asli &amp; Timbangan Akurat</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Kolom Kanan: Detail, Deskripsi & Interaksi Tambah */}
+              <div className="katalog-modal-info-col">
+                <div className="katalog-modal-header-meta">
+                  <span className="katalog-modal-sku">SKU: TKB-{String(selectedProduct.id).padStart(3, '0')}</span>
+                  <span className={`katalog-modal-stock-badge ${selectedProduct.stok > 0 ? 'available' : 'sold-out'}`}>
+                    <span className="katalog-badge-dot" aria-hidden="true" />
+                    {selectedProduct.stok > 0 ? `Tersedia: ${selectedProduct.stok} unit` : 'Stok Habis'}
+                  </span>
+                </div>
+
+                <h2 id="modal-product-title" className="katalog-modal-title">
+                  {selectedProduct.nama}
+                </h2>
+
+                {/* Rating & Terjual */}
+                <div className="katalog-modal-rating-row">
+                  <div className="katalog-modal-stars" aria-label="Rating 4.9 dari 5 bintang">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" aria-hidden="true">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    ))}
+                    <span className="katalog-modal-rating-score">4.9</span>
+                  </div>
+                  <span className="katalog-modal-divider">•</span>
+                  <span className="katalog-modal-sold-text">{getProductSold(selectedProduct)} telah terjual</span>
+                </div>
+
+                {/* Harga Resmi */}
+                <div className="katalog-modal-price-box">
+                  <div className="katalog-modal-price-row">
+                    <span className="katalog-modal-price-val">{formatRupiah(selectedProduct.harga)}</span>
+                    <span className="katalog-modal-price-unit">{getProductUnit(selectedProduct)}</span>
+                  </div>
+                  <p className="katalog-modal-price-note">Harga grosir &amp; eceran terbaik di Telang-Kamal, Bangkalan</p>
+                </div>
+
+                {/* Deskripsi Barang Terperinci */}
+                <div className="katalog-modal-desc-section">
+                  <h4 className="katalog-modal-section-title">Deskripsi Produk</h4>
+                  <p className="katalog-modal-desc-p">
+                    {getProductDetailedDescription(selectedProduct).deskripsi}
+                  </p>
+                </div>
+
+                {/* Spesifikasi Teknis */}
+                <div className="katalog-modal-specs-section">
+                  <h4 className="katalog-modal-section-title">Spesifikasi &amp; Detail Kemasan</h4>
+                  <div className="katalog-modal-specs-grid">
+                    {getProductDetailedDescription(selectedProduct).spesifikasi.map((spec, i) => (
+                      <div key={i} className="katalog-modal-spec-item">
+                        <span className="katalog-modal-spec-label">{spec.label}</span>
+                        <span className="katalog-modal-spec-val">{spec.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pengaturan Kuantitas & Tombol Tambah */}
+                <div className="katalog-modal-action-box">
+                  <div className="katalog-modal-qty-row">
+                    <span className="katalog-modal-qty-label">Jumlah Pembelian:</span>
+                    <div className="katalog-modal-stepper">
+                      <button
+                        type="button"
+                        className="katalog-modal-step-btn"
+                        disabled={modalQty <= 1}
+                        onClick={() => setModalQty((q) => Math.max(1, q - 1))}
+                        aria-label="Kurangi jumlah"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max={selectedProduct.stok}
+                        value={modalQty}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val)) {
+                            setModalQty(Math.min(Math.max(1, val), Math.max(1, selectedProduct.stok)));
+                          }
+                        }}
+                        className="katalog-modal-step-input"
+                        aria-label="Jumlah beli"
+                      />
+                      <button
+                        type="button"
+                        className="katalog-modal-step-btn"
+                        disabled={modalQty >= selectedProduct.stok || selectedProduct.stok <= 0}
+                        onClick={() => setModalQty((q) => Math.min(selectedProduct.stok, q + 1))}
+                        aria-label="Tambah jumlah"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="katalog-modal-subtotal-block">
+                      <span className="katalog-modal-subtotal-label">Subtotal:</span>
+                      <span className="katalog-modal-subtotal-val">
+                        {formatRupiah(selectedProduct.harga * modalQty)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="katalog-modal-buttons-row">
+                    <button
+                      type="button"
+                      className="katalog-modal-add-cart-btn"
+                      disabled={selectedProduct.stok <= 0}
+                      onClick={() => {
+                        handleAdd(selectedProduct, modalQty);
+                        setSelectedProduct(null);
+                      }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="9" cy="21" r="1" />
+                        <circle cx="20" cy="21" r="1" />
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                      </svg>
+                      <span>
+                        {selectedProduct.stok <= 0
+                          ? 'Stok Habis'
+                          : `Masukkan Keranjang (${modalQty}) • ${formatRupiah(selectedProduct.harga * modalQty)}`}
+                      </span>
+                    </button>
+
+                    <a
+                      href={`https://wa.me/6285708350575?text=Halo%20Abah,%20saya%20tertarik%20dengan%20produk%20${encodeURIComponent(selectedProduct.nama)}%20(Harga%20${encodeURIComponent(formatRupiah(selectedProduct.harga))}).%20Apakah%20stok%20masih%20siap%20kirim?`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="katalog-modal-wa-btn"
+                      aria-label="Tanya produk via WhatsApp"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                      <span>Tanya WA</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

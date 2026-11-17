@@ -926,3 +926,512 @@
 .katalog-help-btn:active {
   transform: scale(0.98);
 }
+
+/* Card Stats: Stok & Terjual */
+.katalog-card-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 6px 0 2px;
+}
+
+.katalog-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
+.katalog-stat-pill.stock {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.katalog-stat-pill.stock.sold-out {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.katalog-stat-pill.sold {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #dbeafe;
+}
+
+/* 8. Modal Pop-up Detail & Deskripsi Produk */
+.katalog-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(18, 29, 38, 0.65);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: katalogModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes katalogModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.katalog-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow-y: auto;
+  animation: katalogModalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes katalogModalSlideUp {
+  from {
+    transform: translateY(20px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.katalog-modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 10;
+}
+
+.katalog-modal-close-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.katalog-modal-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  padding: 24px;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .katalog-modal-body {
+    grid-template-columns: 320px 1fr;
+    padding: 32px;
+    gap: 32px;
+  }
+}
+
+/* Kolom Kiri: Gambar Modal */
+.katalog-modal-image-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.katalog-modal-img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.katalog-modal-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.katalog-modal-img-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  color: #166534;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.katalog-modal-trust-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.katalog-modal-trust-box svg {
+  flex-shrink: 0;
+}
+
+.katalog-modal-trust-title {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #14532d;
+}
+
+.katalog-modal-trust-sub {
+  display: block;
+  font-size: 11px;
+  color: #166534;
+}
+
+/* Kolom Kanan: Detail & Aksi Modal */
+.katalog-modal-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.katalog-modal-header-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.katalog-modal-sku {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.katalog-modal-stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.katalog-modal-stock-badge.available {
+  background: #dcfce7;
+  color: #14532d;
+  border: 1px solid #86efac;
+}
+
+.katalog-modal-stock-badge.sold-out {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.katalog-modal-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.katalog-modal-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.katalog-modal-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.katalog-modal-rating-score {
+  margin-left: 4px;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.katalog-modal-divider {
+  color: #cbd5e1;
+}
+
+.katalog-modal-sold-text {
+  font-weight: 600;
+  color: #0369a1;
+}
+
+/* Harga Modal */
+.katalog-modal-price-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+
+.katalog-modal-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.katalog-modal-price-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0d631b;
+}
+
+.katalog-modal-price-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.katalog-modal-price-note {
+  font-size: 12px;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+/* Deskripsi & Spesifikasi */
+.katalog-modal-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.katalog-modal-desc-p {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #334155;
+  margin: 0;
+}
+
+.katalog-modal-specs-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+}
+
+@media (min-width: 500px) {
+  .katalog-modal-specs-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.katalog-modal-spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.katalog-modal-spec-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.katalog-modal-spec-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Aksi Kuantitas & Tombol */
+.katalog-modal-action-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.katalog-modal-qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.katalog-modal-qty-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.katalog-modal-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid #cbd5e1;
+}
+
+.katalog-modal-step-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: none;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.katalog-modal-step-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.katalog-modal-step-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.katalog-modal-step-input {
+  width: 44px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  outline: none;
+}
+
+.katalog-modal-step-input::-webkit-outer-spin-button,
+.katalog-modal-step-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.katalog-modal-step-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.katalog-modal-subtotal-block {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.katalog-modal-subtotal-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.katalog-modal-subtotal-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0d631b;
+}
+
+.katalog-modal-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.katalog-modal-add-cart-btn {
+  flex: 1;
+  min-width: 200px;
+  height: 48px;
+  border-radius: 12px;
+  background: #0d631b;
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(13, 99, 27, 0.25);
+  transition: all 0.15s ease;
+}
+
+.katalog-modal-add-cart-btn:hover:not(:disabled) {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.katalog-modal-add-cart-btn:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.katalog-modal-add-cart-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.katalog-modal-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  border: 1.5px solid #22c55e;
+  color: #15803d;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.katalog-modal-wa-btn:hover {
+  background: #22c55e;
+  color: #ffffff;
+}
