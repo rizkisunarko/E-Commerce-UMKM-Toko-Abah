@@ -21,6 +21,7 @@ async function createFixture(t) {
       nama: 'Beras 5 kg',
       kategori: 'Beras & Tepung',
       harga: '68000.00',
+      harga_beli: '50000.00',
       satuan: 'karung',
       stok: '4.000',
       batas_stok_kritis: '10.000',
@@ -291,5 +292,28 @@ test('produk dan kategori dibaca dari API backend dan memerlukan login', async (
   const archivedResponse = await fetch(`${baseUrl}/products?include_archived=true`, {
     headers: { Authorization: `Bearer ${employee.token}` },
   });
+  assert.equal(archivedResponse.status, 403);
+});
+
+test('katalog publik dapat dibaca tanpa login dan tidak membocorkan harga beli', async (t) => {
+  const baseUrl = await createFixture(t);
+  const catalogResponse = await fetch(`${baseUrl}/catalog?search=Beras&page=1&limit=1`);
+  assert.equal(catalogResponse.status, 200);
+  const catalog = await catalogResponse.json();
+  assert.deepEqual(catalog.pagination, {
+    page: 1,
+    limit: 1,
+    total: 1,
+    total_pages: 1,
+  });
+  assert.equal(catalog.data[0].nama, 'Beras 5 kg');
+  assert.equal(catalog.data[0].tersedia, true);
+  assert.equal('harga_beli' in catalog.data[0], false);
+
+  const categoriesResponse = await fetch(`${baseUrl}/catalog/categories`);
+  assert.equal(categoriesResponse.status, 200);
+  assert.deepEqual(await categoriesResponse.json(), { data: ['Beras & Tepung'] });
+
+  const archivedResponse = await fetch(`${baseUrl}/catalog?include_archived=true`);
   assert.equal(archivedResponse.status, 403);
 });

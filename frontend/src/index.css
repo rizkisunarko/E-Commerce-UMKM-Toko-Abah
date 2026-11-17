@@ -4313,3 +4313,41 @@ th {
     align-items: flex-start;
   }
 }
+.ko-destination-search {
+  position: relative;
+}
+
+.ko-destination-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 20px rgb(31 41 51 / 12%);
+}
+
+.ko-destination-options button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ko-destination-options button:hover,
+.ko-destination-options button:focus-visible {
+  background: var(--success-bg);
+  outline: none;
+}

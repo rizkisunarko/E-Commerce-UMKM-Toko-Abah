@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { itemIssue, useCart } from '../context/CartContext';
 import useCartCheck from '../hooks/useCartCheck';
@@ -52,10 +52,17 @@ export default function CheckoutPage() {
 
   // Metode Penerimaan: 'ambil_di_toko' | 'kurir'
   const [metode, setMetode] = useState('ambil_di_toko');
-  const [wilayah, setWilayah] = useState('Telang, Kamal (Radius < 3 km)');
   const [alamatLengkap, setAlamatLengkap] = useState('');
-  const [layananKurir, setLayananKurir] = useState('kurir_abah'); // 'kurir_abah' | 'grab_gosend'
-  const [courierCalcError, setCourierCalcError] = useState(false);
+  const [destinationSearch, setDestinationSearch] = useState('');
+  const [destination, setDestination] = useState(null);
+  const [destinationOptions, setDestinationOptions] = useState([]);
+  const [destinationSearchLoading, setDestinationSearchLoading] = useState(false);
+  const [destinationError, setDestinationError] = useState('');
+  const [shippingRates, setShippingRates] = useState([]);
+  const [selectedRateId, setSelectedRateId] = useState('');
+  const [shippingQuoteLoading, setShippingQuoteLoading] = useState(false);
+  const [courierCalcError, setCourierCalcError] = useState('');
+  const [quoteRetry, setQuoteRetry] = useState(0);
 
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
@@ -66,16 +73,92 @@ export default function CheckoutPage() {
     return <Navigate to="/keranjang" replace />;
   }
 
+  const selectedRate = shippingRates.find((rate) => rate.id === selectedRateId);
+  const courierLabel = selectedRate
+    ? `${selectedRate.courier_name} ${selectedRate.service}`
+    : 'Pilih layanan kurir';
+
   // Hitung ongkos kirim & diskon
   const diskon = total >= 100000 ? 6000 : 0;
-  const ongkir = metode === 'kurir' ? (layananKurir === 'grab_gosend' ? 18000 : 15000) : 0;
+  const ongkir = metode === 'kurir' && selectedRate ? selectedRate.cost : 0;
   const grandTotal = Math.max(0, total - diskon + ongkir);
+
+  const quoteItems = items.map((item) => ({ product_id: item.id, jumlah: item.jumlah }));
+  const quoteItemsKey = JSON.stringify(quoteItems);
+
+  useEffect(() => {
+    const search = destinationSearch.trim();
+    if (metode !== 'kurir' || destination || search.length < 2) {
+      setDestinationOptions([]);
+      setDestinationSearchLoading(false);
+      setDestinationError('');
+      return undefined;
+    }
+
+    let active = true;
+    const timer = setTimeout(async () => {
+      setDestinationSearchLoading(true);
+      setDestinationError('');
+      try {
+        const result = await orderService.searchDestinations(search);
+        if (active) setDestinationOptions(result.data || []);
+      } catch (error) {
+        if (active) {
+          setDestinationOptions([]);
+          setDestinationError(error.message || 'Gagal mencari wilayah tujuan.');
+        }
+      } finally {
+        if (active) setDestinationSearchLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [metode, destination, destinationSearch, quoteRetry]);
+
+  useEffect(() => {
+    if (metode !== 'kurir' || !destination) {
+      setShippingRates([]);
+      setSelectedRateId('');
+      setShippingQuoteLoading(false);
+      setCourierCalcError('');
+      return undefined;
+    }
+
+    let active = true;
+    setShippingRates([]);
+    setSelectedRateId('');
+    setShippingQuoteLoading(true);
+    setCourierCalcError('');
+    orderService.calculateShipping(destination.id, JSON.parse(quoteItemsKey))
+      .then((result) => {
+        if (!active) return;
+        if (!Array.isArray(result.data) || result.data.length === 0) {
+          setCourierCalcError('Tidak ada layanan kurir untuk tujuan ini. Coba tujuan lain atau pilih Ambil di Toko.');
+          return;
+        }
+        setShippingRates(result.data);
+        setSelectedRateId(result.data[0].id);
+      })
+      .catch((error) => {
+        if (active) setCourierCalcError(error.message || 'Ongkos kirim gagal dihitung.');
+      })
+      .finally(() => {
+        if (active) setShippingQuoteLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [metode, destination, quoteItemsKey, quoteRetry]);
 
   function handleSendSummaryWhatsApp() {
     const phone = '6281288997700';
     const itemLines = items.map((it) => `- ${it.nama} (${it.jumlah}x) = ${formatRupiah(it.harga * it.jumlah)}`).join('\n');
     const metodeText = metode === 'kurir'
-      ? `Kurir Pihak Ketiga (${layananKurir === 'grab_gosend' ? 'Grab/GoSend' : 'Kurir Toko'})\nAlamat: ${alamatLengkap.trim() || '-'}\nWilayah: ${wilayah}\nOngkir: ${formatRupiah(ongkir)}`
+      ? `Kurir Pihak Ketiga (${courierLabel})\nAlamat: ${alamatLengkap.trim() || '-'}\nWilayah: ${destination?.label || '-'}\nOngkir: ${formatRupiah(ongkir)}`
       : 'Ambil Mandiri di Toko Abah (Jl. Raya Telang-Kamal)';
     const msg = `Halo Toko Abah, saya ingin konfirmasi pesanan sembako:\n\nNama Pemesan: ${nama.trim() || '-'}\nNomor HP/WA: ${noHp.trim() || '-'}\n\nDaftar Belanja:\n${itemLines}\n\nSubtotal: ${formatRupiah(total)}\nDiskon: -${formatRupiah(diskon)}\nMetode: ${metodeText}\n\nTotal Tagihan: ${formatRupiah(grandTotal)}\nCatatan: ${catatan.trim() || '-'}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -91,8 +174,12 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (metode === 'kurir' && (!destination || !selectedRate)) {
+      setFormError('Pilih wilayah tujuan dan layanan kurir sebelum melanjutkan.');
+      return;
+    }
     if (metode === 'kurir' && courierCalcError) {
-      setFormError('Layanan kurir sedang mengalami kendala. Harap pilih Ambil di Toko atau coba lagi.');
+      setFormError('Layanan kurir sedang mengalami kendala. Coba lagi atau pilih Ambil di Toko.');
       return;
     }
 
@@ -103,9 +190,9 @@ export default function CheckoutPage() {
         no_hp: noHp.replace(/[\s-]/g, ''),
         catatan: catatan.trim(),
         metode_penerimaan: metode,
-        wilayah: metode === 'kurir' ? wilayah : undefined,
+        wilayah: metode === 'kurir' ? destination.label : undefined,
         alamat_lengkap: metode === 'kurir' ? alamatLengkap.trim() : undefined,
-        layanan_kurir: metode === 'kurir' ? (layananKurir === 'grab_gosend' ? 'GrabExpress / GoSend Sameday' : 'Kurir Instan Toko Abah (Motor)') : undefined,
+        layanan_kurir: metode === 'kurir' ? courierLabel : undefined,
         ongkir,
         diskon,
         items: items.map((it) => ({ product_id: it.id, jumlah: it.jumlah })),
@@ -132,7 +219,8 @@ export default function CheckoutPage() {
 
   // Cari item pertama yang memiliki masalah stok untuk banner error
   const firstIssueItem = items.find((it) => itemIssue(it));
-  const blocked = submitting || checking || Boolean(checkError) || hasIssue;
+  const blocked = submitting || checking || Boolean(checkError) || hasIssue ||
+    (metode === 'kurir' && (shippingQuoteLoading || !selectedRate || Boolean(courierCalcError)));
 
   return (
     <div className="ko-checkout-wrapper">
@@ -523,39 +611,63 @@ export default function CheckoutPage() {
                 {/* Field: Wilayah Tujuan */}
                 <div className="ko-input-field">
                   <label htmlFor="wilayah-tujuan" className="ko-input-label">
-                    Wilayah Pengiriman / Kecamatan <span className="ko-input-star">*</span>
+                    Kecamatan atau Kota Tujuan <span className="ko-input-star">*</span>
                   </label>
-                  <div className="ko-select-wrapper">
-                    <span className="ko-select-leading-icon" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                        <circle cx="12" cy="10" r="3" />
-                      </svg>
-                    </span>
-                    <select
+                  <div className="ko-destination-search">
+                    <input
                       id="wilayah-tujuan"
-                      value={wilayah}
-                      onChange={(e) => setWilayah(e.target.value)}
-                      className="ko-select-control"
-                    >
-                      <option value="Telang, Kamal (Radius < 3 km)">Telang, Kamal (Radius &lt; 3 km)</option>
-                      <option value="Kamal Barat, Bangkalan (Radius 3 - 5 km)">Kamal Barat, Bangkalan (Radius 3 - 5 km)</option>
-                      <option value="Kamal Timur, Bangkalan (Radius 4 - 6 km)">Kamal Timur, Bangkalan (Radius 4 - 6 km)</option>
-                      <option value="Labang, Bangkalan (Radius 5 - 8 km)">Labang, Bangkalan (Radius 5 - 8 km)</option>
-                    </select>
-                    <span className="ko-select-trailing-arrow" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </span>
+                      type="search"
+                      autoComplete="off"
+                      placeholder="Ketik kecamatan, kota, atau provinsi"
+                      value={destinationSearch}
+                      onChange={(event) => {
+                        setDestinationSearch(event.target.value);
+                        setDestination(null);
+                        setDestinationOptions([]);
+                        setShippingRates([]);
+                        setSelectedRateId('');
+                        setCourierCalcError('');
+                      }}
+                      className="ko-input-control no-leading"
+                      role="combobox"
+                      aria-autocomplete="list"
+                      aria-expanded={!destination && destinationOptions.length > 0}
+                      aria-controls="wilayah-tujuan-options"
+                    />
+                    {!destination && destinationOptions.length > 0 && (
+                      <ul id="wilayah-tujuan-options" className="ko-destination-options" role="listbox">
+                        {destinationOptions.map((option) => (
+                          <li key={option.id} role="option" aria-selected="false">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDestination(option);
+                                setDestinationSearch(option.label);
+                                setDestinationOptions([]);
+                                setDestinationError('');
+                                setFormError('');
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between text-xs mt-1.5 px-0.5">
-                    <span className="text-primary font-bold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-primary inline-block" />
-                      <span>Area layanan antar aktif &amp; didukung</span>
-                    </span>
-                    <span className="text-on-surface-variant font-medium">Estimasi jarak: ~1.8 km</span>
-                  </div>
+                  {destinationSearchLoading && (
+                    <p className="ko-input-helper" role="status">Mencari wilayah tujuan...</p>
+                  )}
+                  {destinationError && (
+                    <p className="ko-input-err-msg" role="alert">{destinationError}</p>
+                  )}
+                  {!destinationError && !destinationSearchLoading && destinationSearch.trim().length >= 2 &&
+                    !destination && destinationOptions.length === 0 && (
+                      <p className="ko-input-helper">Wilayah belum ditemukan. Coba nama kecamatan atau kota lain.</p>
+                  )}
+                  <p className="ko-input-helper">
+                    Pilih wilayah dari hasil pencarian agar tarif kurir dapat dihitung.
+                  </p>
                 </div>
 
                 {/* Field: Alamat Lengkap & Patokan Rumah */}
@@ -604,7 +716,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Delivery Cost Highlight Card OR Courier Error State Card */}
-                {courierCalcError ? (
+                {courierCalcError || destinationError ? (
                   <div className="ko-courier-error-card" role="alert">
                     <div className="flex items-start gap-3">
                       <div className="ko-courier-error-icon">
@@ -616,14 +728,18 @@ export default function CheckoutPage() {
                       <div>
                         <span className="ko-courier-error-tag">Gangguan Layanan Kurir</span>
                         <h4 className="ko-courier-error-title">Ongkos kirim tidak dapat dihitung</h4>
-                        <p className="ko-courier-error-sub">Gagal menghubungkan sistem tarif kurir. Coba lagi atau pilih metode Ambil di Toko.</p>
+                        <p className="ko-courier-error-sub">{courierCalcError || destinationError}</p>
                       </div>
                     </div>
                     <div className="ko-courier-error-btns">
                       <button
                         type="button"
                         className="ko-btn-retry-courier"
-                        onClick={() => setCourierCalcError(false)}
+                        onClick={() => {
+                          setCourierCalcError('');
+                          setDestinationError('');
+                          setQuoteRetry((value) => value + 1);
+                        }}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="23 4 23 10 17 10" />
@@ -635,7 +751,7 @@ export default function CheckoutPage() {
                         type="button"
                         className="ko-btn-switch-store"
                         onClick={() => {
-                          setCourierCalcError(false);
+                          setCourierCalcError('');
                           setMetode('ambil_di_toko');
                         }}
                       >
@@ -658,15 +774,25 @@ export default function CheckoutPage() {
                         </svg>
                       </div>
                       <div>
-                        <span className="ko-highlight-small-title">Biaya Pengiriman Terpilih</span>
-                        <div className="ko-highlight-big-rate">Ongkos Kirim {formatRupiah(ongkir)}</div>
+                        <span className="ko-highlight-small-title">Tarif dari RajaOngkir</span>
+                        <div className="ko-highlight-big-rate">
+                          {shippingQuoteLoading
+                            ? 'Menghitung ongkos kirim...'
+                            : selectedRate
+                              ? `Ongkos Kirim ${formatRupiah(ongkir)}`
+                              : 'Pilih tujuan untuk menghitung ongkir'}
+                        </div>
                         <p className="ko-highlight-desc">
-                          {layananKurir === 'grab_gosend' ? 'Pengiriman via mitra GrabExpress / GoSend' : 'Pengiriman langsung oleh armada kurir internal Toko Abah'}
+                          {selectedRate
+                            ? `${selectedRate.courier_name} ${selectedRate.service}${selectedRate.etd ? ` • Estimasi ${selectedRate.etd}` : ''}`
+                            : 'Tarif dihitung berdasarkan total berat keranjang dan wilayah tujuan.'}
                         </p>
                       </div>
                     </div>
                     <div className="self-end sm:self-center">
-                      <span className="ko-priority-pill">Prioritas Pagi Ini</span>
+                      <span className="ko-priority-pill">
+                        {shippingQuoteLoading ? 'Memuat tarif' : selectedRate ? 'Tarif estimasi' : 'Sandbox'}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -675,52 +801,46 @@ export default function CheckoutPage() {
                 <div className="ko-courier-options-group">
                   <span className="ko-input-label font-bold text-on-surface">Pilih Layanan Kurir</span>
                   <div className="space-y-2 mt-2">
-                    {/* Option 1: Kurir Abah */}
-                    <label
-                      className={`ko-courier-option-row ${layananKurir === 'kurir_abah' ? 'selected' : ''}`}
-                      onClick={() => setLayananKurir('kurir_abah')}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="selected_courier"
-                          value="kurir_abah"
-                          checked={layananKurir === 'kurir_abah'}
-                          onChange={() => setLayananKurir('kurir_abah')}
-                          className="ko-native-radio"
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-on-surface text-sm">Kurir Instan Toko Abah (Motor)</span>
-                            <span className="ko-badge-recommend">Rekomendasi</span>
+                    {shippingQuoteLoading && (
+                      <p className="ko-input-helper" role="status">Meminta tarif ke RajaOngkir...</p>
+                    )}
+                    {!shippingQuoteLoading && !courierCalcError && !destinationError &&
+                      shippingRates.map((rate) => (
+                        <label
+                          key={rate.id}
+                          className={`ko-courier-option-row ${selectedRateId === rate.id ? 'selected' : ''}`}
+                          onClick={() => setSelectedRateId(rate.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name="selected_courier"
+                              value={rate.id}
+                              checked={selectedRateId === rate.id}
+                              onChange={() => setSelectedRateId(rate.id)}
+                              className="ko-native-radio"
+                            />
+                            <div>
+                              <div className="font-semibold text-on-surface text-sm">
+                                {rate.courier_name} {rate.service}
+                              </div>
+                              <span className="text-xs text-on-surface-variant">
+                                {rate.description || (rate.etd ? `Estimasi ${rate.etd}` : 'Estimasi layanan kurir')}
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-xs text-on-surface-variant">Estimasi tiba: 45 - 60 menit • Driver internal toko</span>
-                        </div>
-                      </div>
-                      <span className="font-bold text-primary text-base tabular-nums">Rp 15.000</span>
-                    </label>
-
-                    {/* Option 2: Sameday */}
-                    <label
-                      className={`ko-courier-option-row ${layananKurir === 'grab_gosend' ? 'selected' : ''}`}
-                      onClick={() => setLayananKurir('grab_gosend')}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="selected_courier"
-                          value="grab_gosend"
-                          checked={layananKurir === 'grab_gosend'}
-                          onChange={() => setLayananKurir('grab_gosend')}
-                          className="ko-native-radio"
-                        />
-                        <div>
-                          <div className="font-semibold text-on-surface text-sm">GrabExpress / GoSend Sameday</div>
-                          <span className="text-xs text-on-surface-variant">Estimasi tiba: 2 - 4 jam • Kurir pihak ketiga reguler</span>
-                        </div>
-                      </div>
-                      <span className="font-semibold text-on-surface-variant text-base tabular-nums">Rp 18.000</span>
-                    </label>
+                          <span className="font-bold text-primary text-base tabular-nums">
+                            {formatRupiah(rate.cost)}
+                          </span>
+                        </label>
+                      ))}
+                    {!shippingQuoteLoading && destination && !courierCalcError &&
+                      !destinationError && shippingRates.length === 0 && (
+                        <p className="ko-input-helper">Tarif kurir akan ditampilkan setelah perhitungan selesai.</p>
+                    )}
+                    {!destination && !shippingQuoteLoading && (
+                      <p className="ko-input-helper">Pilih wilayah tujuan untuk melihat tarif yang tersedia.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -794,7 +914,7 @@ export default function CheckoutPage() {
                 <div className="flex flex-col">
                   <span>Ongkos Kirim</span>
                   <span className="text-xs text-primary font-semibold">
-                    {metode === 'kurir' ? (layananKurir === 'grab_gosend' ? 'Grab/GoSend Sameday' : 'Kurir Pihak Ketiga (Motor)') : 'Ambil Mandiri di Toko'}
+                    {metode === 'kurir' ? courierLabel : 'Ambil Mandiri di Toko'}
                   </span>
                 </div>
                 <span className="font-bold text-primary tabular-nums">

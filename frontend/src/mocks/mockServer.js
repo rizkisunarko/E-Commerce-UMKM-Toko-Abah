@@ -142,6 +142,7 @@ export async function mockRequest(method, fullPath, body = {}, token) {
     }));
     return reply(200, { data, pagination: { page, limit, total: rows.length } });
   }
+  if (method === 'GET' && path === '/catalog/categories') return reply(200, { data: CATEGORIES });
   if (method === 'GET' && path === '/categories') return reply(200, { data: CATEGORIES });
 
   // Keranjang dan pesanan pelanggan (PPL-08): tanpa login. Harga selalu dari server.

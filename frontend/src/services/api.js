@@ -34,7 +34,7 @@ export class ApiError extends Error {
 export async function request(method, path, body) {
   const token = getToken();
 
-  if (USE_MOCK) {
+  if (USE_MOCK && !path.startsWith('/shipping/')) {
     const res = await mockRequest(method, path, body, token);
     if (res.status >= 400) throw new ApiError(res.status, res.body.message, res.body.errors);
     return res.body;

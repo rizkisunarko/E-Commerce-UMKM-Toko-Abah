@@ -13,6 +13,6 @@ function toQuery(params = {}) {
 export const catalogService = {
   // params: { search, kategori, page, limit }
   list: (params) => api.get(`/catalog${toQuery(params)}`),
-  categories: () => api.get('/categories'),
+  categories: () => api.get('/catalog/categories'),
 };
 

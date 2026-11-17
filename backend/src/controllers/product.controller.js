@@ -1,5 +1,6 @@
 const defaultDb = require('../config/db');
 const { validateProduct, CATEGORIES } = require('../utils/productValidation');
+const parseGram = require('../utils/weight');
 const { randomBytes } = require('node:crypto');
 
 const PRODUCT_SELECT = `
@@ -20,16 +21,6 @@ const PRODUCT_SELECT = `
 
 function getStockStatus(stok, batasStokKritis) {
   return Number(stok) <= Number(batasStokKritis) ? 'Stok Kritis' : 'Stok Aman';
-}
-
-function parseGram(satuan) {
-  if (typeof satuan !== 'string') return 0;
-  const match = satuan.match(/^(\d+(?:\.\d+)?)\s*(kg|g|l|ml)?/i);
-  if (!match) return 0;
-  const val = parseFloat(match[1]);
-  const unit = (match[2] || 'g').toLowerCase();
-  if (unit === 'kg' || unit === 'l') return Math.round(val * 1000);
-  return Math.round(val);
 }
 
 // status_stok dihitung, tidak disimpan (AC-04.1)
