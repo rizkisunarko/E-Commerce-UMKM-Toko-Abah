@@ -10,6 +10,7 @@ import gulaImg from '../assets/Gula-Pasir.jpg';
 import telurImg from '../assets/Telur Ayam.jpg';
 import mieImg from '../assets/Mie-Instan.jpg';
 import kopiImg from '../assets/Kopi-Sachet.jpg';
+import storeBannerImg from '../assets/store-banner.jpg';
 
 function getProductThumbnail(nama = '') {
   const n = (nama || '').toLowerCase();
@@ -137,7 +138,16 @@ export default function OrderPage() {
     minute: '2-digit',
   }) + ' WIB';
 
+  const deadlineTime = deadlineDate.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).replace('.', ':') + ' WIB';
+
   const isCourier = order.metode_penerimaan === 'kurir';
+  const nomorPesanan = order.nomor_pesanan || 'TA-20261112-001';
+  const waTotal = formatRupiah(order.total || 121500).replace(/\s+/g, '');
+  const waMessage = `Halo Toko Abah, saya sudah membuat pesanan nomor ${nomorPesanan} senilai ${waTotal}. Mohon disiapkan ya.`;
+  const waLink = `https://wa.me/6281288997700?text=${encodeURIComponent(waMessage)}`;
 
   return (
     <div className="ko-order-page-wrapper">
@@ -583,7 +593,14 @@ export default function OrderPage() {
               </div>
 
               {/* Visual Map Placeholder Card */}
-              <div className="ko-visual-map-card">
+              <div
+                className="ko-visual-map-card"
+                style={{
+                  backgroundImage: `url(${storeBannerImg})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
                 <div className="ko-map-overlay" />
                 <div className="ko-map-store-badge">
                   <div className="ko-map-badge-icon">
@@ -630,7 +647,7 @@ export default function OrderPage() {
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
-                  <span>Batas bayar: Hari ini pukul {deadlineFormatted.split(',')[1]}</span>
+                  <span>Batas bayar: Hari ini pukul {deadlineTime}</span>
                 </div>
               </div>
 
@@ -651,17 +668,18 @@ export default function OrderPage() {
                   <span>{isPaid ? 'Lihat Bukti QRIS' : 'Bayar Sekarang (QRIS / Transfer)'}</span>
                 </button>
 
-                {/* Secondary Button: WhatsApp */}
-                <button
-                  type="button"
+                {/* Secondary Button: WhatsApp Toko Confirmation */}
+                <a
                   className="ko-btn-wa-order"
-                  onClick={handleSendWhatsApp}
+                  href={waLink}
+                  rel="noopener noreferrer"
+                  target="_blank"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                   <span>Kirim Ringkasan ke WhatsApp Toko</span>
-                </button>
+                </a>
 
                 {/* Tunai di Kasir Note */}
                 <div className="ko-tunai-note-box">
