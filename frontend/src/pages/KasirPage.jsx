@@ -1248,24 +1248,57 @@ export default function KasirPage() {
             {metode === 'tunai' ? (
               <>
                 <label className="kasir-payment-field-label" htmlFor="cash-received">
-                  Uang diterima
+                  Uang Diterima dari Pelanggan
                 </label>
-                <input
-                  id="cash-received"
-                  className="kasir-payment-cash-input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  inputMode="numeric"
-                  autoFocus
-                  value={cashReceived}
-                  onChange={(event) => {
-                    setCashReceived(event.target.value);
-                    setPaymentError('');
-                  }}
-                  placeholder="Masukkan nominal uang"
-                  aria-invalid={Boolean(paymentError)}
-                />
+                <div className="kasir-payment-input-wrap">
+                  <span className="kasir-payment-input-prefix">Rp</span>
+                  <input
+                    id="cash-received"
+                    className="kasir-payment-cash-input"
+                    type="text"
+                    inputMode="numeric"
+                    autoFocus
+                    value={cashReceived ? Number(cashReceived).toLocaleString('id-ID') : ''}
+                    onChange={(event) => {
+                      const raw = event.target.value.replace(/\D/g, '');
+                      setCashReceived(raw ? String(Number(raw)) : '');
+                      setPaymentError('');
+                    }}
+                    placeholder="0"
+                    aria-invalid={Boolean(paymentError)}
+                  />
+                </div>
+
+                {/* Tombol Cepat Nominal Uang Pas / Pecahan */}
+                <div className="kasir-cash-presets">
+                  <button
+                    type="button"
+                    className="kasir-preset-btn"
+                    onClick={() => {
+                      setCashReceived(String(total));
+                      setPaymentError('');
+                    }}
+                  >
+                    Uang Pas ({formatRupiah(total)})
+                  </button>
+                  {[20000, 50000, 100000, 200000]
+                    .filter((amt) => amt >= total || total > 100000)
+                    .slice(0, 3)
+                    .map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        className="kasir-preset-btn"
+                        onClick={() => {
+                          setCashReceived(String(amt));
+                          setPaymentError('');
+                        }}
+                      >
+                        Rp {amt.toLocaleString('id-ID')}
+                      </button>
+                    ))}
+                </div>
+
                 <div className="kasir-payment-change">
                   <span>Kembalian</span>
                   <strong>

@@ -1,540 +1,711 @@
 /* ==========================================================================
-   GAYA HALAMAN LOGIN TOKO ABAH (PPL-20.2)
-   Mengadaptasi desain UI/UX Toko Abah POS v2.4
+   GAYA HALAMAN LOGIN TOKO ABAH
+   Berdasarkan desain Tailwind dari plan/halamana/login.html
    ========================================================================== */
 
+/* Variabel Desain Toko Abah (Material 3 Theme) */
 :root {
-  /* Palet Warna Desain Toko Abah */
-  --login-primary: #2f7c38;        /* Hijau utama Toko Abah: rgb(47, 124, 56) */
-  --login-primary-dark: #256628;   /* Hijau hover tombol */
-  --login-accent-orange: #c17d28;  /* Oranye aksen strip atas kartu */
-  --login-bg: #f8fafc;             /* Latar belakang halaman */
-  --login-card-bg: #ffffff;        /* Latar kartu putih */
-  --login-card-border: #e5e7eb;    /* Border halus kartu */
-  --login-input-bg: #edf4fe;       /* Latar isian input: rgb(237, 244, 254) */
-  --login-input-border: #dbe4f0;   /* Border default input */
-  --login-terminal-bg: #edf3ff;    /* Latar box status terminal POS bawah */
-  --login-badge-bg: #d5ece2;       /* Latar badge POS v2.4 */
-  --login-badge-text: #236f37;     /* Teks badge POS v2.4 */
-  --login-text-dark: #111827;      /* Teks judul utama */
-  --login-text-body: #1f2937;      /* Teks isi / label */
-  --login-text-muted: #6b7280;     /* Teks keterangan / pembantu */
-  --login-error-bg: #fee2e2;       /* Latar pesan error: rgb(254, 226, 226) */
-  --login-error-border: #fecaca;   /* Border pesan error */
-  --login-error-text: #991b1b;     /* Teks pesan error */
-  --login-error-icon: #ef4444;     /* Ikon error */
-  --login-success-bg: #ecfdf5;     /* Latar alert sukses autentikasi */
-  --login-success-border: #bbf7d0; /* Border alert sukses */
-  --login-success-text: #166534;   /* Teks alert sukses */
+  --login-bg: #f7f9ff;
+  --login-on-surface: #121d26;
+  --login-on-surface-variant: #40493d;
+  --login-outline: #707a6c;
+  --login-outline-variant: #bfcaba;
+  --login-primary: #0d631b;
+  --login-primary-hover: #094713;
+  --login-primary-container: #2e7d32;
+  --login-on-primary: #ffffff;
+  --login-primary-fixed: #a3f69c;
+  --login-secondary-container: #fc820c;
+  --login-surface-lowest: #ffffff;
+  --login-surface-low: #edf4ff;
+  --login-surface-container: #e4effd;
+  --login-error: #ba1a1a;
+  --login-error-container: #ffdad6;
+  --login-on-error-container: #93000a;
 }
 
-/* Wadah Pembungkus Utama Halaman Login */
-.login-container {
+/* Wrapper Luar Halaman */
+.login-wrapper {
+  position: relative;
   min-height: 100vh;
+  width: 100%;
+  background-color: var(--login-bg);
+  color: var(--login-on-surface);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
-  background-color: var(--login-bg);
-  /* Efek ambient glow hijau lembut di kiri atas dan oranye di kanan bawah */
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(74, 222, 128, 0.12) 0%, transparent 35%),
-    radial-gradient(circle at 88% 82%, rgba(251, 146, 60, 0.08) 0%, transparent 35%);
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: var(--login-text-body);
+  padding: 24px 16px;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
-/* Header di Atas Kartu (Ikon Aplikasi, Nama Toko, Badge POS) */
-.login-brand-header {
+/* Ambient organic gradient blobs di latar belakang */
+.login-ambient-blob-1 {
+  position: absolute;
+  top: -64px;
+  left: -64px;
+  width: 320px;
+  height: 320px;
+  border-radius: 9999px;
+  background: rgba(163, 246, 156, 0.3);
+  filter: blur(48px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.login-ambient-blob-2 {
+  position: absolute;
+  bottom: -80px;
+  right: -64px;
+  width: 384px;
+  height: 384px;
+  border-radius: 9999px;
+  background: rgba(255, 220, 198, 0.4);
+  filter: blur(48px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Wadah Inti Form Login */
+.login-main-container {
+  position: relative;
+  width: 100%;
+  max-width: 448px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
+  z-index: 1;
+}
+
+/* Header Branding Toko Abah */
+.login-header-branding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
+  margin-bottom: 24px;
 }
 
-.login-brand-logo {
-  width: 48px;
-  height: 48px;
-  background-color: var(--login-primary);
-  border-radius: 12px;
+.login-brand-icon-box {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background-color: var(--login-primary-container);
+  color: var(--login-on-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  box-shadow: 0 4px 10px rgba(47, 124, 56, 0.25);
-  margin-bottom: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  margin-bottom: 8px;
+  transition: transform 0.2s ease;
 }
 
-.login-brand-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.login-brand-icon-box:hover {
+  transform: scale(1.05);
 }
 
-.login-brand-name {
-  font-size: 19px;
-  font-weight: 700;
-  color: var(--login-text-dark);
-  letter-spacing: -0.2px;
-}
-
-.login-brand-badge {
-  background-color: var(--login-badge-bg);
-  color: var(--login-badge-text);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 999px;
-  letter-spacing: 0.3px;
-}
-
-.login-brand-subtitle {
-  font-size: 12.5px;
-  color: var(--login-text-muted);
-  margin-top: 3px;
-  font-weight: 400;
-}
-
-/* Kartu Utama */
-.login-card-wrapper {
-  width: 100%;
-  max-width: 440px;
-  background-color: var(--login-card-bg);
-  border-radius: 16px;
-  border: 1px solid var(--login-card-border);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
-  overflow: hidden;
-  position: relative;
-}
-
-/* Garis Aksen Ganda di Atas Kartu (Hijau ~65%, Oranye ~35%) */
-.login-card-top-stripe {
-  height: 4px;
-  width: 100%;
-  background: linear-gradient(to right, var(--login-primary) 65%, var(--login-accent-orange) 65%);
-}
-
-.login-card-body {
-  padding: 20px 24px 24px 24px;
-}
-
-/* Banner Foto Toko */
-.login-store-banner {
-  position: relative;
-  width: 100%;
-  height: 140px;
-  border-radius: 10px;
-  overflow: hidden;
-  background-color: #2c3e50;
-}
-
-.login-store-banner img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.login-banner-tag {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(4px);
-  color: #ffffff;
-  font-size: 11.5px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: 20px;
+.login-brand-title-line {
   display: flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  margin-top: 4px;
 }
 
-.login-banner-tag svg {
-  flex-shrink: 0;
-}
-
-/* Judul & Keterangan di Dalam Kartu */
-.login-card-header {
-  margin-top: 16px;
-  margin-bottom: 16px;
-}
-
-.login-card-title {
-  font-size: 21px;
+.login-brand-title {
+  font-size: 20px;
+  line-height: 28px;
   font-weight: 700;
-  color: var(--login-text-dark);
-  margin: 0;
-  letter-spacing: -0.3px;
+  color: #121d26;
+  letter-spacing: -0.01em;
 }
 
-.login-card-description {
-  font-size: 13px;
-  color: var(--login-text-muted);
-  margin-top: 5px;
-  margin-bottom: 0;
-  line-height: 1.45;
-}
-
-/* Form */
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* Form Group */
-.login-form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.login-form-group-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.login-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--login-text-body);
-}
-
-.login-badge-required {
-  font-size: 11.5px;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.login-forgot-link {
-  font-size: 12px;
+.login-brand-tag {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: rgba(13, 99, 27, 0.1);
   color: var(--login-primary);
-  text-decoration: none;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.login-brand-desc {
+  font-size: 13px;
+  line-height: 18px;
   font-weight: 500;
-  cursor: pointer;
+  color: var(--login-on-surface-variant);
+  margin: 2px 0 0;
 }
 
-.login-forgot-link:hover {
-  text-decoration: underline;
+/* Kartu Autentikasi */
+.login-auth-card {
+  width: 100%;
+  background-color: var(--login-surface-lowest);
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04), 0 0 1px 1px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* Wadah Input dengan Ikon */
-.login-input-box {
+@media (min-width: 640px) {
+  .login-auth-card {
+    padding: 32px;
+  }
+}
+
+/* Garis Aksen Gradasi Mikro di Bagian Atas Kartu */
+.login-top-accent-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(to right, var(--login-primary), var(--login-secondary-container));
+  z-index: 10;
+}
+
+/* Banner Foto Toko Abah di Bagian Atas Kartu */
+.login-card-banner-wrap {
+  position: relative;
+  margin: -24px -24px 24px -24px;
+  overflow: hidden;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  background-color: #678c2e;
+}
+
+@media (min-width: 640px) {
+  .login-card-banner-wrap {
+    margin: -32px -32px 24px -32px;
+  }
+}
+
+.login-card-banner-img {
+  width: 100%;
+  height: 160px;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
+.login-card-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.2) 50%, transparent 100%);
   display: flex;
+  align-items: flex-end;
+  padding: 12px;
+  pointer-events: none;
+}
+
+.login-card-banner-pill {
+  display: inline-flex;
   align-items: center;
-  height: 42px;
-  padding: 0 12px;
-  background-color: var(--login-input-bg);
-  border: 1px solid var(--login-input-border);
-  border-radius: 8px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: var(--login-on-surface);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-.login-input-box:focus-within {
-  border-color: var(--login-primary);
-  background-color: #ffffff;
-  box-shadow: 0 0 0 2px rgba(47, 124, 56, 0.12);
-}
-
-.login-input-box.has-error {
-  border-color: #ef4444;
-  background-color: #fef2f2;
-}
-
-.login-input-box.has-error:focus-within {
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
-}
-
-.login-input-icon {
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.login-banner-store-icon {
+  color: var(--login-primary);
   flex-shrink: 0;
 }
 
-.login-input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  outline: none;
-  padding: 0 10px;
+/* Bagian Judul Form */
+.login-card-intro {
+  margin-bottom: 24px;
+}
+
+.login-card-main-heading {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  color: var(--login-on-surface);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.login-card-sub-text {
   font-size: 14px;
-  color: var(--login-text-body);
-  font-family: inherit;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--login-on-surface-variant);
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+/* Form Aktual */
+.login-actual-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.login-field-label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--login-on-surface);
+  letter-spacing: 0.01em;
+}
+
+.login-wajib-badge {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--login-outline);
+}
+
+.login-forgot-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--login-primary);
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.login-forgot-btn:hover {
+  text-decoration: underline;
+  color: var(--login-primary-hover);
+}
+
+/* Shell Wadah Input Bersama Ikon Kiri & Kanan */
+.login-input-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
   width: 100%;
 }
 
-.login-input::placeholder {
-  color: #9ca3af;
-}
-
-.login-input-action-btn {
-  border: none;
-  background: transparent;
-  color: #94a3b8;
-  padding: 4px;
-  cursor: pointer;
+.login-input-left-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--login-outline);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: color 0.15s ease;
+  pointer-events: none;
+  user-select: none;
 }
 
-.login-input-action-btn:hover {
-  color: var(--login-text-body);
+.login-text-input {
+  width: 100%;
+  height: 48px;
+  padding-left: 44px;
+  padding-right: 44px;
+  border-radius: 8px;
+  background-color: var(--login-surface-low);
+  border: 1.5px solid transparent;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--login-on-surface);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  outline: none;
 }
 
-.login-field-error-text {
+.login-text-input::placeholder {
+  color: rgba(112, 122, 108, 0.7);
+}
+
+.login-text-input:focus {
+  background-color: var(--login-surface-lowest);
+  border-color: var(--login-primary);
+  box-shadow: 0 0 0 3px rgba(13, 99, 27, 0.18);
+}
+
+.login-input-shell.error .login-text-input {
+  background-color: #fff4f4;
+  border-color: var(--login-error);
+}
+
+.login-input-shell.error .login-text-input:focus {
+  box-shadow: 0 0 0 3px rgba(186, 26, 26, 0.18);
+}
+
+.login-input-valid-icon {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.login-toggle-pw-btn {
+  position: absolute;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--login-outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  padding: 0;
+}
+
+.login-toggle-pw-btn:hover {
+  color: var(--login-on-surface);
+  background-color: var(--login-surface-container);
+}
+
+.login-field-error-msg {
   font-size: 12px;
-  color: #ef4444;
-  margin-top: 2px;
+  line-height: 16px;
   font-weight: 500;
+  color: var(--login-error);
+  margin-top: 2px;
 }
 
-/* Kotak Pesan Error (Alert) */
-.login-alert {
+/* Alert Boxes (Error & Success) */
+.login-alert-box {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px;
   border-radius: 8px;
-  font-size: 12.5px;
-  line-height: 1.4;
+  animation: fadeIn 0.2s ease-in-out;
 }
 
-.login-alert-error {
-  background-color: var(--login-error-bg);
-  border: 1px solid var(--login-error-border);
-  color: var(--login-error-text);
+.login-alert-box.error {
+  background-color: #fef2f2;
+  border: 1px solid rgba(186, 26, 26, 0.25);
+  color: #7f1d1d;
 }
 
-.login-alert-error-icon {
-  color: var(--login-error-icon);
+.login-alert-box.success {
+  background-color: rgba(203, 255, 194, 0.35);
+  border: 1px solid rgba(13, 99, 27, 0.25);
+  color: #121d26;
+}
+
+.login-alert-icon {
   flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.login-alert-title {
-  font-weight: 700;
-  margin-bottom: 2px;
-  font-size: 13px;
-}
-
-.login-alert-desc {
-  margin: 0;
-}
-
-/* Kotak Pesan Berhasil (Saat Memproses Sesi) */
-.login-alert-success {
-  background-color: var(--login-success-bg);
-  border: 1px solid var(--login-success-border);
-  color: var(--login-success-text);
-}
-
-.login-alert-success-icon {
-  color: #16a34a;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-/* Baris Opsi "Ingat Saya" & Status Sesi Kasir */
-.login-options-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12.5px;
   margin-top: 2px;
 }
 
-.login-remember-label {
+.login-alert-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.login-alert-title {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.login-alert-box.error .login-alert-title {
+  color: var(--login-error);
+}
+
+.login-alert-box.success .login-alert-title {
+  color: var(--login-primary);
+}
+
+.login-alert-desc {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--login-on-surface-variant);
+}
+
+/* Options Bar (Remember Me & Session Pill) */
+.login-options-bar {
   display: flex;
   align-items: center;
-  gap: 7px;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.login-remember-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   cursor: pointer;
   user-select: none;
-  color: #374151;
-  font-weight: 500;
+  font-size: 14px;
+  color: var(--login-on-surface-variant);
 }
 
-.login-checkbox {
+.login-native-checkbox {
   width: 16px;
   height: 16px;
+  border-radius: 4px;
   accent-color: var(--login-primary);
   cursor: pointer;
-  margin: 0;
 }
 
-.login-session-active {
+.login-active-session-tag {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   color: var(--login-primary);
-  font-weight: 600;
   font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
 }
 
-/* Tombol Masuk */
-.login-submit-btn {
+/* Tombol Masuk Utama */
+.login-primary-submit-btn {
   width: 100%;
-  height: 44px;
-  background-color: var(--login-primary);
-  color: #ffffff;
-  border: none;
+  height: 48px;
+  margin-top: 8px;
   border-radius: 8px;
+  border: none;
+  background-color: var(--login-primary-container);
+  color: var(--login-on-primary);
+  font-family: inherit;
   font-size: 14px;
+  line-height: 20px;
   font-weight: 600;
+  letter-spacing: 0.01em;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.05s active;
-  font-family: inherit;
-  margin-top: 2px;
+  transition: all 0.15s ease;
 }
 
-.login-submit-btn:hover:not(:disabled) {
-  background-color: var(--login-primary-dark);
+.login-primary-submit-btn:hover:not(:disabled) {
+  background-color: var(--login-primary);
+  box-shadow: 0 6px 10px -1px rgba(13, 99, 27, 0.25);
 }
 
-.login-submit-btn:disabled {
-  opacity: 0.85;
+.login-primary-submit-btn:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.login-primary-submit-btn:disabled {
+  opacity: 0.75;
   cursor: not-allowed;
 }
 
-/* Animasi Spinner Loading */
-.login-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: login-spin 0.7s linear infinite;
+.login-spin-svg {
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes login-spin {
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
   to {
     transform: rotate(360deg);
   }
 }
 
-/* Progress Bar Pengalihan */
-.login-progress-section {
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Submit Progress Bar Block */
+.login-submit-progress-block {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 2px;
+  padding-top: 4px;
 }
 
-.login-progress-header {
+.login-progress-text-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
   font-size: 12px;
-  color: #4b5563;
+  line-height: 16px;
 }
 
-.login-progress-text {
-  display: flex;
+.login-progress-msg {
+  color: var(--login-primary);
+  font-weight: 500;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
-.login-progress-percent {
-  font-weight: 700;
+.login-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: var(--login-primary);
+  display: inline-block;
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.login-progress-pct {
+  font-weight: 600;
   color: var(--login-primary);
 }
 
 .login-progress-track {
   width: 100%;
-  height: 5px;
-  background-color: #e2e8f0;
-  border-radius: 999px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: var(--login-surface-container);
   overflow: hidden;
 }
 
-.login-progress-bar {
+.login-progress-fill {
   height: 100%;
   background-color: var(--login-primary);
-  border-radius: 999px;
-  transition: width 0.4s ease;
+  border-radius: 9999px;
+  transition: width 0.5s ease;
 }
 
-/* Box Status Terminal POS di Bawah */
-.login-terminal-box {
-  background-color: var(--login-terminal-bg);
-  border-radius: 10px;
-  padding: 10px 14px;
+/* Terminal Shift Status Box di Bawah Form */
+.login-terminal-shift-box {
+  margin-top: 24px;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: var(--login-surface-low);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 14px;
 }
 
-.login-terminal-left {
+.login-terminal-shift-left {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.login-terminal-dot {
-  width: 8px;
-  height: 8px;
-  background-color: #16a34a;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+.login-terminal-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background-color: var(--login-primary);
   flex-shrink: 0;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.login-terminal-info {
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+}
+
+.login-terminal-text-col {
   display: flex;
   flex-direction: column;
 }
 
-.login-terminal-title {
+.login-terminal-heading {
   font-size: 12px;
+  line-height: 16px;
   font-weight: 600;
-  color: var(--login-text-dark);
+  color: var(--login-on-surface);
 }
 
-.login-terminal-subtitle {
-  font-size: 11px;
-  color: var(--login-text-muted);
-  margin-top: 1px;
+.login-terminal-time {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--login-outline);
 }
 
-.login-terminal-icon {
-  color: #94a3b8;
+.login-terminal-pos-icon {
+  flex-shrink: 0;
+}
+
+/* Footer Halaman */
+.login-page-footer {
+  margin-top: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--login-on-surface-variant);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.login-footer-security-row {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   justify-content: center;
 }
 
-/* Petunjuk Akun Uji Mode Mock */
-.login-mock-hint {
+.login-footer-bold {
+  font-weight: 600;
+  color: var(--login-on-surface);
+}
+
+.login-footer-ssl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--login-primary);
+  font-weight: 500;
+}
+
+.login-footer-copyright {
+  color: var(--login-outline);
+  margin: 0;
+}
+
+/* Kotak Info Mock Credential */
+.login-mock-credential-box {
   margin-top: 16px;
   padding: 10px 14px;
-  background-color: rgba(255, 255, 255, 0.85);
-  border: 1px dashed #cbd5e1;
-  border-radius: 10px;
-  font-size: 12.5px;
-  color: var(--login-text-muted);
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 16px;
+  color: #92400e;
   text-align: center;
-  line-height: 1.4;
-  backdrop-filter: blur(4px);
+  max-width: 448px;
+  width: 100%;
+  box-sizing: border-box;
 }
-
-.login-mock-hint strong {
-  color: var(--login-text-dark);
-}
-

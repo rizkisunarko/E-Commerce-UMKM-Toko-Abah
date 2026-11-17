@@ -1435,22 +1435,72 @@
   font-weight: 700;
 }
 
+.kasir-payment-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.kasir-payment-input-prefix {
+  position: absolute;
+  left: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #64748b;
+  pointer-events: none;
+}
+
 .kasir-payment-cash-input {
   width: 100%;
-  padding: 11px 12px;
-  border: 1px solid #cbd5e1;
+  padding: 11px 14px 11px 44px;
+  border: 1.5px solid #cbd5e1;
   border-radius: 8px;
-  color: #111827;
-  font: inherit;
+  color: #0f172a;
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
 }
 
 .kasir-payment-cash-input:focus {
-  outline: 2px solid #86efac;
+  outline: none;
   border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.kasir-cash-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.kasir-preset-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kasir-preset-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
 }
 
 .kasir-payment-change {
-  margin-top: 8px;
+  margin-top: 10px;
   border-radius: 8px;
   background: #f0fdf4;
   padding: 12px;
