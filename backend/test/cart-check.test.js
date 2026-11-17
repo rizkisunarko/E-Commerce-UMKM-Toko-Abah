@@ -60,14 +60,44 @@ test('POST /api/cart/check returns authoritative active product prices and stock
       nama: 'Gula Pasir 1 kg',
       harga: 17000,
       stok: 17,
+      jumlah_diminta: 1,
+      cukup: true,
     }],
   });
   assert.deepEqual(queries[0].params, [2, 3, 999]);
 });
 
+test('POST /api/cart/check marks insufficient combined quantities', async (t) => {
+  const { baseUrl } = await createFixture(t);
+  const response = await fetch(`${baseUrl}/cart/check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      items: [
+        { product_id: 2, jumlah: 10 },
+        { product_id: 2, jumlah: 8 },
+      ],
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).data[0], {
+    product_id: 2,
+    nama: 'Gula Pasir 1 kg',
+    harga: 17000,
+    stok: 17,
+    jumlah_diminta: 18,
+    cukup: false,
+  });
+});
+
 test('POST /api/cart/check rejects empty or invalid cart data before querying products', async (t) => {
   const { baseUrl, queries } = await createFixture(t);
-  for (const items of [[], [{ product_id: 2, jumlah: 0 }]]) {
+  for (const items of [
+    [],
+    [{ product_id: 2, jumlah: 0 }],
+    [{ product_id: 2, jumlah: 700 }, { product_id: 2, jumlah: 400 }],
+  ]) {
     const response = await fetch(`${baseUrl}/cart/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

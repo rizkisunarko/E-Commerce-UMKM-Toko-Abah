@@ -84,7 +84,18 @@ const RECOMMENDED_PRODUCTS = [
 
 export default function CartPage() {
   const navigate = useNavigate();
-  const { items, count, total, hasIssue, addItem, setJumlah, removeItem, clear } = useCart();
+  const {
+    items,
+    count,
+    total,
+    hasIssue,
+    syncError,
+    retrySync,
+    addItem,
+    setJumlah,
+    removeItem,
+    clear,
+  } = useCart();
   const { checking, error, recheck } = useCartCheck();
 
   const [toastMsg, setToastMsg] = useState('');
@@ -116,6 +127,14 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="ko-empty-wrapper">
+        {syncError && (
+          <div className="ko-alert-warning" role="alert">
+            <p className="ko-alert-desc">
+              {syncError}{' '}
+              <button type="button" className="ko-link-retry" onClick={retrySync}>Coba lagi</button>
+            </p>
+          </div>
+        )}
         {/* Top Breadcrumb & Context Bar */}
         <section className="ko-empty-top-bar">
           <div className="ko-empty-top-inner">
@@ -452,6 +471,15 @@ export default function CartPage() {
               <button type="button" className="ko-link-retry" onClick={recheck}>Coba lagi</button>
             </p>
           </div>
+        </div>
+      )}
+
+      {syncError && (
+        <div className="ko-alert-warning" role="alert">
+          <p className="ko-alert-desc">
+            {syncError}{' '}
+            <button type="button" className="ko-link-retry" onClick={retrySync}>Coba lagi</button>
+          </p>
         </div>
       )}
 

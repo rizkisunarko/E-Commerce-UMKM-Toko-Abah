@@ -31,11 +31,11 @@ export class ApiError extends Error {
 
 // Satu pintu untuk semua panggilan ke backend.
 // Mode mock (VITE_USE_MOCK=true) memakai data tiruan di browser.
-export async function request(method, path, body) {
+export async function request(method, path, body, extraHeaders = {}) {
   const token = getToken();
 
   if (USE_MOCK && !path.startsWith('/shipping/')) {
-    const res = await mockRequest(method, path, body, token);
+    const res = await mockRequest(method, path, body, token, extraHeaders);
     if (res.status >= 400) throw new ApiError(res.status, res.body.message, res.body.errors);
     return res.body;
   }
@@ -44,6 +44,7 @@ export async function request(method, path, body) {
     method,
     headers: {
       'Content-Type': 'application/json',
+      ...extraHeaders,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -54,9 +55,9 @@ export async function request(method, path, body) {
 }
 
 export const api = {
-  get: (path) => request('GET', path),
-  post: (path, body) => request('POST', path, body),
-  put: (path, body) => request('PUT', path, body),
-  patch: (path, body) => request('PATCH', path, body),
-  del: (path) => request('DELETE', path),
+  get: (path, headers) => request('GET', path, undefined, headers),
+  post: (path, body, headers) => request('POST', path, body, headers),
+  put: (path, body, headers) => request('PUT', path, body, headers),
+  patch: (path, body, headers) => request('PATCH', path, body, headers),
+  del: (path, headers) => request('DELETE', path, undefined, headers),
 };

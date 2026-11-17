@@ -63,6 +63,7 @@ const transactions = [
 ];
 let nextTransactionId = transactions.length + 1;
 const orders = [];
+const guestCarts = new Map();
 
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
@@ -106,7 +107,7 @@ function validateProduct(body, mode) {
 const reply = (status, body) => ({ status, body });
 const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function mockRequest(method, fullPath, body = {}, token) {
+export async function mockRequest(method, fullPath, body = {}, token, requestHeaders = {}) {
   await delay();
   const [path, queryString = ''] = fullPath.split('?');
   const query = Object.fromEntries(new URLSearchParams(queryString));
@@ -147,19 +148,96 @@ export async function mockRequest(method, fullPath, body = {}, token) {
 
   // Keranjang dan pesanan pelanggan (PPL-08): tanpa login. Harga selalu dari server.
   // Stok TIDAK berkurang saat pesanan dibuat; stok berkurang saat pembayaran berhasil (Sprint 3).
+  const guestCartToken = requestHeaders['X-Guest-Cart-Token'];
+  if ((method === 'GET' || method === 'PUT') && path === '/cart') {
+    if (typeof guestCartToken !== 'string' || !/^[\da-f]{64}$/i.test(guestCartToken)) {
+      return reply(400, { message: 'Token keranjang tamu tidak valid' });
+    }
+
+    if (method === 'GET') {
+      const savedItems = guestCarts.get(guestCartToken);
+      if (!savedItems) return reply(200, { data: [], persisted: false });
+      const data = savedItems
+        .map(({ product_id, jumlah }) => {
+          const product = products.find((item) => item.id === product_id);
+          if (!product) return null;
+          return {
+            product_id,
+            nama: product.nama,
+            harga: product.harga,
+            stok: product.stok,
+            jumlah,
+            jumlah_diminta: jumlah,
+            cukup: product.stok >= jumlah,
+          };
+        })
+        .filter(Boolean);
+      return reply(200, { data, persisted: true });
+    }
+
+    if (!Array.isArray(body.items) || body.items.length > 100) {
+      return reply(422, {
+        message: 'Data keranjang tidak valid.',
+        errors: { items: 'Pilih maksimal 100 produk dengan jumlah yang valid.' },
+      });
+    }
+    const quantities = new Map();
+    for (const item of body.items) {
+      const productId = Number(item?.product_id);
+      const quantity = Number(item?.jumlah);
+      const combined = (quantities.get(productId) || 0) + quantity;
+      if (!Number.isSafeInteger(productId) || productId < 1 ||
+          !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 1000 ||
+          !Number.isSafeInteger(combined) || combined > 1000) {
+        return reply(422, {
+          message: 'Data keranjang tidak valid.',
+          errors: { items: 'Pilih produk dengan jumlah yang valid.' },
+        });
+      }
+      quantities.set(productId, combined);
+    }
+    const data = [...quantities].map(([product_id, jumlah]) => {
+      const product = products.find((item) => item.id === product_id);
+      return product ? {
+        product_id,
+        nama: product.nama,
+        harga: product.harga,
+        stok: product.stok,
+        jumlah,
+        jumlah_diminta: jumlah,
+        cukup: product.stok >= jumlah,
+      } : null;
+    });
+    if (data.some((item) => !item)) {
+      return reply(422, {
+        message: 'Keranjang berisi produk yang tidak tersedia',
+        errors: { items: 'Periksa kembali produk pada keranjang' },
+      });
+    }
+    guestCarts.set(guestCartToken, [...quantities].map(([product_id, jumlah]) => ({
+      product_id,
+      jumlah,
+    })));
+    return reply(200, { data, persisted: true });
+  }
+
   if (method === 'POST' && path === '/cart/check') {
-    const items = Array.isArray(body.items) ? body.items : [];
-    const data = items
-      .map((it) => {
-        const product = products.find((p) => p.id === Number(it.product_id));
+    const quantities = new Map();
+    for (const item of Array.isArray(body.items) ? body.items : []) {
+      const productId = Number(item.product_id);
+      quantities.set(productId, (quantities.get(productId) || 0) + Number(item.jumlah));
+    }
+    const data = [...quantities]
+      .map(([productId, quantity]) => {
+        const product = products.find((p) => p.id === productId);
         if (!product) return null;
         return {
           product_id: product.id,
           nama: product.nama,
           harga: product.harga,
           stok: product.stok,
-          jumlah: Number(it.jumlah),
-          cukup: product.stok >= Number(it.jumlah) && product.stok > 0,
+          jumlah_diminta: quantity,
+          cukup: product.stok >= quantity && product.stok > 0,
         };
       })
       .filter(Boolean);
