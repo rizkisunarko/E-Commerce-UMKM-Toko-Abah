@@ -42,7 +42,7 @@ export function validateCheckout({ nama, noHp, metode, alamatLengkap }) {
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { items, total, hasIssue, clear } = useCart();
+  const { items, cartReady, total, hasIssue, syncError, retrySync, clear } = useCart();
   const { checking, error: checkError, recheck } = useCartCheck();
   const finished = useRef(false);
 
@@ -67,11 +67,6 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  // Keranjang kosong: kembali ke keranjang (kecuali pesanan baru saja dibuat)
-  if (items.length === 0 && !finished.current) {
-    return <Navigate to="/keranjang" replace />;
-  }
 
   const selectedRate = shippingRates.find((rate) => rate.id === selectedRateId);
   const courierLabel = selectedRate
@@ -191,6 +186,8 @@ export default function CheckoutPage() {
         catatan: catatan.trim(),
         metode_penerimaan: metode,
         wilayah: metode === 'kurir' ? destination.label : undefined,
+        destination_id: metode === 'kurir' ? destination.id : undefined,
+        selected_rate_id: metode === 'kurir' ? selectedRate.id : undefined,
         alamat_lengkap: metode === 'kurir' ? alamatLengkap.trim() : undefined,
         layanan_kurir: metode === 'kurir' ? courierLabel : undefined,
         ongkir,
@@ -221,6 +218,13 @@ export default function CheckoutPage() {
   const firstIssueItem = items.find((it) => itemIssue(it));
   const blocked = submitting || checking || Boolean(checkError) || hasIssue ||
     (metode === 'kurir' && (shippingQuoteLoading || !selectedRate || Boolean(courierCalcError)));
+
+  if (!cartReady) {
+    return <div className="ko-checkout-wrapper" role="status">Memuat keranjang...</div>;
+  }
+  if (items.length === 0 && !finished.current) {
+    return <Navigate to="/keranjang" replace />;
+  }
 
   return (
     <div className="ko-checkout-wrapper">
@@ -322,6 +326,15 @@ export default function CheckoutPage() {
               <button type="button" className="ko-link-retry" onClick={recheck}>Coba lagi</button>
             </p>
           </div>
+        </div>
+      )}
+
+      {syncError && (
+        <div className="ko-alert-warning" role="alert">
+          <p className="ko-alert-desc">
+            {syncError}{' '}
+            <button type="button" className="ko-link-retry" onClick={retrySync}>Coba lagi</button>
+          </p>
         </div>
       )}
 

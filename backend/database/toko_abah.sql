@@ -142,7 +142,8 @@ INSERT INTO `kategori` (`id_kategori`, `nama_kategori`, `deskripsi`, `created_at
 
 CREATE TABLE `keranjang` (
   `id_keranjang` int NOT NULL,
-  `id_user` int NOT NULL,
+  `id_user` int DEFAULT NULL,
+  `guest_token_hash` char(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status_keranjang` enum('aktif','checkout','dikosongkan') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'aktif',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
@@ -265,6 +266,7 @@ CREATE TABLE `pengiriman` (
   `id_transaksi` int NOT NULL,
   `id_kurir` int DEFAULT NULL,
   `alamat_tujuan` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `wilayah_tujuan` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `layanan_kurir` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ongkos_kirim` decimal(12,2) NOT NULL DEFAULT '0.00',
   `nomor_resi` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -480,6 +482,7 @@ ALTER TABLE `kategori`
 --
 ALTER TABLE `keranjang`
   ADD PRIMARY KEY (`id_keranjang`),
+  ADD UNIQUE KEY `uq_keranjang_guest_token` (`guest_token_hash`),
   ADD KEY `idx_keranjang_user_status` (`id_user`,`status_keranjang`);
 
 --

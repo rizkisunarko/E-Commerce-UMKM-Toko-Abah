@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "test": "node --test",
     "db:setup": "node scripts/setup-database.js",
+    "db:migrate:orders": "node scripts/migrate-order-checkout.js",
     "db:reset-admin-password": "node scripts/reset-admin-password.js"
   },
   "dependencies": {

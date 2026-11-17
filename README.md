@@ -35,6 +35,8 @@ React (Vite), Node.js + Express, MySQL
    Perintah membuat database sesuai `DB_NAME` di `.env` dan mengimpor `backend/database/toko_abah.sql`.
    Jika database sudah memiliki tabel, proses dibatalkan tanpa menghapus data. Untuk setup ulang, gunakan
    database kosong yang baru; jangan hapus database berisi data penting.
+   Untuk database yang sudah ada, jalankan `npm run db:migrate:orders` dari folder `backend` agar
+   keranjang tamu dan wilayah pengiriman pesanan dapat disimpan.
 4. Jalankan backend:
    ```bash
    npm run dev
@@ -74,7 +76,9 @@ Kata sandi di database tersimpan sebagai hash bcrypt.
 ### Login dan hak akses backend
 
 - Katalog pelanggan dapat diakses tanpa login melalui `GET /api/catalog?search=beras&kategori=Beras%20%26%20Tepung&page=1&limit=12` dan `GET /api/catalog/categories`. Katalog hanya mengembalikan produk aktif dan tidak menyertakan harga beli.
-- `POST /api/cart/check` dapat digunakan tanpa login untuk memeriksa harga dan stok keranjang dari data produk aktif di database.
+- `POST /api/cart/check` dapat digunakan tanpa login untuk memeriksa harga, stok, dan kecukupan jumlah keranjang dari produk aktif di database.
+- `GET /api/cart` dan `PUT /api/cart` menyimpan keranjang tamu di database menggunakan token acak per browser; token disimpan sebagai hash.
+- Checkout pesanan pelanggan tidak memerlukan login, tetapi `POST /api/orders` mewajibkan nama dan nomor HP. Server memvalidasi ulang harga, stok, diskon, dan tarif pengiriman; pesanan dapat dilihat dengan nomor pesanan melalui `GET /api/orders/:nomor`.
 - Endpoint kategori, daftar/detail/tambah/ubah produk, daftar stok, dan pembaruan stok membaca/menulis MySQL.
 - `GET /api/products?page=1&limit=10&search=beras&kategori=Beras%20%26%20Tepung` memerlukan token login, menggabungkan pencarian nama dan filter kategori, lalu mengembalikan `data` serta `pagination` (`page`, `limit`, `total`, `total_pages`). `limit` maksimum 100; parameter berulang/berformat salah ditolak. `GET /api/categories` menyediakan opsi kategori untuk filter.
 - Produk arsip tidak disertakan secara default. Hanya admin dapat meminta `include_archived=true`; pegawai menerima `403`.
