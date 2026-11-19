@@ -66,6 +66,9 @@ async function createFixture(t) {
     archived_at: null,
   }];
   const stockHistory = [];
+  const transactionDetails = [];
+  const purchaseDetails = [];
+  const cartItems = [];
   const db = {
     async query(sql, params) {
       if (sql.includes('UNION ALL')) {
@@ -91,9 +94,30 @@ async function createFixture(t) {
           ? [[{ id_produk: params[0] }], []]
           : [[], []];
       }
+      if (sql.includes('AS has_sales') && sql.includes('FOR UPDATE')) {
+        const product = products.find((item) => item.id === params[0]);
+        return [product ? [{
+          id_produk: product.id,
+          has_sales: transactionDetails.some((item) => item.id_produk === product.id) ? 1 : 0,
+          has_purchases: purchaseDetails.some((item) => item.id_produk === product.id) ? 1 : 0,
+          has_stock_history: stockHistory.some((item) => item.id_produk === product.id) ? 1 : 0,
+          has_cart_items: cartItems.some((item) => item.id_produk === product.id) ? 1 : 0,
+        }] : [], []];
+      }
+      if (sql.trimStart().startsWith('DELETE FROM produk')) {
+        const index = products.findIndex((item) => item.id === params[0]);
+        if (index >= 0) products.splice(index, 1);
+        return [{ affectedRows: index >= 0 ? 1 : 0 }, []];
+      }
       if (sql.trimStart().startsWith('UPDATE produk') && sql.includes('SET archived_at')) {
-        const product = products.find((item) => item.id === params[1]);
-        if (product) product.archived_at = params[0] ? '2026-11-08 12:00:00' : null;
+        const deletingToArchive = sql.includes('SET archived_at = COALESCE');
+        const productId = deletingToArchive ? params[0] : params[1];
+        const product = products.find((item) => item.id === productId);
+        if (product) {
+          product.archived_at = deletingToArchive
+            ? (product.archived_at || '2026-11-08 12:00:00')
+            : (params[0] ? '2026-11-08 12:00:00' : null);
+        }
         return [{ affectedRows: product ? 1 : 0 }, []];
       }
       if (sql.trimStart().startsWith('UPDATE produk') && sql.includes('SET jumlah_stok =')) {
@@ -195,6 +219,10 @@ async function createFixture(t) {
   return {
     baseUrl: `http://127.0.0.1:${server.address().port}/api`,
     stockHistory,
+    transactionDetails,
+    purchaseDetails,
+    cartItems,
+    products,
   };
 }
 
@@ -513,4 +541,44 @@ test('PATCH /api/products/:id/archive: hanya admin dapat mengarsipkan dan memuli
   assert.equal(restoreResponse.status, 200);
   const restoredProducts = await fetch(`${baseUrl}/products`, { headers });
   assert.equal((await restoredProducts.json()).data.length, 1);
+});
+
+test('DELETE /api/products/:id: hapus produk tanpa riwayat, arsipkan produk yang pernah ditransaksikan', async (t) => {
+  const { baseUrl, products, transactionDetails } = await createFixture(t);
+  const login = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'admin-pass' }),
+  });
+  const { token } = await login.json();
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const noTokenResponse = await fetch(`${baseUrl}/products/20`, { method: 'DELETE' });
+  assert.equal(noTokenResponse.status, 401);
+
+  transactionDetails.push({ id_produk: 20 });
+  const archivedResponse = await fetch(`${baseUrl}/products/20`, {
+    method: 'DELETE',
+    headers,
+  });
+  assert.equal(archivedResponse.status, 200);
+  assert.equal((await archivedResponse.json()).action, 'archived');
+  assert.ok(products[0].archived_at);
+  assert.equal(products.length, 1);
+
+  transactionDetails.length = 0;
+  products[0].archived_at = null;
+  const deletedResponse = await fetch(`${baseUrl}/products/20`, {
+    method: 'DELETE',
+    headers,
+  });
+  assert.equal(deletedResponse.status, 200);
+  assert.equal((await deletedResponse.json()).action, 'deleted');
+  assert.equal(products.length, 0);
+
+  const missingResponse = await fetch(`${baseUrl}/products/20`, {
+    method: 'DELETE',
+    headers,
+  });
+  assert.equal(missingResponse.status, 404);
 });

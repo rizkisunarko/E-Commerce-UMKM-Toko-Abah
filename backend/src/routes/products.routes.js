@@ -327,6 +327,73 @@ function createProductsRoutes(db, jwtSecret) {
     }
   });
 
+  router.delete('/products/:id', authenticate, authorizeRoles('admin'), async (req, res, next) => {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
+      return res.status(400).json({ message: 'ID produk tidak valid' });
+    }
+
+    let connection;
+    try {
+      connection = await db.getConnection();
+      await connection.beginTransaction();
+      const [products] = await connection.query(
+        `SELECT p.id_produk,
+                EXISTS(SELECT 1 FROM detail_transaksi dt WHERE dt.id_produk = p.id_produk)
+                  AS has_sales,
+                EXISTS(SELECT 1 FROM detail_pembelian dp WHERE dp.id_produk = p.id_produk)
+                  AS has_purchases,
+                EXISTS(SELECT 1 FROM riwayat_stok rs WHERE rs.id_produk = p.id_produk)
+                  AS has_stock_history,
+                EXISTS(SELECT 1 FROM item_keranjang ik WHERE ik.id_produk = p.id_produk)
+                  AS has_cart_items
+         FROM produk p
+         WHERE p.id_produk = ?
+         FOR UPDATE`,
+        [id],
+      );
+      if (!products.length) {
+        await connection.rollback();
+        return res.status(404).json({ message: 'Produk tidak ditemukan' });
+      }
+
+      const product = products[0];
+      const hasHistory = [
+        product.has_sales,
+        product.has_purchases,
+        product.has_stock_history,
+        product.has_cart_items,
+      ].some((value) => Number(value) === 1);
+
+      if (hasHistory) {
+        await connection.query(
+          `UPDATE produk
+           SET archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP),
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id_produk = ?`,
+          [id],
+        );
+        await connection.commit();
+        return res.json({
+          action: 'archived',
+          message: 'Produk memiliki riwayat atau masih digunakan, sehingga berhasil diarsipkan',
+        });
+      }
+
+      await connection.query('DELETE FROM produk WHERE id_produk = ?', [id]);
+      await connection.commit();
+      return res.json({
+        action: 'deleted',
+        message: 'Produk berhasil dihapus permanen',
+      });
+    } catch (error) {
+      if (connection) await connection.rollback();
+      return next(error);
+    } finally {
+      if (connection) connection.release();
+    }
+  });
+
   // 5. GET /api/products/:id - Detail produk berdasarkan ID
   router.get('/products/:id', authenticate, async (req, res, next) => {
     const id = Number(req.params.id);
