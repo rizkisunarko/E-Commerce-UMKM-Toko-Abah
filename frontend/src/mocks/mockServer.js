@@ -257,8 +257,10 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     if (body.metode_penerimaan && body.metode_penerimaan !== 'ambil_di_toko' && body.metode_penerimaan !== 'kurir') {
       errors.metode_penerimaan = 'Pilih cara menerima pesanan';
     }
-    if (metode === 'kurir' && !alamat) {
-      errors.alamat_lengkap = REQUIRED;
+    if (metode === 'kurir') {
+      if (!alamat) errors.alamat_lengkap = REQUIRED;
+      if (!body.wilayah && !body.destination_id) errors.wilayah = 'Pilih kecamatan / kota tujuan';
+      if (!body.selected_rate_id) errors.selected_rate_id = 'Pilih layanan kurir';
     }
 
     const items = Array.isArray(body.items) ? body.items : [];
