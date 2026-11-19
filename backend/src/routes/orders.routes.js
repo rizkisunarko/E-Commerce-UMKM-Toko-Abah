@@ -8,6 +8,7 @@ const MAX_MONEY_CENTS = 999999999999;
 const PHONE_PATTERN = /^(\+62|62|0)8\d{8,11}$/;
 const PICKUP_METHOD = 'ambil_di_toko';
 const COURIER_METHOD = 'kurir';
+const PAYMENT_METHODS = ['midtrans', 'cod'];
 
 function validatePayload(body) {
   const errors = {};
@@ -17,6 +18,7 @@ function validatePayload(body) {
     : '';
   const catatan = body?.catatan === undefined ? '' : body.catatan;
   const metode = body?.metode_penerimaan;
+  const metodePembayaran = body?.metode_pembayaran ?? 'midtrans';
   const alamat = body?.alamat_lengkap === undefined ? '' : body.alamat_lengkap;
   const wilayah = body?.wilayah === undefined ? '' : body.wilayah;
   const quantities = new Map();
@@ -29,6 +31,11 @@ function validatePayload(body) {
   }
   if (metode !== PICKUP_METHOD && metode !== COURIER_METHOD) {
     errors.metode_penerimaan = 'Pilih cara menerima pesanan';
+  }
+  if (!PAYMENT_METHODS.includes(metodePembayaran)) {
+    errors.metode_pembayaran = 'Pilih metode pembayaran yang tersedia';
+  } else if (metodePembayaran === 'cod' && metode !== COURIER_METHOD) {
+    errors.metode_pembayaran = 'COD hanya tersedia untuk pengiriman kurir';
   }
   if (typeof catatan !== 'string' || catatan.length > 2000) {
     errors.catatan = 'Catatan maksimal 2000 karakter';
@@ -92,6 +99,7 @@ function validatePayload(body) {
       noHp,
       catatan: typeof catatan === 'string' ? catatan.trim() : '',
       metode,
+      metodePembayaran,
       alamat: typeof alamat === 'string' ? alamat.trim() : '',
       wilayah: typeof wilayah === 'string' ? wilayah.trim() : '',
       destinationId,
@@ -129,6 +137,7 @@ function formatOrder(row, items) {
     nomor_pesanan: row.nomor_pesanan,
     status: orderStatusLabel(row.status),
     status_pembayaran: row.status_pembayaran || null,
+    metode_pembayaran: row.metode_pembayaran === 'cod' ? 'cod' : 'midtrans',
     tanggal: row.tanggal,
     nama_pemesan: row.nama_pemesan,
     no_hp: row.no_hp,
@@ -324,6 +333,16 @@ function createOrdersRoutes(db, shippingClient, paymentClient) {
         ],
       );
       const transactionId = result.insertId;
+      const databasePaymentMethod = values.metodePembayaran === 'cod'
+        ? 'cod'
+        : 'payment_gateway';
+      await connection.query(
+        `INSERT INTO pembayaran (
+           id_transaksi, metode_pembayaran, jumlah_bayar, status_pembayaran,
+           kode_referensi, snap_token
+         ) VALUES (?, ?, ?, 'menunggu', NULL, NULL)`,
+        [transactionId, databasePaymentMethod, (totalCents / 100).toFixed(2)],
+      );
 
       for (const line of lines) {
         await connection.query(
@@ -363,6 +382,7 @@ function createOrdersRoutes(db, shippingClient, paymentClient) {
           id: transactionId,
           nomor_pesanan: nomorPesanan,
           status: 'Menunggu Pembayaran',
+          metode_pembayaran: values.metodePembayaran,
           tanggal: now.toISOString(),
           nama_pemesan: values.nama,
           no_hp: values.noHp,
@@ -424,7 +444,12 @@ function createOrdersRoutes(db, shippingClient, paymentClient) {
 
       const [orders] = await connection.query(
         `SELECT id_transaksi, kode_transaksi, nama_pelanggan, no_telepon,
-                total_bayar, status_transaksi
+                total_bayar, status_transaksi,
+                (SELECT metode_pembayaran
+                 FROM pembayaran
+                 WHERE id_transaksi = transaksi.id_transaksi
+                 ORDER BY id_pembayaran DESC
+                 LIMIT 1) AS metode_pembayaran
          FROM transaksi
          WHERE kode_transaksi = ? AND jenis_transaksi = 'online'
          FOR UPDATE`,
@@ -437,6 +462,13 @@ function createOrdersRoutes(db, shippingClient, paymentClient) {
       }
 
       const order = orders[0];
+      if (order.metode_pembayaran === 'cod') {
+        await connection.rollback();
+        transactionStarted = false;
+        return res.status(409).json({
+          message: 'Pesanan ini menggunakan COD dan tidak memerlukan pembayaran Midtrans.',
+        });
+      }
       if (order.status_transaksi !== 'menunggu') {
         await connection.rollback();
         transactionStarted = false;
@@ -444,9 +476,10 @@ function createOrdersRoutes(db, shippingClient, paymentClient) {
       }
 
       const [existingPayments] = await connection.query(
-        `SELECT id_pembayaran, snap_token
+        `SELECT id_pembayaran, snap_token, kode_referensi
          FROM pembayaran
-         WHERE id_transaksi = ? AND status_pembayaran = 'menunggu'
+         WHERE id_transaksi = ? AND metode_pembayaran = 'payment_gateway'
+           AND status_pembayaran = 'menunggu'
          ORDER BY id_pembayaran DESC
          LIMIT 1
          FOR UPDATE`,
@@ -454,32 +487,41 @@ function createOrdersRoutes(db, shippingClient, paymentClient) {
       );
       if (existingPayments.length) {
         payment = existingPayments[0];
-        if (!payment.snap_token) {
+        if (payment.snap_token) {
+          await connection.commit();
+          transactionStarted = false;
+          return res.json({
+            data: {
+              snap_token: payment.snap_token,
+              client_key: paymentClient.getClientKey(),
+            },
+          });
+        }
+        if (payment.kode_referensi) {
           await connection.rollback();
           transactionStarted = false;
           return res.status(409).json({
             message: 'Pembayaran sedang disiapkan. Coba beberapa saat lagi.',
           });
         }
-        await connection.commit();
-        transactionStarted = false;
-        return res.json({
-          data: {
-            snap_token: payment.snap_token,
-            client_key: paymentClient.getClientKey(),
-          },
-        });
+        paymentId = payment.id_pembayaran;
+      } else {
+        const [result] = await connection.query(
+          `INSERT INTO pembayaran (
+             id_transaksi, metode_pembayaran, jumlah_bayar, status_pembayaran,
+             kode_referensi, snap_token
+           ) VALUES (?, 'payment_gateway', ?, 'menunggu', NULL, NULL)`,
+          [order.id_transaksi, order.total_bayar],
+        );
+        paymentId = result.insertId;
       }
 
       paymentReference = `${order.kode_transaksi}-${randomBytes(4).toString('hex')}`;
-      const [result] = await connection.query(
-        `INSERT INTO pembayaran (
-           id_transaksi, metode_pembayaran, jumlah_bayar, status_pembayaran,
-           kode_referensi, snap_token
-         ) VALUES (?, 'payment_gateway', ?, 'menunggu', ?, NULL)`,
-        [order.id_transaksi, order.total_bayar, paymentReference],
+      await connection.query(
+        `UPDATE pembayaran SET kode_referensi = ?
+         WHERE id_pembayaran = ? AND status_pembayaran = 'menunggu'`,
+        [paymentReference, paymentId],
       );
-      paymentId = result.insertId;
       await connection.commit();
       transactionStarted = false;
 
@@ -552,7 +594,12 @@ function createOrdersRoutes(db, shippingClient, paymentClient) {
                  FROM pembayaran pb
                  WHERE pb.id_transaksi = t.id_transaksi
                  ORDER BY pb.id_pembayaran DESC
-                 LIMIT 1) AS status_pembayaran
+                 LIMIT 1) AS status_pembayaran,
+                (SELECT pb.metode_pembayaran
+                 FROM pembayaran pb
+                 WHERE pb.id_transaksi = t.id_transaksi
+                 ORDER BY pb.id_pembayaran DESC
+                 LIMIT 1) AS metode_pembayaran
          FROM transaksi t
          LEFT JOIN pengiriman p ON p.id_transaksi = t.id_transaksi
          WHERE t.kode_transaksi = ? AND t.jenis_transaksi = 'online'`,

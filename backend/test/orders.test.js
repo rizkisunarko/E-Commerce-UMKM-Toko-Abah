@@ -78,13 +78,21 @@ async function createFixture(t, products = [{
       const payment = {
         id_pembayaran: state.payments.length + 1,
         id_transaksi: params[0],
-        jumlah_bayar: params[1],
+        metode_pembayaran: params[1],
+        jumlah_bayar: params[2],
         status_pembayaran: 'menunggu',
-        kode_referensi: params[2],
+        kode_referensi: params[3] || null,
         snap_token: null,
       };
       state.payments.push(payment);
       return [{ insertId: payment.id_pembayaran }, []];
+    }
+    if (sql.includes('UPDATE pembayaran SET kode_referensi')) {
+      const payment = state.payments.find((item) => item.id_pembayaran === params[1]);
+      if (payment && payment.status_pembayaran === 'menunggu') {
+        payment.kode_referensi = params[0];
+      }
+      return [{ affectedRows: payment ? 1 : 0 }, []];
     }
     if (sql.includes('UPDATE pembayaran SET snap_token')) {
       const payment = state.payments.find((item) => item.id_pembayaran === params[1]);
@@ -151,11 +159,17 @@ async function createFixture(t, products = [{
         no_telepon: transaction.no_telepon,
         total_bayar: transaction.total_bayar,
         status_transaksi: transaction.status_transaksi,
+        metode_pembayaran: state.payments
+          .filter((payment) => payment.id_transaksi === transaction.id_transaksi)
+          .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0]?.metode_pembayaran || null,
       }] : [], []];
     }
     if (sql.includes('FROM pembayaran') && sql.includes("status_pembayaran = 'menunggu'")) {
       const payment = state.payments
-        .filter((item) => item.id_transaksi === params[0] && item.status_pembayaran === 'menunggu')
+        .filter((item) => item.id_transaksi === params[0] &&
+          item.status_pembayaran === 'menunggu' &&
+          (!sql.includes("metode_pembayaran = 'payment_gateway'") ||
+            item.metode_pembayaran === 'payment_gateway'))
         .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0];
       return [payment ? [{ ...payment }] : [], []];
     }
@@ -183,6 +197,9 @@ async function createFixture(t, products = [{
         status_pembayaran: state.payments
           .filter((payment) => payment.id_transaksi === transaction.id_transaksi)
           .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0]?.status_pembayaran || null,
+        metode_pembayaran: state.payments
+          .filter((payment) => payment.id_transaksi === transaction.id_transaksi)
+          .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0]?.metode_pembayaran || null,
         wilayah: shipment?.wilayah_tujuan,
         layanan_kurir: shipment?.layanan_kurir,
       }], []];
@@ -299,13 +316,16 @@ test('checkout tamu membuat pesanan berdasarkan harga server tanpa mengurangi st
   assert.equal(data.nama_pemesan, 'Ibu Tester');
   assert.equal(data.no_hp, '081234567890');
   assert.equal(data.metode_penerimaan, 'ambil_di_toko');
+  assert.equal(data.metode_pembayaran, 'midtrans');
   assert.equal(data.subtotal, 136000);
   assert.equal(data.diskon, 6000);
   assert.equal(data.ongkir, 0);
   assert.equal(data.total, 130000);
   assert.equal(data.items[0].jumlah, 2);
   assert.equal(state.transactions[0].jenis_transaksi, 'online');
+  assert.equal(state.transactions[0].metode_penerimaan, 'pickup');
   assert.equal(state.transactions[0].status_transaksi, 'menunggu');
+  assert.equal(state.payments[0].metode_pembayaran, 'payment_gateway');
   assert.equal(state.products[0].jumlah_stok, 5);
   assert.equal(state.details.length, 1);
 });
@@ -320,6 +340,44 @@ test('checkout meminta nama dan nomor HP yang valid tanpa meminta login', async 
     assert.equal(response.status, 422);
   }
   assert.equal(state.transactions.length, 0);
+});
+
+test('checkout COD menyimpan pembayaran tunai dan hanya berlaku untuk kurir', async (t) => {
+  const { baseUrl, state } = await createFixture(t);
+  const courierOrder = {
+    ...pickupOrder,
+    metode_penerimaan: 'kurir',
+    metode_pembayaran: 'cod',
+    alamat_lengkap: 'Jl. Raya Telang No. 10',
+    wilayah: 'Kamal, Bangkalan, Jawa Timur',
+    destination_id: '123',
+    selected_rate_id: 'jne:REG:0',
+    items: [{ product_id: 20, jumlah: 2 }],
+  };
+  const response = await createOrder(baseUrl, courierOrder);
+
+  assert.equal(response.status, 201);
+  const { data } = await response.json();
+  assert.equal(data.metode_pembayaran, 'cod');
+  assert.equal(state.payments.length, 1);
+  assert.equal(state.payments[0].metode_pembayaran, 'cod');
+  assert.equal(state.payments[0].status_pembayaran, 'menunggu');
+
+  const paymentResponse = await fetch(
+    `${baseUrl}/orders/${data.nomor_pesanan}/pembayaran`,
+    { method: 'POST' },
+  );
+  assert.equal(paymentResponse.status, 409);
+
+  const detailResponse = await fetch(`${baseUrl}/orders/${data.nomor_pesanan}`);
+  assert.equal((await detailResponse.json()).data.metode_pembayaran, 'cod');
+
+  const pickupResponse = await createOrder(baseUrl, {
+    ...pickupOrder,
+    metode_pembayaran: 'cod',
+  });
+  assert.equal(pickupResponse.status, 422);
+  assert.equal(state.transactions.length, 1);
 });
 
 test('checkout menolak stok yang tidak cukup dan membatalkan transaksi', async (t) => {
@@ -355,6 +413,7 @@ test('pesanan kurir memakai tarif server dan menyimpan tujuan serta layanan', as
   assert.equal(data.ongkir, 17000);
   assert.equal(data.diskon, 6000);
   assert.equal(data.total, 147000);
+  assert.equal(state.transactions[0].metode_penerimaan, 'kurir');
   assert.equal(data.alamat_lengkap, 'Jl. Raya Telang No. 10');
   assert.equal(data.layanan_kurir, 'JNE REG');
   assert.deepEqual(shippingCalls, [{ destination: '123', weight: 10000 }]);
@@ -369,6 +428,8 @@ test('pesanan kurir memakai tarif server dan menyimpan tujuan serta layanan', as
   const detailResponse = await fetch(`${baseUrl}/orders/${data.nomor_pesanan}`);
   assert.equal(detailResponse.status, 200);
   const detail = (await detailResponse.json()).data;
+  assert.equal(detail.metode_penerimaan, 'kurir');
+  assert.equal(detail.metode_pembayaran, 'midtrans');
   assert.equal(detail.wilayah, 'Kamal, Bangkalan, Jawa Timur');
   assert.equal(detail.alamat_lengkap, 'Jl. Raya Telang No. 10');
   assert.equal(detail.items[0].nama, 'Beras 5 kg');

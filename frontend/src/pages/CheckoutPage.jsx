@@ -52,6 +52,7 @@ export default function CheckoutPage() {
 
   // Metode Penerimaan: 'ambil_di_toko' | 'kurir'
   const [metode, setMetode] = useState('ambil_di_toko');
+  const [metodePembayaran, setMetodePembayaran] = useState('midtrans');
   const [alamatLengkap, setAlamatLengkap] = useState('');
   const [destinationSearch, setDestinationSearch] = useState('');
   const [destination, setDestination] = useState(null);
@@ -67,6 +68,11 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  function changeFulfillmentMethod(value) {
+    setMetode(value);
+    if (value !== 'kurir') setMetodePembayaran('midtrans');
+  }
 
   const selectedRate = shippingRates.find((rate) => rate.id === selectedRateId);
   const courierLabel = selectedRate
@@ -185,6 +191,7 @@ export default function CheckoutPage() {
         no_hp: noHp.replace(/[\s-]/g, ''),
         catatan: catatan.trim(),
         metode_penerimaan: metode,
+        metode_pembayaran: metodePembayaran,
         wilayah: metode === 'kurir' ? destination.label : undefined,
         destination_id: metode === 'kurir' ? destination.id : undefined,
         selected_rate_id: metode === 'kurir' ? selectedRate.id : undefined,
@@ -469,7 +476,7 @@ export default function CheckoutPage() {
               {/* CARD A: Ambil di Toko */}
               <label
                 className={`ko-pickup-selectable-card ${metode === 'ambil_di_toko' ? 'selected' : 'unselected'}`}
-                onClick={() => setMetode('ambil_di_toko')}
+                onClick={() => changeFulfillmentMethod('ambil_di_toko')}
               >
                 {metode === 'ambil_di_toko' && (
                   <div className="ko-pickup-active-badge">
@@ -485,7 +492,7 @@ export default function CheckoutPage() {
                     name="pickup_mode"
                     value="store"
                     checked={metode === 'ambil_di_toko'}
-                    onChange={() => setMetode('ambil_di_toko')}
+                    onChange={() => changeFulfillmentMethod('ambil_di_toko')}
                     className="ko-native-radio"
                   />
                   <div className="flex flex-col">
@@ -505,7 +512,7 @@ export default function CheckoutPage() {
               {/* CARD B: Kurir Pihak Ketiga */}
               <label
                 className={`ko-pickup-selectable-card ${metode === 'kurir' ? 'selected' : 'unselected'}`}
-                onClick={() => setMetode('kurir')}
+                onClick={() => changeFulfillmentMethod('kurir')}
               >
                 {metode === 'kurir' && (
                   <div className="ko-pickup-active-badge">
@@ -521,7 +528,7 @@ export default function CheckoutPage() {
                     name="pickup_mode"
                     value="courier"
                     checked={metode === 'kurir'}
-                    onChange={() => setMetode('kurir')}
+                    onChange={() => changeFulfillmentMethod('kurir')}
                     className="ko-native-radio"
                   />
                   <div className="flex flex-col">
@@ -765,7 +772,7 @@ export default function CheckoutPage() {
                         className="ko-btn-switch-store"
                         onClick={() => {
                           setCourierCalcError('');
-                          setMetode('ambil_di_toko');
+                          changeFulfillmentMethod('ambil_di_toko');
                         }}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -946,20 +953,38 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Petunjuk Metode Pembayaran */}
-            <div className="ko-payment-preview-banner">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fc820c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="2" y="5" width="20" height="14" rx="2" />
-                <line x1="2" y1="10" x2="22" y2="10" />
-              </svg>
-              <div>
-                <strong className="block font-bold text-on-surface">Pilihan Pembayaran Fleksibel:</strong>
-                <span className="text-xs text-on-surface-variant">
-                  {metode === 'kurir'
-                    ? 'Transfer Bank BCA/Mandiri, QRIS instan, atau bayar tunai (COD) saat kurir tiba di rumah.'
-                    : 'Transfer Bank BCA/Mandiri, QRIS instan, atau bayar tunai di kasir saat mengambil sembako.'}
+            <div className="ko-payment-options">
+              <strong className="font-bold text-on-surface">Pilih Metode Pembayaran</strong>
+              <label className="ko-payment-choice">
+                <input
+                  type="radio"
+                  name="metode_pembayaran"
+                  value="midtrans"
+                  checked={metodePembayaran === 'midtrans'}
+                  onChange={() => setMetodePembayaran('midtrans')}
+                  className="ko-native-radio"
+                />
+                <span>
+                  <strong>Midtrans</strong>
+                  <small>Transfer bank, QRIS, dan e-wallet melalui halaman pembayaran aman.</small>
                 </span>
-              </div>
+              </label>
+              {metode === 'kurir' && (
+                <label className="ko-payment-choice">
+                  <input
+                    type="radio"
+                    name="metode_pembayaran"
+                    value="cod"
+                    checked={metodePembayaran === 'cod'}
+                    onChange={() => setMetodePembayaran('cod')}
+                    className="ko-native-radio"
+                  />
+                  <span>
+                    <strong>COD (bayar tunai ke kurir)</strong>
+                    <small>Bayar pesanan saat kurir mengantarkannya ke alamat Anda.</small>
+                  </span>
+                </label>
+              )}
             </div>
 
             {/* Tombol Buat Pesanan & WhatsApp */}

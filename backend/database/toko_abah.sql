@@ -212,7 +212,7 @@ CREATE TABLE `pemasok` (
 CREATE TABLE `pembayaran` (
   `id_pembayaran` int NOT NULL,
   `id_transaksi` int NOT NULL,
-  `metode_pembayaran` enum('tunai','QRIS','debit','payment_gateway') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `metode_pembayaran` enum('tunai','QRIS','debit','payment_gateway','cod') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `jumlah_bayar` decimal(12,2) NOT NULL,
   `jumlah_diterima` decimal(12,2) DEFAULT NULL,
   `kembalian` decimal(12,2) NOT NULL DEFAULT '0.00',

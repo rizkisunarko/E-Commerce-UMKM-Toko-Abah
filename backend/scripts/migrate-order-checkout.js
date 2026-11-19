@@ -50,6 +50,22 @@ async function main() {
     } else {
       console.log('Kolom pembayaran.snap_token sudah tersedia.');
     }
+
+    const [paymentMethodColumns] = await db.query(
+      "SHOW COLUMNS FROM pembayaran LIKE 'metode_pembayaran'",
+    );
+    if (paymentMethodColumns.length &&
+        !paymentMethodColumns[0].Type.includes("'cod'")) {
+      await db.query(
+        `ALTER TABLE pembayaran
+         MODIFY COLUMN metode_pembayaran
+         ENUM('tunai','QRIS','debit','payment_gateway','cod')
+         CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL`,
+      );
+      console.log('Metode pembayaran COD berhasil ditambahkan.');
+    } else {
+      console.log('Metode pembayaran COD sudah tersedia.');
+    }
   } finally {
     await db.end();
   }
