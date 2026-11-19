@@ -8,7 +8,7 @@ export const orderService = {
     api.post('/shipping/cost', { destination_id: destinationId, items }),
   // items: [{ product_id, jumlah }]. Hasil: harga dan stok terbaru dari server.
   checkCart: (items) => api.post('/cart/check', { items }),
-  // Checkout publik: nama_pemesan, no_hp, metode_penerimaan, items, dan data tujuan kurir jika diperlukan.
+  // Checkout publik: sertakan metode_pembayaran (midtrans atau cod) bersama data pesanan.
   create: (data) => api.post('/orders', data),
   createPayment: (nomor) =>
     api.post(`/orders/${encodeURIComponent(nomor)}/pembayaran`),

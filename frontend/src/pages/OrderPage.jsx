@@ -59,6 +59,7 @@ export default function OrderPage() {
             no_hp: '081298765432',
             catatan: 'Tolong bungkus minyaknya rapat ya Abah.',
             metode_penerimaan: 'ambil_di_toko',
+            metode_pembayaran: 'midtrans',
             wilayah: 'Telang, Kamal (Radius < 3 km)',
             alamat_lengkap: 'Jl. Raya Telang No. 15, RT 04 / RW 03, Kamal, Bangkalan',
             layanan_kurir: 'Kurir Instan Toko Abah (Motor)',
@@ -196,6 +197,7 @@ export default function OrderPage() {
   }).replace('.', ':') + ' WIB';
 
   const isCourier = order.metode_penerimaan === 'kurir';
+  const isCod = order.metode_pembayaran === 'cod';
   const nomorPesanan = order.nomor_pesanan || 'TA-20261112-001';
   const waTotal = formatRupiah(order.total || 121500).replace(/\s+/g, '');
   const waMessage = `Halo Toko Abah, saya sudah membuat pesanan nomor ${nomorPesanan} senilai ${waTotal}. Mohon disiapkan ya.`;
@@ -276,7 +278,7 @@ export default function OrderPage() {
                 3. Pembayaran
               </span>
               <span className={`ko-order-step-sub ${isPaid ? 'text-primary font-bold' : 'text-secondary font-bold'}`}>
-                {isPaid ? 'Sudah Dibayar' : 'Menunggu Bayar'}
+                {isPaid ? 'Sudah Dibayar' : isCod ? 'Bayar ke Kurir' : 'Menunggu Bayar'}
               </span>
             </div>
           </div>
@@ -337,6 +339,11 @@ export default function OrderPage() {
                     <span className="ko-status-dot-solid" />
                     <span>Sudah Dibayar</span>
                   </span>
+                ) : isCod ? (
+                  <span className="ko-order-status-pill pending">
+                    <span className="ko-status-dot-pulse" />
+                    <span>COD</span>
+                  </span>
                 ) : (
                   <span className="ko-order-status-pill pending">
                     <span className="ko-status-dot-pulse" />
@@ -388,7 +395,7 @@ export default function OrderPage() {
           </div>
 
           {/* Urgent Countdown Warning Banner */}
-          {!isPaid && (
+          {!isPaid && !isCod && (
             <div className="ko-urgent-countdown-banner">
               <div className="flex items-center gap-3">
                 <div className="ko-hourglass-icon">
@@ -679,10 +686,14 @@ export default function OrderPage() {
                     <rect x="2" y="5" width="20" height="14" rx="2" />
                     <line x1="2" y1="10" x2="22" y2="10" />
                   </svg>
-                  <h3 className="ko-card-title text-base">Instruksi Pembayaran</h3>
+                  <h3 className="ko-card-title text-base">
+                    {isCod ? 'Pembayaran COD' : 'Instruksi Pembayaran'}
+                  </h3>
                 </div>
                 {isPaid ? (
                   <span className="ko-pill-paid-status">Lunas</span>
+                ) : isCod ? (
+                  <span className="ko-pill-unpaid-status">COD</span>
                 ) : (
                   <span className="ko-pill-unpaid-status">Belum Lunas</span>
                 )}
@@ -694,40 +705,64 @@ export default function OrderPage() {
                 <div className="ko-order-total-big-num mt-1">
                   {formatRupiah(order.total || 121500)}
                 </div>
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-secondary font-medium">
+                {!isCod && !isPaid && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-secondary font-medium">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
                   <span>Batas bayar: Hari ini pukul {deadlineTime}</span>
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-2.5 mt-2">
-                {/* Primary Button: QRIS */}
-                <button
-                  type="button"
-                  className="ko-btn-pay-qris"
-                  onClick={handlePay}
-                  disabled={paying || isPaid}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" />
-                    <rect x="14" y="3" width="7" height="7" />
-                    <rect x="14" y="14" width="7" height="7" />
-                    <rect x="3" y="14" width="7" height="7" />
-                  </svg>
-                  <span>
-                    {isPaid
-                      ? 'Pembayaran Berhasil'
-                      : paying
-                        ? 'Menyiapkan Pembayaran...'
-                        : 'Bayar Sekarang dengan Midtrans'}
-                  </span>
-                </button>
-                {paymentError && <p role="alert">{paymentError}</p>}
-                {paymentNotice && <p role="status">{paymentNotice}</p>}
+                {isCod ? (
+                  <div className="ko-tunai-note-box" role="status">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2" className="shrink-0 mt-0.5">
+                      <rect x="2" y="6" width="20" height="12" rx="2" />
+                      <circle cx="12" cy="12" r="2" />
+                    </svg>
+                    <p className="text-xs text-on-surface-variant m-0 leading-snug">
+                      Siapkan <strong className="text-on-surface">{formatRupiah(order.total || 121500)}</strong> dan bayar tunai langsung kepada kurir saat pesanan diterima.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="ko-btn-pay-qris"
+                      onClick={handlePay}
+                      disabled={paying || isPaid}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                        <rect x="14" y="14" width="7" height="7" />
+                        <rect x="3" y="14" width="7" height="7" />
+                      </svg>
+                      <span>
+                        {isPaid
+                          ? 'Pembayaran Berhasil'
+                          : paying
+                            ? 'Menyiapkan Pembayaran...'
+                            : 'Bayar Sekarang dengan Midtrans'}
+                      </span>
+                    </button>
+                    {paymentError && <p role="alert">{paymentError}</p>}
+                    {paymentNotice && <p role="status">{paymentNotice}</p>}
+                    <div className="ko-tunai-note-box">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2" className="shrink-0 mt-0.5">
+                        <rect x="2" y="6" width="20" height="12" rx="2" />
+                        <circle cx="12" cy="12" r="2" />
+                      </svg>
+                      <p className="text-xs text-on-surface-variant m-0 leading-snug">
+                        <strong className="text-on-surface">Pembayaran aman melalui Midtrans Snap.</strong> Pilih metode yang tersedia pada jendela pembayaran.
+                      </p>
+                    </div>
+                  </>
+                )}
 
                 {/* Secondary Button: WhatsApp Toko Confirmation */}
                 <a
@@ -741,17 +776,6 @@ export default function OrderPage() {
                   </svg>
                   <span>Kirim Ringkasan ke WhatsApp Toko</span>
                 </a>
-
-                {/* Tunai di Kasir Note */}
-                <div className="ko-tunai-note-box">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2" className="shrink-0 mt-0.5">
-                    <rect x="2" y="6" width="20" height="12" rx="2" />
-                    <circle cx="12" cy="12" r="2" />
-                  </svg>
-                  <p className="text-xs text-on-surface-variant m-0 leading-snug">
-                    <strong className="text-on-surface">Pembayaran aman melalui Midtrans Snap.</strong> Pilih metode yang tersedia pada jendela pembayaran.
-                  </p>
-                </div>
 
                 {/* Link Kembali ke Katalog */}
                 <Link to="/katalog" className="ko-link-back-catalog">
