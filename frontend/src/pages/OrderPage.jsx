@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import QrisModal from '../components/QrisModal';
 import { orderService } from '../services/orderService';
+import { loadMidtransSnap } from '../services/midtrans';
 import { formatRupiah } from '../utils/format';
 
 import berasImg from '../assets/Beras.jpg';
@@ -28,8 +28,11 @@ export default function OrderPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [showQrisModal, setShowQrisModal] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [paymentNotice, setPaymentNotice] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(58 * 60 + 42);
 
   // Ambil data pesanan dari API / mockServer
@@ -40,6 +43,7 @@ export default function OrderPage() {
       .then((res) => {
         if (!cancelled) {
           setOrder(res.data);
+          setIsPaid(res.data.status_pembayaran === 'berhasil');
           setLoading(false);
         }
       })
@@ -77,6 +81,23 @@ export default function OrderPage() {
     };
   }, [nomor]);
 
+  useEffect(() => {
+    if (!checkingPayment || isPaid) return undefined;
+    const timer = setInterval(() => {
+      orderService.get(nomor)
+        .then((res) => {
+          setOrder(res.data);
+          if (res.data.status_pembayaran === 'berhasil') {
+            setIsPaid(true);
+            setCheckingPayment(false);
+            setPaymentNotice('Pembayaran berhasil dikonfirmasi Midtrans.');
+          }
+        })
+        .catch((error) => setPaymentError(error.message));
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [checkingPayment, isPaid, nomor]);
+
   // Countdown timer batas pembayaran (58 menit)
   useEffect(() => {
     const timer = setInterval(() => {
@@ -98,6 +119,37 @@ export default function OrderPage() {
     const phone = '6281288997700';
     const msg = `Halo Toko Abah, saya sudah membuat pesanan nomor ${order.nomor_pesanan} senilai ${formatRupiah(order.total)}. Mohon disiapkan ya. Terima kasih!`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  async function handlePay() {
+    setPaying(true);
+    setPaymentError('');
+    setPaymentNotice('');
+    try {
+      const { data } = await orderService.createPayment(nomor);
+      const snap = await loadMidtransSnap(data.client_key);
+      snap.pay(data.snap_token, {
+        onSuccess: () => {
+          setPaying(false);
+          setCheckingPayment(true);
+          setPaymentNotice('Pembayaran diterima. Menunggu konfirmasi dari Midtrans...');
+        },
+        onPending: () => {
+          setPaying(false);
+          setCheckingPayment(true);
+          setPaymentNotice('Pembayaran sedang diproses oleh Midtrans.');
+        },
+        onError: () => {
+          setPaying(false);
+          setPaymentError('Pembayaran gagal diproses. Silakan coba kembali.');
+        },
+        onClose: () => setPaying(false),
+      });
+    } catch (error) {
+      setPaymentError(error.message || 'Tidak dapat memulai pembayaran Midtrans.');
+    } finally {
+      setPaying(false);
+    }
   }
 
   if (loading) {
@@ -657,7 +709,8 @@ export default function OrderPage() {
                 <button
                   type="button"
                   className="ko-btn-pay-qris"
-                  onClick={() => setShowQrisModal(true)}
+                  onClick={handlePay}
+                  disabled={paying || isPaid}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="7" height="7" />
@@ -665,8 +718,16 @@ export default function OrderPage() {
                     <rect x="14" y="14" width="7" height="7" />
                     <rect x="3" y="14" width="7" height="7" />
                   </svg>
-                  <span>{isPaid ? 'Lihat Bukti QRIS' : 'Bayar Sekarang (QRIS / Transfer)'}</span>
+                  <span>
+                    {isPaid
+                      ? 'Pembayaran Berhasil'
+                      : paying
+                        ? 'Menyiapkan Pembayaran...'
+                        : 'Bayar Sekarang dengan Midtrans'}
+                  </span>
                 </button>
+                {paymentError && <p role="alert">{paymentError}</p>}
+                {paymentNotice && <p role="status">{paymentNotice}</p>}
 
                 {/* Secondary Button: WhatsApp Toko Confirmation */}
                 <a
@@ -688,7 +749,7 @@ export default function OrderPage() {
                     <circle cx="12" cy="12" r="2" />
                   </svg>
                   <p className="text-xs text-on-surface-variant m-0 leading-snug">
-                    <strong className="text-on-surface">Pilihan Bayar di Toko:</strong> Anda juga dapat membayar langsung secara tunai atau debit di kasir saat mengambil barang belanjaan.
+                    <strong className="text-on-surface">Pembayaran aman melalui Midtrans Snap.</strong> Pilih metode yang tersedia pada jendela pembayaran.
                   </p>
                 </div>
 
@@ -779,16 +840,6 @@ export default function OrderPage() {
         </div>
       </div>
 
-      {/* QRIS Modal Component */}
-      <QrisModal
-        isOpen={showQrisModal}
-        onClose={() => setShowQrisModal(false)}
-        total={order.total || 121500}
-        orderId={order.nomor_pesanan}
-        onPaymentSuccess={() => {
-          setIsPaid(true);
-        }}
-      />
     </div>
   );
 }

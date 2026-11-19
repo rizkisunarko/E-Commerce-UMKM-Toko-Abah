@@ -2,7 +2,7 @@ const cors = require('cors');
 const express = require('express');
 const createRoutes = require('./routes');
 
-function createApp({ db, jwtSecret, shippingClient }) {
+function createApp({ db, jwtSecret, shippingClient, paymentClient }) {
   if (!db || typeof db.query !== 'function') {
     throw new Error('Pool database backend wajib dikonfigurasi');
   }
@@ -13,7 +13,7 @@ function createApp({ db, jwtSecret, shippingClient }) {
   const app = express();
   app.use(cors());
   app.use(express.json());
-  app.use('/api', createRoutes(db, jwtSecret, shippingClient));
+  app.use('/api', createRoutes(db, jwtSecret, shippingClient, paymentClient));
   app.use((req, res) => res.status(404).json({ message: 'Endpoint tidak ditemukan' }));
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);

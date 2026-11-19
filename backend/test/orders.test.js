@@ -19,6 +19,7 @@ async function createFixture(t, products = [{
     transactions: [],
     details: [],
     shipments: [],
+    payments: [],
     nextTransactionId: 1,
   };
   const shippingCalls = [];
@@ -73,6 +74,91 @@ async function createFixture(t, products = [{
       });
       return [{ insertId: state.shipments.length }, []];
     }
+    if (sql.includes('INSERT INTO pembayaran')) {
+      const payment = {
+        id_pembayaran: state.payments.length + 1,
+        id_transaksi: params[0],
+        jumlah_bayar: params[1],
+        status_pembayaran: 'menunggu',
+        kode_referensi: params[2],
+        snap_token: null,
+      };
+      state.payments.push(payment);
+      return [{ insertId: payment.id_pembayaran }, []];
+    }
+    if (sql.includes('UPDATE pembayaran SET snap_token')) {
+      const payment = state.payments.find((item) => item.id_pembayaran === params[1]);
+      if (payment && payment.status_pembayaran === 'menunggu') {
+        payment.snap_token = params[0];
+      }
+      return [{ affectedRows: payment ? 1 : 0 }, []];
+    }
+    if (sql.includes("UPDATE pembayaran SET status_pembayaran = 'gagal'") &&
+        sql.includes('WHERE id_pembayaran = ?')) {
+      const payment = state.payments.find((item) => item.id_pembayaran === params[0]);
+      if (payment && payment.status_pembayaran === 'menunggu') payment.status_pembayaran = 'gagal';
+      return [{ affectedRows: payment ? 1 : 0 }, []];
+    }
+    if (sql.includes('FROM pembayaran p') && sql.includes('JOIN transaksi t') &&
+        sql.includes('p.kode_referensi = ?')) {
+      const payment = state.payments.find((item) => item.kode_referensi === params[0]);
+      const transaction = state.transactions.find(
+        (item) => item.id_transaksi === payment?.id_transaksi,
+      );
+      return [payment && transaction ? [{
+        id_pembayaran: payment.id_pembayaran,
+        id_transaksi: payment.id_transaksi,
+        status_pembayaran: payment.status_pembayaran,
+        jumlah_bayar: payment.jumlah_bayar,
+        status_transaksi: transaction.status_transaksi,
+      }] : [], []];
+    }
+    if (sql.includes("UPDATE pembayaran") &&
+        sql.includes("status_pembayaran = 'berhasil'")) {
+      const payment = state.payments.find((item) => item.id_pembayaran === params[0]);
+      if (payment && payment.status_pembayaran === 'menunggu') {
+        payment.status_pembayaran = 'berhasil';
+      }
+      return [{ affectedRows: payment ? 1 : 0 }, []];
+    }
+    if (sql.includes('UPDATE pembayaran SET status_pembayaran = \'gagal\'') &&
+        sql.includes('id_transaksi = ?')) {
+      for (const payment of state.payments) {
+        if (payment.id_transaksi === params[0] &&
+            payment.id_pembayaran !== params[1] &&
+            payment.status_pembayaran === 'menunggu') {
+          payment.status_pembayaran = 'gagal';
+        }
+      }
+      return [{ affectedRows: 1 }, []];
+    }
+    if (sql.includes("UPDATE transaksi SET status_transaksi = 'diproses'")) {
+      const transaction = state.transactions.find((item) => item.id_transaksi === params[0]);
+      if (transaction && transaction.status_transaksi === 'menunggu') {
+        transaction.status_transaksi = 'diproses';
+      }
+      return [{ affectedRows: transaction ? 1 : 0 }, []];
+    }
+    if (sql.includes('FROM transaksi') && sql.includes("jenis_transaksi = 'online'") &&
+        sql.includes('FOR UPDATE')) {
+      const transaction = state.transactions.find(
+        (item) => item.kode_transaksi === params[0] && item.jenis_transaksi === 'online',
+      );
+      return [transaction ? [{
+        id_transaksi: transaction.id_transaksi,
+        kode_transaksi: transaction.kode_transaksi,
+        nama_pelanggan: transaction.nama_pelanggan,
+        no_telepon: transaction.no_telepon,
+        total_bayar: transaction.total_bayar,
+        status_transaksi: transaction.status_transaksi,
+      }] : [], []];
+    }
+    if (sql.includes('FROM pembayaran') && sql.includes("status_pembayaran = 'menunggu'")) {
+      const payment = state.payments
+        .filter((item) => item.id_transaksi === params[0] && item.status_pembayaran === 'menunggu')
+        .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0];
+      return [payment ? [{ ...payment }] : [], []];
+    }
     if (sql.includes('FROM transaksi t') && sql.includes('WHERE t.kode_transaksi = ?')) {
       const transaction = state.transactions.find(
         (item) => item.kode_transaksi === params[0] && item.jenis_transaksi === 'online',
@@ -94,6 +180,9 @@ async function createFixture(t, products = [{
         subtotal: transaction.subtotal_produk,
         ongkir: transaction.ongkos_kirim,
         total: transaction.total_bayar,
+        status_pembayaran: state.payments
+          .filter((payment) => payment.id_transaksi === transaction.id_transaksi)
+          .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0]?.status_pembayaran || null,
         wilayah: shipment?.wilayah_tujuan,
         layanan_kurir: shipment?.layanan_kurir,
       }], []];
@@ -148,7 +237,23 @@ async function createFixture(t, products = [{
       }];
     },
   };
-  const server = createApp({ db, jwtSecret: JWT_SECRET, shippingClient }).listen(0);
+  const paymentCalls = [];
+  const paymentClient = {
+    isConfigured: () => true,
+    isNotificationConfigured: () => true,
+    getClientKey: () => 'client-test',
+    async createTransaction(parameter) {
+      paymentCalls.push(parameter);
+      return { token: `snap-${parameter.transaction_details.order_id}` };
+    },
+    verifyNotification: (notification) => notification?.signature_key === 'valid',
+  };
+  const server = createApp({
+    db,
+    jwtSecret: JWT_SECRET,
+    shippingClient,
+    paymentClient,
+  }).listen(0);
   await once(server, 'listening');
   t.after(() => new Promise((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
@@ -157,6 +262,7 @@ async function createFixture(t, products = [{
     baseUrl: `http://127.0.0.1:${server.address().port}/api`,
     state,
     shippingCalls,
+    paymentCalls,
   };
 }
 
@@ -266,6 +372,87 @@ test('pesanan kurir memakai tarif server dan menyimpan tujuan serta layanan', as
   assert.equal(detail.wilayah, 'Kamal, Bangkalan, Jawa Timur');
   assert.equal(detail.alamat_lengkap, 'Jl. Raya Telang No. 10');
   assert.equal(detail.items[0].nama, 'Beras 5 kg');
+});
+
+test('pembayaran Snap memakai total pesanan server dan menyimpan token agar dapat dipakai ulang', async (t) => {
+  const { baseUrl, state, paymentCalls } = await createFixture(t);
+  const createdOrder = await createOrder(baseUrl, pickupOrder);
+  const order = (await createdOrder.json()).data;
+
+  const firstResponse = await fetch(`${baseUrl}/orders/${order.nomor_pesanan}/pembayaran`, {
+    method: 'POST',
+  });
+  assert.equal(firstResponse.status, 201);
+  const firstPayment = (await firstResponse.json()).data;
+  assert.match(firstPayment.snap_token, /^snap-TA-/);
+  assert.equal(firstPayment.client_key, 'client-test');
+  assert.equal(paymentCalls[0].transaction_details.gross_amount, 130000);
+  assert.equal(
+    paymentCalls[0].callbacks.finish,
+    `http://localhost:5173/pesanan/${order.nomor_pesanan}`,
+  );
+  assert.equal(state.payments.length, 1);
+  assert.equal(state.payments[0].status_pembayaran, 'menunggu');
+
+  const retryResponse = await fetch(`${baseUrl}/orders/${order.nomor_pesanan}/pembayaran`, {
+    method: 'POST',
+  });
+  assert.equal(retryResponse.status, 200);
+  assert.deepEqual((await retryResponse.json()).data, firstPayment);
+  assert.equal(paymentCalls.length, 1);
+});
+
+test('notifikasi Snap terverifikasi menandai pembayaran lunas dan pesanan diproses', async (t) => {
+  const { baseUrl, state, paymentCalls } = await createFixture(t);
+  const createdOrder = await createOrder(baseUrl, pickupOrder);
+  const order = (await createdOrder.json()).data;
+  await fetch(`${baseUrl}/orders/${order.nomor_pesanan}/pembayaran`, { method: 'POST' });
+  const reference = paymentCalls[0].transaction_details.order_id;
+
+  const response = await fetch(`${baseUrl}/payments/midtrans/notification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      order_id: reference,
+      status_code: '200',
+      gross_amount: '130000.00',
+      signature_key: 'valid',
+      transaction_status: 'settlement',
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(state.payments[0].status_pembayaran, 'berhasil');
+  assert.equal(state.transactions[0].status_transaksi, 'diproses');
+});
+
+test('notifikasi Midtrans ditolak jika tanda tangan tidak valid atau nominal berbeda', async (t) => {
+  const { baseUrl, state, paymentCalls } = await createFixture(t);
+  const createdOrder = await createOrder(baseUrl, pickupOrder);
+  const order = (await createdOrder.json()).data;
+  await fetch(`${baseUrl}/orders/${order.nomor_pesanan}/pembayaran`, { method: 'POST' });
+  const notification = {
+    order_id: paymentCalls[0].transaction_details.order_id,
+    status_code: '200',
+    gross_amount: '130000.00',
+    transaction_status: 'settlement',
+  };
+
+  const invalidSignature = await fetch(`${baseUrl}/payments/midtrans/notification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...notification, signature_key: 'invalid' }),
+  });
+  assert.equal(invalidSignature.status, 401);
+
+  const invalidAmount = await fetch(`${baseUrl}/payments/midtrans/notification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...notification, gross_amount: '1.00', signature_key: 'valid' }),
+  });
+  assert.equal(invalidAmount.status, 422);
+  assert.equal(state.payments[0].status_pembayaran, 'menunggu');
+  assert.equal(state.transactions[0].status_transaksi, 'menunggu');
 });
 
 test('detail pesanan yang tidak dikenal mengembalikan 404', async (t) => {

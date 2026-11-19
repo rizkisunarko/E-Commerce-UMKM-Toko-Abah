@@ -38,6 +38,18 @@ async function main() {
     } else {
       console.log('Kolom pengiriman.wilayah_tujuan sudah tersedia.');
     }
+
+    const [snapTokenColumns] = await db.query(
+      "SHOW COLUMNS FROM pembayaran LIKE 'snap_token'",
+    );
+    if (snapTokenColumns.length === 0) {
+      await db.query(
+        'ALTER TABLE pembayaran ADD COLUMN snap_token VARCHAR(255) NULL AFTER kode_referensi',
+      );
+      console.log('Kolom pembayaran.snap_token berhasil ditambahkan.');
+    } else {
+      console.log('Kolom pembayaran.snap_token sudah tersedia.');
+    }
   } finally {
     await db.end();
   }

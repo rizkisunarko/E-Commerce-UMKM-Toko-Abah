@@ -25,6 +25,10 @@ React (Vite), Node.js + Express, MySQL
    dan bila perlu `DB_HOST`/`DB_PORT`.
    Untuk tarif ongkir, isi `RAJAONGKIR_API_KEY` di `backend/.env` dengan key **Shipping Cost Sandbox**
    dari dashboard Komerce. Jangan menaruh key di frontend atau mengirimkannya ke Git.
+   Untuk pembayaran, isi `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, dan
+   `MIDTRANS_SIGNATURE_SECRET_KEY` dari dashboard Midtrans Sandbox. Gunakan Server Key aktif
+   dengan izin Snap Checkout Write; Signature Secret Key dipakai backend untuk memverifikasi webhook.
+   Simpan Server Key dan Signature Secret Key hanya di `backend/.env`; jangan kirim ke browser atau Git.
 3. Buat database dan tabel dari dump SQL (hanya untuk database kosong):
    ```bash
    npm run db:setup
@@ -36,7 +40,7 @@ React (Vite), Node.js + Express, MySQL
    Jika database sudah memiliki tabel, proses dibatalkan tanpa menghapus data. Untuk setup ulang, gunakan
    database kosong yang baru; jangan hapus database berisi data penting.
    Untuk database yang sudah ada, jalankan `npm run db:migrate:orders` dari folder `backend` agar
-   keranjang tamu dan wilayah pengiriman pesanan dapat disimpan.
+   keranjang tamu, wilayah pengiriman, dan token Snap dapat disimpan.
 4. Jalankan backend:
    ```bash
    npm run dev
@@ -46,7 +50,8 @@ React (Vite), Node.js + Express, MySQL
    cd frontend
    copy .env.example .env
    ```
-   Semua halaman menggunakan backend dan MySQL. Atur `VITE_API_URL` di `frontend/.env` bila alamat backend berbeda, lalu jalankan:
+   Ubah `VITE_USE_MOCK=false` agar checkout memakai backend dan Midtrans. Atur `VITE_API_URL` bila
+   alamat backend berbeda, lalu jalankan:
    ```bash
    npm install
    npm run dev
@@ -56,6 +61,12 @@ React (Vite), Node.js + Express, MySQL
 Checkout mencari kecamatan/kota melalui backend, lalu menampilkan pilihan tarif dan layanan dari
 RajaOngkir berdasarkan berat produk di database. Permintaan ongkir memakai key yang disimpan di
 `backend/.env`; jika layanan gagal, pelanggan dapat mencoba lagi atau memilih ambil di toko.
+Pembayaran pesanan online menggunakan Snap Sandbox. Backend membuat token Snap dari total pesanan
+yang dihitung server, sementara status lunas hanya berubah setelah notifikasi Midtrans dengan
+signature dan nominal yang valid diterima. Atur URL notifikasi pada dashboard Midtrans ke
+`https://<alamat-backend-publik>/api/payments/midtrans/notification`; server lokal `localhost`
+tidak dapat menerima webhook tanpa URL publik. `FRONTEND_URL` (default `http://localhost:5173`)
+dipakai sebagai URL kembali setelah metode pembayaran berbasis redirect selesai.
 
 ### Reset password admin
 
