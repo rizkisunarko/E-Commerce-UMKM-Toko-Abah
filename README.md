@@ -101,9 +101,10 @@ Kata sandi di database tersimpan sebagai hash bcrypt.
 - Admin dapat menaikkan atau menurunkan stok; pegawai dapat melihat dan hanya menurunkan stok melalui halaman Stok.
 - Form ubah produk admin dapat memperbarui stok. Jika stok berubah, API memperbarui produk dan mencatat riwayat stok dalam satu transaksi; setelah disimpan, aplikasi membuka halaman Daftar Stok dengan nilai terbaru.
 - Stok produk, batas stok minimum, dan jumlah pada riwayat menggunakan bilangan bulat. Migrasi `backend/database/migrations/002-convert-stock-to-integers.sql` membulatkan nilai pecahan yang sudah ada ke bawah (FLOOR); jalankan sekali pada database lama sebelum memakai versi ini. Data baru akan menolak stok pecahan.
-- `PUT /api/products/:id` mengubah nama, kategori, harga jual, berat, dan batas stok minimum; hanya admin yang boleh mengaksesnya. Pegawai mendapat respons `403` dan tidak dapat mengubah harga atau data produk. Tidak tersedia endpoint untuk menghapus produk.
+- `PUT /api/products/:id` mengubah nama, kategori, harga jual, berat, dan batas stok minimum; hanya admin yang boleh mengaksesnya. Pegawai mendapat respons `403` dan tidak dapat mengubah harga atau data produk.
 - Dua peran yang digunakan adalah admin (pemilik, akses penuh) dan pegawai (kasir/operasional, tanpa hak ubah harga, tambah, ubah, atau arsip produk). Pembatasan diberlakukan backend, bukan hanya dengan menyembunyikan tombol.
 - `PATCH /api/products/:id/archive` menerima `{ "archived": true|false }` dan hanya dapat digunakan admin. Arsip menyembunyikan produk dari daftar aktif dan stok tanpa menghapus riwayat; admin dapat menampilkan arsip lalu memulihkan produk. Produk arsip tidak dapat disesuaikan stoknya.
+- `DELETE /api/products/:id` hanya dapat digunakan admin. Produk yang memiliki detail penjualan/pembelian, riwayat stok, atau masih ada di keranjang akan diarsipkan; produk tanpa relasi tersebut dihapus permanen. Respons menyertakan `action` bernilai `archived` atau `deleted`.
 - Untuk database yang sudah ada, jalankan sekali `backend/database/migrations/001-add-product-archive.sql` sebelum menjalankan versi backend ini. Database baru memperoleh kolom arsip dari dump SQL.
 - NFR-02: pemeriksaan hak akses dilakukan pada setiap endpoint backend; aksi produk yang dibatasi tetap ditolak meskipun dipanggil langsung tanpa UI.
 
