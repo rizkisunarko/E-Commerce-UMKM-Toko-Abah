@@ -128,6 +128,7 @@ function formatOrder(row, items) {
     id: Number(row.id),
     nomor_pesanan: row.nomor_pesanan,
     status: orderStatusLabel(row.status),
+    status_pembayaran: row.status_pembayaran || null,
     tanggal: row.tanggal,
     nama_pemesan: row.nama_pemesan,
     no_hp: row.no_hp,
@@ -151,7 +152,7 @@ function formatOrder(row, items) {
   };
 }
 
-function createOrdersRoutes(db, shippingClient) {
+function createOrdersRoutes(db, shippingClient, paymentClient) {
   const router = express.Router();
 
   router.post('/', async (req, res, next) => {
@@ -401,6 +402,141 @@ function createOrdersRoutes(db, shippingClient) {
     }
   });
 
+  router.post('/:nomor/pembayaran', async (req, res, next) => {
+    if (!paymentClient.isConfigured()) {
+      return res.status(503).json({
+        message: 'Konfigurasi Midtrans Sandbox belum lengkap di backend/.env.',
+      });
+    }
+
+    let connection;
+    let transactionStarted = false;
+    let paymentReference;
+    let paymentId;
+    let payment;
+    try {
+      connection = typeof db.getConnection === 'function' ? await db.getConnection() : db;
+      if (typeof connection.beginTransaction !== 'function') {
+        throw new Error('Koneksi database tidak mendukung transaksi atomik');
+      }
+      await connection.beginTransaction();
+      transactionStarted = true;
+
+      const [orders] = await connection.query(
+        `SELECT id_transaksi, kode_transaksi, nama_pelanggan, no_telepon,
+                total_bayar, status_transaksi
+         FROM transaksi
+         WHERE kode_transaksi = ? AND jenis_transaksi = 'online'
+         FOR UPDATE`,
+        [req.params.nomor],
+      );
+      if (!orders.length) {
+        await connection.rollback();
+        transactionStarted = false;
+        return res.status(404).json({ message: 'Pesanan tidak ditemukan.' });
+      }
+
+      const order = orders[0];
+      if (order.status_transaksi !== 'menunggu') {
+        await connection.rollback();
+        transactionStarted = false;
+        return res.status(409).json({ message: 'Pesanan ini tidak lagi menunggu pembayaran.' });
+      }
+
+      const [existingPayments] = await connection.query(
+        `SELECT id_pembayaran, snap_token
+         FROM pembayaran
+         WHERE id_transaksi = ? AND status_pembayaran = 'menunggu'
+         ORDER BY id_pembayaran DESC
+         LIMIT 1
+         FOR UPDATE`,
+        [order.id_transaksi],
+      );
+      if (existingPayments.length) {
+        payment = existingPayments[0];
+        if (!payment.snap_token) {
+          await connection.rollback();
+          transactionStarted = false;
+          return res.status(409).json({
+            message: 'Pembayaran sedang disiapkan. Coba beberapa saat lagi.',
+          });
+        }
+        await connection.commit();
+        transactionStarted = false;
+        return res.json({
+          data: {
+            snap_token: payment.snap_token,
+            client_key: paymentClient.getClientKey(),
+          },
+        });
+      }
+
+      paymentReference = `${order.kode_transaksi}-${randomBytes(4).toString('hex')}`;
+      const [result] = await connection.query(
+        `INSERT INTO pembayaran (
+           id_transaksi, metode_pembayaran, jumlah_bayar, status_pembayaran,
+           kode_referensi, snap_token
+         ) VALUES (?, 'payment_gateway', ?, 'menunggu', ?, NULL)`,
+        [order.id_transaksi, order.total_bayar, paymentReference],
+      );
+      paymentId = result.insertId;
+      await connection.commit();
+      transactionStarted = false;
+
+      const created = await paymentClient.createTransaction({
+        transaction_details: {
+          order_id: paymentReference,
+          gross_amount: Number(Number(order.total_bayar).toFixed(2)),
+        },
+        customer_details: {
+          first_name: order.nama_pelanggan,
+          phone: order.no_telepon,
+        },
+        callbacks: {
+          finish: `${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '')}/pesanan/${encodeURIComponent(order.kode_transaksi)}`,
+        },
+      });
+      await db.query(
+        `UPDATE pembayaran SET snap_token = ?
+         WHERE id_pembayaran = ? AND status_pembayaran = 'menunggu'`,
+        [created.token, paymentId],
+      );
+      return res.status(201).json({
+        data: {
+          snap_token: created.token,
+          client_key: paymentClient.getClientKey(),
+        },
+      });
+    } catch (error) {
+      if (transactionStarted) {
+        try {
+          await connection.rollback();
+        } catch (rollbackError) {
+          return next(rollbackError);
+        }
+      }
+      if (paymentId) {
+        try {
+          await db.query(
+            `UPDATE pembayaran SET status_pembayaran = 'gagal'
+             WHERE id_pembayaran = ? AND status_pembayaran = 'menunggu'`,
+            [paymentId],
+          );
+        } catch (updateError) {
+          return next(updateError);
+        }
+      }
+      if (Number.isInteger(error.statusCode)) {
+        return res.status(error.statusCode).json({ message: error.message });
+      }
+      return next(error);
+    } finally {
+      if (connection && typeof connection.release === 'function') {
+        connection.release();
+      }
+    }
+  });
+
   router.get('/:nomor', async (req, res, next) => {
     try {
       const [orders] = await db.query(
@@ -411,7 +547,12 @@ function createOrdersRoutes(db, shippingClient) {
                 t.alamat_pelanggan AS alamat_lengkap,
                 t.subtotal_produk AS subtotal, t.ongkos_kirim AS ongkir,
                 t.total_bayar AS total, p.wilayah_tujuan AS wilayah,
-                p.layanan_kurir
+                p.layanan_kurir,
+                (SELECT pb.status_pembayaran
+                 FROM pembayaran pb
+                 WHERE pb.id_transaksi = t.id_transaksi
+                 ORDER BY pb.id_pembayaran DESC
+                 LIMIT 1) AS status_pembayaran
          FROM transaksi t
          LEFT JOIN pengiriman p ON p.id_transaksi = t.id_transaksi
          WHERE t.kode_transaksi = ? AND t.jenis_transaksi = 'online'`,

@@ -218,6 +218,7 @@ CREATE TABLE `pembayaran` (
   `kembalian` decimal(12,2) NOT NULL DEFAULT '0.00',
   `status_pembayaran` enum('menunggu','berhasil','gagal') COLLATE utf8mb4_unicode_ci DEFAULT 'menunggu',
   `kode_referensi` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `snap_token` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `tanggal_pembayaran` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

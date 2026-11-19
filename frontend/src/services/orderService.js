@@ -10,6 +10,8 @@ export const orderService = {
   checkCart: (items) => api.post('/cart/check', { items }),
   // Checkout publik: nama_pemesan, no_hp, metode_penerimaan, items, dan data tujuan kurir jika diperlukan.
   create: (data) => api.post('/orders', data),
+  createPayment: (nomor) =>
+    api.post(`/orders/${encodeURIComponent(nomor)}/pembayaran`),
   get: (nomor) => api.get(`/orders/${encodeURIComponent(nomor)}`),
 };
 
