@@ -327,7 +327,7 @@ export default function CheckoutPage() {
             <span>Konfirmasi Belanja Cepat</span>
           </div>
           <h1 className="ko-page-title">Checkout Pesanan Sembako</h1>
-          <p className="ko-page-subtitle">Lengkapi data pemesan dan konfirmasi pengantaran hari ini.</p>
+          <p className="ko-page-subtitle">Lengkapi data pemesan dan konfirmasi pesanan Anda.</p>
         </div>
 
         {/* Stepper Indikator (1. Keranjang -> 2. Checkout -> 3. Pembayaran) */}
@@ -430,7 +430,11 @@ export default function CheckoutPage() {
               <span className="ko-section-badge-num">1</span>
               <div>
                 <h2 className="ko-section-title">Data Pemesan</h2>
-                <p className="ko-section-sub">Informasi penerima sembako dan kontak penanggung jawab</p>
+                <p className="ko-section-sub">
+                  {metode === 'ambil_di_toko'
+                    ? 'Informasi identitas untuk pengambilan pesanan di counter'
+                    : 'Informasi penerima sembako dan kontak penanggung jawab'}
+                </p>
               </div>
             </div>
 
@@ -439,18 +443,25 @@ export default function CheckoutPage() {
               <label htmlFor="nama-pemesan" className="ko-input-label">
                 Nama Lengkap <span className="ko-input-star">*</span>
               </label>
-              <div className="ko-input-icon-box">
+              <div className="ko-input-icon-box relative">
+                <span className="ko-input-leading-icon" style={{ left: 14, color: errors.nama_pemesan ? '#ba1a1a' : '#707a6c' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
                 <input
                   id="nama-pemesan"
                   type="text"
                   required
-                  placeholder="Contoh: Ibu Rahmawati"
+                  placeholder="Ibu Rahmawati"
                   value={nama}
                   onChange={(e) => {
                     setNama(e.target.value);
                     if (errors.nama_pemesan) setErrors((prev) => ({ ...prev, nama_pemesan: undefined }));
                   }}
-                  className={`ko-input-control no-leading${errors.nama_pemesan ? ' error' : ''}`}
+                  className={`ko-input-control${errors.nama_pemesan ? ' error' : ''}`}
+                  style={{ paddingLeft: 44 }}
                 />
                 {isNamaValid && (
                   <span className="ko-input-trailing-icon" title="Format valid">
@@ -482,25 +493,25 @@ export default function CheckoutPage() {
               <label htmlFor="wa-pemesan" className="ko-input-label">
                 Nomor WhatsApp / HP <span className="ko-input-star">*</span>
               </label>
-              <div className="ko-input-icon-box">
-                <div className={`ko-input-leading-prefix ${errors.no_hp ? 'text-error' : ''}`}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <div className="ko-input-icon-box relative">
+                <span className="ko-input-leading-icon" style={{ left: 14, color: errors.no_hp ? '#ba1a1a' : '#707a6c' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                     <line x1="12" y1="18" x2="12.01" y2="18" />
                   </svg>
-                  <span className="font-bold">+62</span>
-                </div>
+                </span>
                 <input
                   id="wa-pemesan"
                   type="tel"
                   required
-                  placeholder="812-9876-5432"
+                  placeholder="0812-9876-5432"
                   value={noHp}
                   onChange={(e) => {
                     setNoHp(e.target.value);
                     if (errors.no_hp) setErrors((prev) => ({ ...prev, no_hp: undefined }));
                   }}
-                  className={`ko-input-control with-prefix${errors.no_hp ? ' error' : ''}`}
+                  className={`ko-input-control${errors.no_hp ? ' error' : ''}`}
+                  style={{ paddingLeft: 44 }}
                 />
                 {isHpValid && (
                   <span className="ko-input-trailing-icon" title="Format valid">
@@ -525,17 +536,11 @@ export default function CheckoutPage() {
                   <span>{errors.no_hp}</span>
                 </p>
               ) : (
-                <p className="ko-input-helper">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                <p className="ko-input-helper flex items-center gap-1 mt-1">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                   </svg>
-                  <span>
-                    {metode === 'kurir'
-                      ? 'Kurir akan menghubungi nomor ini saat pengantaran untuk konfirmasi pintu pagar.'
-                      : 'Konfirmasi pesanan dan struk akan dikirim ke nomor ini.'}
-                  </span>
+                  <span>Konfirmasi pesanan dan struk akan dikirim ke nomor ini</span>
                 </p>
               )}
             </div>
@@ -544,11 +549,11 @@ export default function CheckoutPage() {
             <div className="ko-input-field">
               <label htmlFor="catatan-pemesan" className="ko-input-label justify-between">
                 <span>Catatan Tambahan untuk Toko</span>
-                <span className="font-normal text-outline text-xs">(Opsional)</span>
+                <span className="font-normal text-outline text-xs">Opsional</span>
               </label>
               <textarea
                 id="catatan-pemesan"
-                rows={2}
+                rows={3}
                 placeholder="Contoh: Beras minta disatukan dalam karung goni kecil..."
                 value={catatan}
                 onChange={(e) => setCatatan(e.target.value)}
@@ -563,7 +568,7 @@ export default function CheckoutPage() {
               <span className="ko-section-badge-num">2</span>
               <div>
                 <h2 className="ko-section-title">Cara Menerima Pesanan</h2>
-                <p className="ko-section-sub">Pilih metode pengambilan belanjaan sembako</p>
+                <p className="ko-section-sub">Pilih metode pengambilan kebutuhan belanja Anda</p>
               </div>
             </div>
 
@@ -574,35 +579,28 @@ export default function CheckoutPage() {
                 className={`ko-pickup-selectable-card ${metode === 'ambil_di_toko' ? 'selected' : 'unselected'}`}
                 onClick={() => changeFulfillmentMethod('ambil_di_toko')}
               >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="pickup_mode"
-                    value="store"
-                    checked={metode === 'ambil_di_toko'}
-                    onChange={() => changeFulfillmentMethod('ambil_di_toko')}
-                    className="ko-native-radio"
-                  />
-                  <div className="flex flex-col flex-1">
-                    <div className="ko-pickup-card-title-row">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={metode === 'ambil_di_toko' ? '#0d631b' : '#707a6c'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                        <polyline points="9 22 9 12 15 12 15 22" />
-                      </svg>
-                      <span className="font-bold text-on-surface">Ambil di Toko</span>
-                    </div>
-                    <p className="ko-pickup-card-sub">Ongkos kirim Rp 0. Ambil pesanan di toko setelah pembayaran.</p>
-                    {metode === 'ambil_di_toko' ? (
-                      <div className="ko-pickup-card-status">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        <span>Pilihan Aktif</span>
+                <div className="flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${metode === 'ambil_di_toko' ? 'bg-primary ring-2 ring-primary-fixed' : 'border-2 border-outline'}`}>
+                        {metode === 'ambil_di_toko' && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
-                    ) : (
-                      <div className="ko-pickup-unselected-hint">Klik untuk memilih</div>
-                    )}
+                      <div className="font-bold text-on-surface text-base">Ambil di Toko</div>
+                    </div>
+                    <p className="ko-pickup-card-sub">
+                      Ongkos kirim Rp 0. Ambil pesanan di toko setelah pembayaran.
+                    </p>
                   </div>
+                  {metode === 'ambil_di_toko' ? (
+                    <div className="ko-pickup-card-status flex items-center gap-1 text-primary font-semibold text-xs mt-3">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                      <span>Pilihan Aktif</span>
+                    </div>
+                  ) : (
+                    <div className="ko-pickup-unselected-hint text-xs text-outline mt-3">Klik untuk memilih</div>
+                  )}
                 </div>
               </label>
 
@@ -611,37 +609,28 @@ export default function CheckoutPage() {
                 className={`ko-pickup-selectable-card ${metode === 'kurir' ? 'selected' : 'unselected'}`}
                 onClick={() => changeFulfillmentMethod('kurir')}
               >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="pickup_mode"
-                    value="courier"
-                    checked={metode === 'kurir'}
-                    onChange={() => changeFulfillmentMethod('kurir')}
-                    className="ko-native-radio"
-                  />
-                  <div className="flex flex-col flex-1">
-                    <div className="ko-pickup-card-title-row">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={metode === 'kurir' ? '#0d631b' : '#707a6c'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="18.5" cy="17.5" r="3.5" />
-                        <circle cx="5.5" cy="17.5" r="3.5" />
-                        <circle cx="15" cy="5" r="1" />
-                        <path d="M12 17.5V14l-3-3 4-3 2 3h2" />
-                      </svg>
-                      <span className="font-bold text-on-surface">Kurir Pihak Ketiga</span>
-                    </div>
-                    <p className="ko-pickup-card-sub">Pesanan dijemput kurir di toko dan diantar ke alamat Anda. Ongkos kirim ditanggung pelanggan.</p>
-                    {metode === 'kurir' ? (
-                      <div className="ko-pickup-card-status">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        <span>Pilihan Aktif</span>
+                <div className="flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${metode === 'kurir' ? 'bg-primary ring-2 ring-primary-fixed' : 'border-2 border-outline'}`}>
+                        {metode === 'kurir' && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
-                    ) : (
-                      <div className="ko-pickup-unselected-hint">Klik untuk memilih</div>
-                    )}
+                      <div className="font-bold text-on-surface text-base">Kurir Pihak Ketiga</div>
+                    </div>
+                    <p className="ko-pickup-card-sub">
+                      Pesanan dijemput kurir di toko dan diantar ke alamat Anda. Ongkos kirim ditanggung pelanggan.
+                    </p>
                   </div>
+                  {metode === 'kurir' ? (
+                    <div className="ko-pickup-card-status flex items-center gap-1 text-primary font-semibold text-xs mt-3">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                      <span>Pilihan Aktif</span>
+                    </div>
+                  ) : (
+                    <div className="ko-pickup-unselected-hint text-xs text-outline mt-3">Klik untuk memilih</div>
+                  )}
                 </div>
               </label>
             </div>
@@ -969,43 +958,8 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Metode Pembayaran (Midtrans / COD) */}
-            <div className="ko-payment-options">
-              <strong className="font-bold text-on-surface">Pilih Metode Pembayaran</strong>
-              <label className="ko-payment-choice">
-                <input
-                  type="radio"
-                  name="metode_pembayaran"
-                  value="midtrans"
-                  checked={metodePembayaran === 'midtrans'}
-                  onChange={() => setMetodePembayaran('midtrans')}
-                  className="ko-native-radio"
-                />
-                <span>
-                  <strong>Midtrans</strong>
-                  <small>Transfer bank, QRIS, dan e-wallet melalui halaman pembayaran aman.</small>
-                </span>
-              </label>
-              {metode === 'kurir' && (
-                <label className="ko-payment-choice">
-                  <input
-                    type="radio"
-                    name="metode_pembayaran"
-                    value="cod"
-                    checked={metodePembayaran === 'cod'}
-                    onChange={() => setMetodePembayaran('cod')}
-                    className="ko-native-radio"
-                  />
-                  <span>
-                    <strong>COD (bayar tunai ke kurir)</strong>
-                    <small>Bayar pesanan saat kurir mengantarkannya ke alamat Anda.</small>
-                  </span>
-                </label>
-              )}
-            </div>
-
-            {/* Tombol Buat Pesanan & WhatsApp */}
-            <div className="ko-cta-btns">
+            {/* Tombol Buat Pesanan */}
+            <div className="ko-cta-btns" style={{ paddingTop: 8 }}>
               <button
                 type="submit"
                 className="ko-btn-create-order"
@@ -1022,17 +976,6 @@ export default function CheckoutPage() {
                     </svg>
                   </>
                 )}
-              </button>
-
-              <button
-                type="button"
-                className="ko-btn-wa-summary"
-                onClick={handleSendSummaryWhatsApp}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                <span>Kirim Ringkasan ke WhatsApp Toko</span>
               </button>
             </div>
           </div>
