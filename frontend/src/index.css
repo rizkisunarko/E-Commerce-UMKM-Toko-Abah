@@ -4426,6 +4426,23 @@ th {
   outline: none;
 }
 
+.ko-destination-options li.ko-opt-highlighted button,
+.ko-destination-options li[aria-selected="true"] button {
+  background: rgba(13, 99, 27, 0.08);
+}
+
+.ko-courier-status-warning {
+  padding: 10px 14px;
+  background-color: #fff8e1;
+  border-radius: 8px;
+  border: 1px solid #ffe082;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #b78103;
+}
+
 /* ==========================================================================
    Product Icon Box (Desain Stitch Toko Abah)
    ========================================================================== */

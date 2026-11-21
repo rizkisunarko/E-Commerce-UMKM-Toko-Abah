@@ -321,7 +321,16 @@ export default function OrderPage() {
                   </span>
                 </div>
                 <div className="order-cost-row">
-                  <span>Ongkos Kirim</span>
+                  <div className="flex flex-col">
+                    <span>Ongkos Kirim</span>
+                    {order.metode_penerimaan === 'kurir' && order.layanan_kurir && (
+                      <span className="order-courier-sub" style={{ fontSize: '11px', color: '#707a6c', fontWeight: 'normal' }}>
+                        {typeof order.layanan_kurir === 'object'
+                          ? `${order.layanan_kurir.nama || order.layanan_kurir.kode || ''}${order.layanan_kurir.estimasi ? ` (${order.layanan_kurir.estimasi})` : ''}`
+                          : order.layanan_kurir}
+                      </span>
+                    )}
+                  </div>
                   <span className="order-cost-val">
                     {order.ongkir ? formatRupiah(order.ongkir) : 'Rp 0'}
                     {order.metode_penerimaan === 'ambil_di_toko' ? ' (Ambil di Toko)' : ''}
