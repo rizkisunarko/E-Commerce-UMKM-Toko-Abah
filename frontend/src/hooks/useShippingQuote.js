@@ -30,6 +30,7 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
   const [quoteState, setQuoteState] = useState('idle'); // 'idle' | 'loading' | 'success' | 'empty' | 'error'
   const [rates, setRates] = useState([]);
   const [selectedRate, setSelectedRate] = useState(null);
+  const [shippingWeight, setShippingWeight] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [warningMessage, setWarningMessage] = useState('');
 
@@ -51,6 +52,7 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
         setQuoteState('idle');
         setRates([]);
         setSelectedRate(null);
+        setShippingWeight(null);
         setErrorMessage('');
         setWarningMessage('Tujuan atau isi pesanan berubah. Hitung ulang ongkos kirim.');
         lastQuotedParamsRef.current = null;
@@ -72,6 +74,7 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
     setErrorMessage('');
     setWarningMessage('');
     setSelectedRate(null);
+    setShippingWeight(null);
 
     try {
       const res = await shippingService.calculateCost(destId, currentItems);
@@ -79,6 +82,8 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
 
       const rawRates = res?.data?.layanan || (Array.isArray(res?.data) ? res.data : []);
       const normalized = rawRates.map(normalizeRate).filter(Boolean);
+      const totalWeight = res?.weight ?? res?.data?.berat_gram ?? res?.berat_gram ?? null;
+      setShippingWeight(totalWeight);
 
       if (normalized.length === 0) {
         setQuoteState('empty');
@@ -102,6 +107,7 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
       setQuoteState('error');
       setRates([]);
       setSelectedRate(null);
+      setShippingWeight(null);
       setErrorMessage(
         err.message || 'Ongkos kirim tidak dapat dihitung. Coba lagi atau pilih Ambil di Toko.'
       );
@@ -125,6 +131,7 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
     setQuoteState('idle');
     setRates([]);
     setSelectedRate(null);
+    setShippingWeight(null);
     setErrorMessage('');
     setWarningMessage(customWarning);
     lastQuotedParamsRef.current = null;
@@ -134,6 +141,7 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
     quoteState,
     rates,
     selectedRate,
+    shippingWeight,
     errorMessage,
     warningMessage,
     calculateQuote,
