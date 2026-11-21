@@ -702,7 +702,7 @@ export default function CartPage() {
               </div>
             </div>
             <a
-              href="https://wa.me/6281234567890"
+              href="https://wa.me/6285708350575"
               target="_blank"
               rel="noopener noreferrer"
               className="ko-grosir-btn"
@@ -839,7 +839,7 @@ export default function CartPage() {
               </div>
             </div>
             <a
-              href="https://wa.me/6281234567890"
+              href="https://wa.me/6285708350575"
               target="_blank"
               rel="noopener noreferrer"
               className="ko-help-link"

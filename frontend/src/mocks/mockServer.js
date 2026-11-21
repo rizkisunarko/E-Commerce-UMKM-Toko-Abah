@@ -39,6 +39,61 @@ const isValidDate = (value) => {
 };
 
 // Data contoh riwayat transaksi (PPL-06). Tidak mengurangi stok.
+const MOCK_DESTINATIONS = [
+  { id: 17486, label: 'Pasar Minggu, Jakarta Selatan, DKI Jakarta' },
+  { id: 17490, label: 'Cilandak, Jakarta Selatan, DKI Jakarta' },
+  { id: 17495, label: 'Pancoran, Jakarta Selatan, DKI Jakarta' },
+  { id: 17500, label: 'Tebet, Jakarta Selatan, DKI Jakarta' },
+  { id: 17505, label: 'Kebayoran Baru, Jakarta Selatan, DKI Jakarta' },
+  { id: 18120, label: 'Depok, Jawa Barat' },
+  { id: 19230, label: 'Bekasi Selatan, Kota Bekasi, Jawa Barat' },
+  { id: 20110, label: 'Bandung Wetan, Kota Bandung, Jawa Barat' },
+];
+
+function getMockCourierRates(beratGram) {
+  const kg = Math.max(1, Math.ceil(beratGram / 1000));
+  return [
+    {
+      id: 'jne_reg',
+      kode: 'jne_reg',
+      kurir: 'JNE',
+      courier_name: 'JNE',
+      layanan: 'REG',
+      service: 'REG',
+      biaya: kg * 9000,
+      cost: kg * 9000,
+      estimasi: '2-3 hari',
+      etd: '2-3 hari',
+      nama: 'JNE REG',
+    },
+    {
+      id: 'sicepat_reg',
+      kode: 'sicepat_reg',
+      kurir: 'SiCepat',
+      courier_name: 'SiCepat',
+      layanan: 'REG',
+      service: 'REG',
+      biaya: kg * 8500,
+      cost: kg * 8500,
+      estimasi: '2-3 hari',
+      etd: '2-3 hari',
+      nama: 'SiCepat REG',
+    },
+    {
+      id: 'jnt_ez',
+      kode: 'jnt_ez',
+      kurir: 'J&T',
+      courier_name: 'J&T',
+      layanan: 'EZ',
+      service: 'EZ',
+      biaya: kg * 9500,
+      cost: kg * 9500,
+      estimasi: '1-2 hari',
+      etd: '1-2 hari',
+      nama: 'J&T EZ',
+    },
+  ];
+}
 const daysAgo = (d, h, m) => {
   const t = new Date();
   t.setDate(t.getDate() - d);
@@ -243,12 +298,83 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       .filter(Boolean);
     return reply(200, { data });
   }
+  // Shipping API (PPL-10.2)
+  if (method === 'GET' && path === '/shipping/destinations') {
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
+    if (search.length < 3) {
+      return reply(422, {
+        message: 'Data tidak valid',
+        errors: { search: 'Ketik minimal 3 huruf' },
+      });
+    }
+    const filtered = MOCK_DESTINATIONS.filter((d) =>
+      d.label.toLowerCase().includes(search.toLowerCase())
+    );
+    return reply(200, { data: filtered });
+  }
+
+  if (method === 'POST' && path === '/shipping/cost') {
+    const destId = body.tujuan_id || body.destination_id;
+    if (!destId) {
+      return reply(422, {
+        message: 'Pilih kecamatan / kota tujuan',
+        errors: { tujuan_id: 'Pilih kecamatan / kota tujuan', destination_id: REQUIRED },
+      });
+    }
+
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (items.length === 0) {
+      return reply(422, {
+        message: 'Keranjang masih kosong',
+        errors: { items: 'Keranjang masih kosong' },
+      });
+    }
+
+    let berat_gram = 0;
+    for (const it of items) {
+      const p = products.find((x) => x.id === Number(it.product_id));
+      const beratSatuan = p?.berat || 1000;
+      berat_gram += beratSatuan * Number(it.jumlah || 1);
+    }
+    if (berat_gram < 1000) berat_gram = 1000;
+
+    const matchedDest = MOCK_DESTINATIONS.find((d) => String(d.id) === String(destId))
+      || MOCK_DESTINATIONS.find((d) => d.label.toLowerCase().includes(String(destId).toLowerCase()));
+
+    // Bandung Wetan: layanan kosong [] (uji keadaan empty)
+    if (String(destId) === '20110' || (matchedDest && matchedDest.label.includes('Bandung Wetan'))) {
+      return reply(200, {
+        data: {
+          berat_gram,
+          layanan: [],
+        },
+      });
+    }
+
+    // Bekasi Selatan: 502 error (uji keadaan gagal)
+    if (String(destId) === '19230' || (matchedDest && matchedDest.label.includes('Bekasi Selatan'))) {
+      return reply(502, {
+        message: 'Layanan pengiriman sedang bermasalah. Coba lagi.',
+      });
+    }
+
+    const layanan = getMockCourierRates(berat_gram);
+    return reply(200, {
+      data: {
+        berat_gram,
+        layanan,
+      },
+    });
+  }
+
   if (method === 'POST' && path === '/orders') {
     const errors = {};
     const nama = String(body.nama_pemesan || '').trim();
     const hp = String(body.no_hp || '').replace(/[\s-]/g, '');
     const metode = body.metode_penerimaan === 'kurir' ? 'kurir' : 'ambil_di_toko';
-    const alamat = String(body.alamat_lengkap || '').trim();
+    const alamat = String(body.alamat_pengiriman || body.alamat_lengkap || '').trim();
+    const tujuanId = body.tujuan_id || body.destination_id;
+    const rateCode = body.layanan_kurir || body.selected_rate_id;
 
     if (!nama) errors.nama_pemesan = REQUIRED;
     if (!hp) errors.no_hp = REQUIRED;
@@ -259,13 +385,20 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     }
     if (metode === 'kurir') {
       if (!alamat) errors.alamat_lengkap = REQUIRED;
-      if (!body.wilayah && !body.destination_id) errors.wilayah = 'Pilih kecamatan / kota tujuan';
-      if (!body.selected_rate_id) errors.selected_rate_id = 'Pilih layanan kurir';
+      if (!tujuanId) {
+        errors.tujuan_id = 'Pilih kecamatan / kota tujuan';
+        errors.wilayah = 'Pilih kecamatan / kota tujuan';
+      }
+      if (!rateCode) {
+        errors.layanan_kurir = 'Pilih layanan kurir terlebih dahulu';
+        errors.selected_rate_id = 'Pilih layanan kurir';
+      }
     }
 
     const items = Array.isArray(body.items) ? body.items : [];
     if (items.length === 0) errors.items = 'Keranjang masih kosong';
     const lines = [];
+    let berat_gram = 0;
     items.forEach((it) => {
       const key = `items.${it.product_id}`;
       const product = products.find((p) => p.id === Number(it.product_id));
@@ -273,8 +406,22 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       if (!product) errors[key] = 'Produk tidak ditemukan';
       else if (!Number.isInteger(jumlah) || jumlah < 1) errors[key] = INVALID_NUMBER;
       else if (jumlah > product.stok) errors[key] = `Stok tidak mencukupi. Stok tersedia: ${product.stok}`;
-      else lines.push({ product, jumlah });
+      else {
+        lines.push({ product, jumlah });
+        berat_gram += (product.berat || 1000) * jumlah;
+      }
     });
+
+    let matchedRate = null;
+    if (metode === 'kurir' && rateCode) {
+      const mockRates = getMockCourierRates(Math.max(1000, berat_gram));
+      matchedRate = mockRates.find((r) => r.id === rateCode || r.kode === rateCode);
+      if (!matchedRate) {
+        errors.layanan_kurir = 'Pilih layanan kurir terlebih dahulu';
+        errors.selected_rate_id = 'Pilih layanan kurir';
+      }
+    }
+
     if (Object.keys(errors).length) return reply(422, { message: 'Data tidak valid', errors });
 
     const tanggal = now();
@@ -290,24 +437,38 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     }));
     const subtotal = detail.reduce((sum, d) => sum + d.subtotal, 0);
     const diskon = subtotal >= 100000 ? 6000 : 0;
-    const ongkir = metode === 'kurir' ? (Number(body.ongkir) || 15000) : 0;
+    const ongkir = metode === 'kurir' && matchedRate ? matchedRate.cost : 0;
+    const total = Math.max(0, subtotal - diskon + ongkir);
+
+    const matchedDest = MOCK_DESTINATIONS.find((d) => String(d.id) === String(tujuanId))
+      || MOCK_DESTINATIONS.find((d) => d.label.toLowerCase().includes(String(body.tujuan || body.wilayah || '').toLowerCase()));
+
+    const savedCourier = matchedRate
+      ? {
+          kode: matchedRate.kode,
+          nama: `${matchedRate.kurir} ${matchedRate.layanan}`,
+          estimasi: matchedRate.estimasi,
+        }
+      : null;
+
     const order = {
       id: orders.length + 1,
       nomor_pesanan: `TA-${day}-${String(seq).padStart(3, '0')}`,
       status: 'Menunggu Pembayaran',
+      status_pembayaran: 'menunggu',
       tanggal,
       nama_pemesan: nama,
       no_hp: hp,
       catatan: String(body.catatan || '').trim(),
       metode_penerimaan: metode,
-      wilayah: body.wilayah || 'Telang, Kamal (Radius < 3 km)',
-      alamat_lengkap: alamat,
-      layanan_kurir: body.layanan_kurir || (metode === 'kurir' ? 'Kurir Instan Toko Abah (Motor)' : null),
+      wilayah: metode === 'kurir' ? (body.tujuan || body.wilayah || matchedDest?.label || '') : '',
+      alamat_lengkap: metode === 'kurir' ? alamat : '',
+      layanan_kurir: savedCourier,
       items: detail,
       subtotal,
       diskon,
       ongkir,
-      total: Math.max(0, subtotal - diskon + ongkir),
+      total,
     };
     orders.push(order);
     return reply(201, { data: order });
