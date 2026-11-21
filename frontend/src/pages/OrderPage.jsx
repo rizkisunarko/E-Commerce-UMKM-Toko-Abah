@@ -146,7 +146,7 @@ export default function OrderPage() {
     minute: '2-digit',
   }) + ' WIB';
 
-  const waNumber = '6281288997700';
+  const waNumber = '6285708350575';
   const waMessage = `Halo Toko Abah, pesanan saya nomor ${order.nomor_pesanan} sudah dibuat.`;
   const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 
