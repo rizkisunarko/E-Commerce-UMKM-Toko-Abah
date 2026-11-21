@@ -10,6 +10,11 @@ import { formatRupiah } from '../utils/format';
 // Nomor HP Indonesia: 08..., 628..., atau +628..., 10 sampai 14 digit
 const PHONE_PATTERN = /^(\+62|62|0)8\d{8,11}$/;
 
+function formatWeight(grams) {
+  if (grams === null || grams === undefined) return 'Belum dihitung';
+  return `${(grams / 1000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} kg`;
+}
+
 export function validateCheckout({ nama, noHp, metode, alamatLengkap, destination, selectedRate, selectedRateId }) {
   const errors = {};
   if (!nama || !nama.trim()) errors.nama_pemesan = 'Kolom ini wajib diisi';
@@ -55,6 +60,7 @@ export default function CheckoutPage() {
     quoteState,
     rates: shippingRates,
     selectedRate,
+    shippingWeight,
     errorMessage: courierCalcError,
     warningMessage: courierWarning,
     calculateQuote,
@@ -142,13 +148,21 @@ export default function CheckoutPage() {
       navigate(`/pesanan/${res.data.nomor_pesanan}`, { replace: true });
     } catch (err) {
       if (err.status === 422) {
-        setErrors(err.errors || {});
-        const stockProblem = Object.keys(err.errors || {}).some((k) => k.startsWith('items'));
+        const rawErrors = err.errors || {};
+        const mappedErrors = { ...rawErrors };
+        if (rawErrors.destination_id && !mappedErrors.wilayah) {
+          mappedErrors.wilayah = rawErrors.destination_id;
+        }
+        if (rawErrors.selected_rate_id && !mappedErrors.layanan_kurir) {
+          mappedErrors.layanan_kurir = rawErrors.selected_rate_id;
+        }
+        setErrors(mappedErrors);
+        const stockProblem = Object.keys(rawErrors).some((k) => k.startsWith('items'));
         if (stockProblem) {
           setFormError('Stok beberapa barang berubah atau tidak mencukupi. Harap periksa keranjang belanja Anda sebelum melanjutkan.');
           recheck();
         }
-        if (err.errors?.tujuan_id || err.errors?.layanan_kurir || err.errors?.selected_rate_id || err.errors?.ongkir) {
+        if (rawErrors.tujuan_id || rawErrors.destination_id || rawErrors.layanan_kurir || rawErrors.selected_rate_id || rawErrors.ongkir) {
           resetQuote('Data ongkos kirim perlu diperbarui. Hitung ulang ongkos kirim.');
         }
       } else {
@@ -782,6 +796,21 @@ export default function CheckoutPage() {
                 <span>Subtotal Produk</span>
                 <span className="font-semibold text-on-surface">{formatRupiah(total)}</span>
               </div>
+              {metode === 'kurir' && (
+                <div className="ko-checkout-calc-row">
+                  <div className="flex flex-col">
+                    <span>Berat Total Pesanan</span>
+                    <span className="text-xs text-on-surface-variant" style={{ fontSize: 11, color: '#707a6c' }}>
+                      Berat produk dikalikan jumlah
+                    </span>
+                  </div>
+                  <span className="font-semibold text-on-surface">
+                    {shippingWeight === null
+                      ? quoteState === 'loading' ? 'Menghitung...' : 'Belum dihitung'
+                      : formatWeight(shippingWeight)}
+                  </span>
+                </div>
+              )}
               <div className="ko-checkout-calc-row">
                 <div className="flex flex-col">
                   <span>Ongkos Kirim</span>

@@ -344,10 +344,10 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     // Bandung Wetan: layanan kosong [] (uji keadaan empty)
     if (String(destId) === '20110' || (matchedDest && matchedDest.label.includes('Bandung Wetan'))) {
       return reply(200, {
-        data: {
-          berat_gram,
-          layanan: [],
-        },
+        data: [],
+        weight: berat_gram,
+        weight_kg: Number((berat_gram / 1000).toFixed(2)),
+        berat_gram,
       });
     }
 
@@ -360,10 +360,10 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
 
     const layanan = getMockCourierRates(berat_gram);
     return reply(200, {
-      data: {
-        berat_gram,
-        layanan,
-      },
+      data: layanan,
+      weight: berat_gram,
+      weight_kg: Number((berat_gram / 1000).toFixed(2)),
+      berat_gram,
     });
   }
 
