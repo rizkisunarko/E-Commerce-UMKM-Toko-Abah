@@ -8,6 +8,10 @@ import { formatRupiah } from '../utils/format';
 // Nomor HP Indonesia: 08..., 628..., atau +628..., 10 sampai 14 digit
 const PHONE_PATTERN = /^(\+62|62|0)8\d{8,11}$/;
 
+function formatWeight(grams) {
+  return `${(grams / 1000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} kg`;
+}
+
 export function validateCheckout({ nama, noHp, metode, alamatLengkap, destination, selectedRateId }) {
   const errors = {};
   if (!nama || !nama.trim()) errors.nama_pemesan = 'Kolom ini wajib diisi';
@@ -50,6 +54,7 @@ export default function CheckoutPage() {
   const [destinationSearchLoading, setDestinationSearchLoading] = useState(false);
   const [destinationError, setDestinationError] = useState('');
   const [shippingRates, setShippingRates] = useState([]);
+  const [shippingWeight, setShippingWeight] = useState(null);
   const [selectedRateId, setSelectedRateId] = useState('');
   const [shippingQuoteLoading, setShippingQuoteLoading] = useState(false);
   const [courierCalcError, setCourierCalcError] = useState('');
@@ -100,26 +105,15 @@ export default function CheckoutPage() {
         const result = await orderService.searchDestinations(search);
         if (active) {
           const list = result.data || [];
+          setDestinationOptions(list);
           if (list.length === 0) {
-            // Fallback contoh wilayah sesuai template
-            setDestinationOptions([
-              { id: '101', label: `${search}, Kota Jakarta Selatan, DKI Jakarta` },
-              { id: '102', label: 'Pasar Minggu, Kota Jakarta Selatan, DKI Jakarta' },
-              { id: '103', label: 'Cilandak, Kota Jakarta Selatan, DKI Jakarta' },
-              { id: '104', label: 'Pancoran, Kota Jakarta Selatan, DKI Jakarta' },
-            ]);
-          } else {
-            setDestinationOptions(list);
+            setDestinationError('Wilayah tidak ditemukan. Coba nama kecamatan atau kota lain.');
           }
         }
       } catch (error) {
         if (active) {
-          setDestinationOptions([
-            { id: '101', label: `${search}, Kota Jakarta Selatan, DKI Jakarta` },
-            { id: '102', label: 'Pasar Minggu, Kota Jakarta Selatan, DKI Jakarta' },
-            { id: '103', label: 'Cilandak, Kota Jakarta Selatan, DKI Jakarta' },
-            { id: '104', label: 'Pancoran, Kota Jakarta Selatan, DKI Jakarta' },
-          ]);
+          setDestinationOptions([]);
+          setDestinationError(error.message || 'Pencarian wilayah gagal. Coba lagi.');
         }
       } finally {
         if (active) setDestinationSearchLoading(false);
@@ -136,6 +130,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (metode !== 'kurir' || !destination) {
       setShippingRates([]);
+      setShippingWeight(null);
       setSelectedRateId('');
       setShippingQuoteLoading(false);
       setCourierCalcError('');
@@ -144,6 +139,7 @@ export default function CheckoutPage() {
 
     let active = true;
     setShippingRates([]);
+    setShippingWeight(null);
     setSelectedRateId('');
     setShippingQuoteLoading(true);
     setCourierCalcError('');
@@ -151,16 +147,13 @@ export default function CheckoutPage() {
     orderService.calculateShipping(destination.id, JSON.parse(quoteItemsKey))
       .then((result) => {
         if (!active) return;
+        if (!Number.isSafeInteger(result.weight) || result.weight < 1) {
+          setCourierCalcError('Berat total pesanan tidak valid. Periksa berat produk.');
+          return;
+        }
+        setShippingWeight(result.weight);
         if (!Array.isArray(result.data) || result.data.length === 0) {
-          // Fallback realistis sesuai template Checkout (Kurir Pihak Ketiga)
-          const fallbackRates = [
-            { id: 'jne_reg', courier_name: 'JNE', service: 'REG', description: 'Estimasi: 2 - 3 hari', cost: 18000, etd: '2 - 3 hari' },
-            { id: 'sicepat_reg', courier_name: 'SiCepat', service: 'REG', description: 'Estimasi: 2 - 3 hari', cost: 17000, etd: '2 - 3 hari' },
-            { id: 'jnt_ez', courier_name: 'J&T', service: 'EZ', description: 'Estimasi: 1 - 2 hari', cost: 19000, etd: '1 - 2 hari' },
-          ];
-          setShippingRates(fallbackRates);
-          setSelectedRateId(fallbackRates[0].id);
-          setErrors((prev) => ({ ...prev, selected_rate_id: undefined }));
+          setCourierCalcError('Tidak ada layanan kurir untuk wilayah dan berat pesanan ini.');
           return;
         }
         setShippingRates(result.data);
@@ -169,14 +162,10 @@ export default function CheckoutPage() {
       })
       .catch((error) => {
         if (active) {
-          const fallbackRates = [
-            { id: 'jne_reg', courier_name: 'JNE', service: 'REG', description: 'Estimasi: 2 - 3 hari', cost: 18000, etd: '2 - 3 hari' },
-            { id: 'sicepat_reg', courier_name: 'SiCepat', service: 'REG', description: 'Estimasi: 2 - 3 hari', cost: 17000, etd: '2 - 3 hari' },
-            { id: 'jnt_ez', courier_name: 'J&T', service: 'EZ', description: 'Estimasi: 1 - 2 hari', cost: 19000, etd: '1 - 2 hari' },
-          ];
-          setShippingRates(fallbackRates);
-          setSelectedRateId(fallbackRates[0].id);
-          setErrors((prev) => ({ ...prev, selected_rate_id: undefined }));
+          setShippingRates([]);
+          setShippingWeight(null);
+          setSelectedRateId('');
+          setCourierCalcError(error.message || 'Ongkos kirim gagal dihitung. Coba lagi.');
         }
       })
       .finally(() => {
@@ -196,25 +185,27 @@ export default function CheckoutPage() {
     }
     setShippingQuoteLoading(true);
     setCourierCalcError('');
+    setShippingRates([]);
+    setShippingWeight(null);
+    setSelectedRateId('');
     orderService.calculateShipping(destination.id, quoteItems)
       .then((res) => {
+        if (!Number.isSafeInteger(res.weight) || res.weight < 1) {
+          setCourierCalcError('Berat total pesanan tidak valid. Periksa berat produk.');
+          return;
+        }
+        setShippingWeight(res.weight);
         if (Array.isArray(res.data) && res.data.length > 0) {
           setShippingRates(res.data);
           setSelectedRateId(res.data[0].id);
           setErrors((prev) => ({ ...prev, selected_rate_id: undefined }));
         } else {
-          const fallbackRates = [
-            { id: 'jne_reg', courier_name: 'JNE', service: 'REG', description: 'Estimasi: 2 - 3 hari', cost: 18000, etd: '2 - 3 hari' },
-            { id: 'sicepat_reg', courier_name: 'SiCepat', service: 'REG', description: 'Estimasi: 2 - 3 hari', cost: 17000, etd: '2 - 3 hari' },
-            { id: 'jnt_ez', courier_name: 'J&T', service: 'EZ', description: 'Estimasi: 1 - 2 hari', cost: 19000, etd: '1 - 2 hari' },
-          ];
-          setShippingRates(fallbackRates);
-          setSelectedRateId(fallbackRates[0].id);
-          setErrors((prev) => ({ ...prev, selected_rate_id: undefined }));
+          setCourierCalcError('Tidak ada layanan kurir untuk wilayah dan berat pesanan ini.');
         }
       })
       .catch((err) => {
-        setCourierCalcError(err.message || 'Ongkos kirim gagal dihitung. Coba lagi atau pilih Ambil di Toko.');
+        setShippingWeight(null);
+        setCourierCalcError(err.message || 'Ongkos kirim gagal dihitung. Coba lagi.');
       })
       .finally(() => {
         setShippingQuoteLoading(false);
@@ -711,7 +702,9 @@ export default function CheckoutPage() {
                           setDestinationSearch(event.target.value);
                           setDestination(null);
                           setDestinationOptions([]);
+                          setDestinationError('');
                           setShippingRates([]);
+                          setShippingWeight(null);
                           setSelectedRateId('');
                           setCourierCalcError('');
                           if (errors.wilayah) setErrors((prev) => ({ ...prev, wilayah: undefined }));
@@ -757,6 +750,11 @@ export default function CheckoutPage() {
                   </div>
                   {destinationSearchLoading && (
                     <p className="ko-input-helper" role="status">Mencari wilayah tujuan...</p>
+                  )}
+                  {destinationError && (
+                    <p className="ko-input-err-msg flex items-center gap-1" role="alert">
+                      <span>{destinationError}</span>
+                    </p>
                   )}
                   {errors.wilayah && (
                     <p className="ko-input-err-msg flex items-center gap-1" role="alert">
@@ -859,7 +857,7 @@ export default function CheckoutPage() {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="#ba1a1a">
                           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                         </svg>
-                        <span>Ongkos kirim tidak dapat dihitung. Coba lagi atau pilih Ambil di Toko.</span>
+                        <span>{courierCalcError}</span>
                       </div>
                       <div className="ko-courier-status-error-actions">
                         <button
@@ -941,6 +939,21 @@ export default function CheckoutPage() {
                 <span>Subtotal Produk</span>
                 <span className="font-semibold text-on-surface">{formatRupiah(total)}</span>
               </div>
+              {metode === 'kurir' && (
+                <div className="ko-checkout-calc-row">
+                  <div className="flex flex-col">
+                    <span>Berat Total Pesanan</span>
+                    <span className="text-xs text-on-surface-variant">
+                      Berat produk dikalikan jumlah
+                    </span>
+                  </div>
+                  <span className="font-semibold text-on-surface">
+                    {shippingWeight === null
+                      ? shippingQuoteLoading ? 'Menghitung...' : 'Belum dihitung'
+                      : formatWeight(shippingWeight)}
+                  </span>
+                </div>
+              )}
               <div className="ko-checkout-calc-row">
                 <div className="flex flex-col">
                   <span>Ongkos Kirim</span>

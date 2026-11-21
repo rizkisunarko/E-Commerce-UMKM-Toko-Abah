@@ -1,6 +1,7 @@
 const express = require('express');
 const { randomBytes } = require('node:crypto');
 const parseGram = require('../utils/weight');
+const { calculateTotalWeight } = parseGram;
 
 const MAX_ITEMS = 100;
 const MAX_QUANTITY = 1000;
@@ -189,18 +190,15 @@ function createOrdersRoutes(db, shippingClient, paymentClient) {
           });
         }
 
-        quotedWeight = 0;
-        for (const product of products) {
-          const itemWeight = parseGram(product.satuan);
-          if (itemWeight < 1) {
-            return res.status(422).json({
-              message: 'Berat produk belum diatur dengan benar',
-              errors: { [`items.${product.id_produk}`]: 'Periksa satuan produk' },
-            });
-          }
-          quotedWeight += itemWeight * quantities.get(Number(product.id_produk));
+        const weightResult = calculateTotalWeight(products, quantities);
+        quotedWeight = weightResult.weight;
+        if (quotedWeight === null && weightResult.invalidProductId !== undefined) {
+          return res.status(422).json({
+            message: 'Berat produk belum diatur dengan benar',
+            errors: { [`items.${weightResult.invalidProductId}`]: 'Periksa satuan produk' },
+          });
         }
-        if (!Number.isSafeInteger(quotedWeight) || quotedWeight < 1) {
+        if (quotedWeight === null) {
           return res.status(422).json({
             message: 'Berat keranjang tidak valid',
             errors: { items: 'Periksa kembali jumlah produk' },

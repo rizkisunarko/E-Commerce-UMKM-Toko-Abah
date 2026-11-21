@@ -9,4 +9,23 @@ function parseGram(satuan) {
     : Math.round(value);
 }
 
+function calculateTotalWeight(products, quantities) {
+  let weight = 0;
+  for (const product of products) {
+    const productId = Number(product.id_produk);
+    const itemWeight = parseGram(product.satuan);
+    const quantity = quantities.get(productId);
+    if (itemWeight < 1 || !Number.isSafeInteger(quantity) || quantity < 1) {
+      return { weight: null, invalidProductId: product.id_produk };
+    }
+
+    weight += itemWeight * quantity;
+    if (!Number.isSafeInteger(weight)) return { weight: null };
+  }
+  return weight > 0
+    ? { weight }
+    : { weight: null };
+}
+
 module.exports = parseGram;
+module.exports.calculateTotalWeight = calculateTotalWeight;
