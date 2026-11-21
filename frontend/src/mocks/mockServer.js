@@ -128,7 +128,7 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
   // Katalog publik (PPL-07): tanpa login. Hanya field yang aman untuk pelanggan.
   // Produk arsip (PPL-14, Sprint 3) nantinya tidak ikut ditampilkan.
   if (method === 'GET' && path === '/catalog') {
-    let rows = products.slice();
+    let rows = products.filter((p) => !p.archived_at);
     if (query.search) rows = rows.filter((p) => p.nama.toLowerCase().includes(query.search.toLowerCase()));
     if (query.kategori) rows = rows.filter((p) => p.kategori === query.kategori);
     const page = Number(query.page) || 1;
@@ -355,7 +355,7 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
 
   // Produk
   if (method === 'GET' && path === '/products') {
-    let rows = products.map(withStatus);
+    let rows = products.filter((p) => !p.archived_at).map(withStatus);
     if (query.search) rows = rows.filter((p) => p.nama.toLowerCase().includes(query.search.toLowerCase()));
     if (query.kategori) rows = rows.filter((p) => p.kategori === query.kategori);
     const page = Number(query.page) || 1;
@@ -387,8 +387,11 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
 
   const productMatch = path.match(/^\/products\/(\d+)$/);
   if (productMatch) {
-    const product = products.find((p) => p.id === Number(productMatch[1]));
-    if (!product) return reply(404, { message: 'Produk tidak ditemukan' });
+    const id = Number(productMatch[1]);
+    const product = products.find((p) => p.id === id);
+    if (!product || (product.archived_at && method === 'GET' && !isAdmin)) {
+      return reply(404, { message: 'Produk tidak ditemukan' });
+    }
 
     if (method === 'GET') return reply(200, { data: withStatus(product) });
 
@@ -406,14 +409,51 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       });
       return reply(200, { data: withStatus(product) });
     }
+
+    if (method === 'DELETE') {
+      if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
+
+      // Cek apakah produk pernah muncul di riwayat transaksi atau pesanan mock
+      const hasTransaction = transactions.some((t) =>
+        t.items.some((it) => it.product_id === id)
+      );
+      const hasOrder = orders.some((o) =>
+        o.items.some((it) => it.product_id === id)
+      );
+      const hasHistory = hasTransaction || hasOrder;
+
+      if (hasHistory) {
+        product.archived_at = now();
+        return reply(200, {
+          message: 'Produk diarsipkan. Riwayat transaksi lama tetap tersimpan.',
+          data: { id, tindakan: 'diarsipkan' },
+          action: 'archived',
+        });
+      }
+
+      const idx = products.findIndex((p) => p.id === id);
+      if (idx !== -1) {
+        products.splice(idx, 1);
+      }
+      return reply(200, {
+        message: 'Produk berhasil dihapus.',
+        data: { id, tindakan: 'dihapus' },
+        action: 'deleted',
+      });
+    }
   }
 
   // Stok
   if (method === 'GET' && path === '/stock') {
-    let rows = products.map(withStatus);
+    let rows = products.filter((p) => !p.archived_at).map(withStatus);
     if (query.search) rows = rows.filter((p) => p.nama.toLowerCase().includes(query.search.toLowerCase()));
     if (query.kritis === 'true') rows = rows.filter((p) => p.status_stok === 'Stok Kritis');
-    return reply(200, { data: rows, ringkasan: { stok_kritis: products.filter((p) => p.stok <= p.batas_stok_kritis).length } });
+    return reply(200, {
+      data: rows,
+      ringkasan: {
+        stok_kritis: products.filter((p) => !p.archived_at && p.stok <= p.batas_stok_kritis).length,
+      },
+    });
   }
 
   const stockMatch = path.match(/^\/products\/(\d+)\/stock$/);

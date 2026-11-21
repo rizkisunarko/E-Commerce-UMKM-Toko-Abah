@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import ConfirmDialog from '../components/ConfirmDialog';
 import ProductIcon from '../components/ProductIcon';
 import { useAuth } from '../context/AuthContext';
 import { productService } from '../services/productService';
@@ -54,6 +55,21 @@ export default function ProductListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // State Hapus & Notifikasi Hasil (PPL-14.2)
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [successBanner, setSuccessBanner] = useState('');
+
+  // Hilang otomatis pesan sukses setelah 5 detik
+  useEffect(() => {
+    if (!successBanner) return;
+    const timer = setTimeout(() => {
+      setSuccessBanner('');
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [successBanner]);
+
   // State Filter & Pengurutan Lanjutan
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
   const [sortBy, setSortBy] = useState('');
@@ -82,9 +98,8 @@ export default function ProductListPage() {
       .catch(() => { });
   }, []);
 
-  // Muat daftar produk sesuai filter & halaman
-  useEffect(() => {
-    let cancelled = false;
+  // Muat daftar produk dari server
+  const loadProducts = useCallback(() => {
     setLoading(true);
 
     const params = {
@@ -94,31 +109,73 @@ export default function ProductListPage() {
     if (search.trim()) params.search = search.trim();
     if (selectedCategory) params.kategori = selectedCategory;
 
-    productService
+    return productService
       .list(params)
       .then((res) => {
-        if (!cancelled) {
-          const items = res.data || [];
-          setRows(items);
-          if (res.pagination) {
-            setPagination(res.pagination);
-          } else {
-            setPagination({ page: currentPage, limit: 8, total: items.length });
-          }
-          setError('');
+        const items = res.data || [];
+        setRows(items);
+        if (res.pagination) {
+          setPagination(res.pagination);
+        } else {
+          setPagination({ page: currentPage, limit: 8, total: items.length });
         }
+        setError('');
       })
       .catch((err) => {
-        if (!cancelled) setError(err.message);
+        setError(err.message);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
+  }, [currentPage, search, selectedCategory]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [search, selectedCategory, currentPage]);
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const handleOpenDelete = (product) => {
+    setDeleteTarget(product);
+    setDeleteError('');
+  };
+
+  const handleCloseDelete = () => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+    setDeleteError('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    setDeleteError('');
+
+    try {
+      const res = await productService.remove(deleteTarget.id);
+      setDeleteTarget(null);
+      await loadProducts();
+
+      const action = res?.action || res?.data?.tindakan;
+      if (action === 'archived' || action === 'diarsipkan') {
+        setSuccessBanner('Produk diarsipkan. Riwayat transaksi lama tetap tersimpan.');
+      } else if (action === 'deleted' || action === 'dihapus') {
+        setSuccessBanner('Produk berhasil dihapus.');
+      } else {
+        setSuccessBanner('Produk berhasil dihapus atau diarsipkan.');
+      }
+    } catch (err) {
+      if (err.status === 404) {
+        setDeleteTarget(null);
+        await loadProducts();
+        setSuccessBanner('Produk tidak ditemukan. Daftar sudah diperbarui.');
+      } else if (err.status === 403) {
+        setDeleteError('Akses ditolak');
+      } else {
+        setDeleteError(err.message || 'Produk gagal dihapus. Coba lagi.');
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -511,6 +568,49 @@ export default function ProductListPage() {
 
       {error && <div className="alert-error" role="alert">{error}</div>}
 
+      {/* Pesan Sukses Hapus / Arsip Produk (PPL-14.2) */}
+      {successBanner && (
+        <div className="product-alert-banner" role="status">
+          <div className="product-alert-content">
+            <span className="product-alert-icon">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            <span>{successBanner}</span>
+          </div>
+          <button
+            type="button"
+            className="product-alert-close"
+            aria-label="Tutup pemberitahuan"
+            onClick={() => setSuccessBanner('')}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* 4. Tabel Daftar Produk */}
       <div className="product-table-card">
         <div className="product-table-scroll">
@@ -577,26 +677,51 @@ export default function ProductListPage() {
                       </td>
                       {isAdmin && (
                         <td>
-                          <Link
-                            to={`/produk/${p.id}/ubah`}
-                            className="btn-edit-action"
-                            title="Ubah data produk"
-                          >
-                            <svg
-                              width="13"
-                              height="13"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <Link
+                              to={`/produk/${p.id}/ubah`}
+                              className="btn-edit-action"
+                              title="Ubah data produk"
                             >
-                              <path d="M12 20h9" />
-                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                            </svg>
-                            <span>Ubah</span>
-                          </Link>
+                              <svg
+                                width="13"
+                                height="13"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                              </svg>
+                              <span>Ubah</span>
+                            </Link>
+                            <button
+                              type="button"
+                              className="btn-delete-action"
+                              title="Hapus atau arsipkan produk"
+                              onClick={() => handleOpenDelete(p)}
+                            >
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                              </svg>
+                              <span>Hapus</span>
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -730,6 +855,23 @@ export default function ProductListPage() {
           </div>
         </div>
       </div>
+
+      {/* Dialog Konfirmasi Hapus Produk (PPL-14.2) */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Hapus produk?"
+        confirmLabel="Ya, Hapus"
+        cancelLabel="Batal"
+        busy={isDeleting}
+        error={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCloseDelete}
+      >
+        <p className="dlg-product-name">{deleteTarget?.nama}</p>
+        <p className="dlg-description">
+          Jika produk ini sudah pernah terjual, produk akan diarsipkan dan riwayat transaksi tetap tersimpan. Jika belum pernah terjual, produk akan dihapus permanen.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }
