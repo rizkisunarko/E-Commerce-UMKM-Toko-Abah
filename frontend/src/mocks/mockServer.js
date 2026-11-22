@@ -461,6 +461,7 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       no_hp: hp,
       catatan: String(body.catatan || '').trim(),
       metode_penerimaan: metode,
+      metode_pembayaran: body.metode_pembayaran === 'cod' ? 'cod' : 'midtrans',
       wilayah: metode === 'kurir' ? (body.tujuan || body.wilayah || matchedDest?.label || '') : '',
       alamat_lengkap: metode === 'kurir' ? alamat : '',
       layanan_kurir: savedCourier,
@@ -503,6 +504,18 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       };
     }
     return reply(200, { data: order });
+  }
+
+  const paymentMatch = path.match(/^\/orders\/([^/]+)\/pembayaran$/);
+  if (method === 'POST' && paymentMatch) {
+    const nomor = decodeURIComponent(paymentMatch[1]);
+    const found = orders.find((o) => o.nomor_pesanan === nomor);
+    return reply(201, {
+      data: {
+        snap_token: `mock-snap-token-${nomor}`,
+        client_key: 'Mid-client-mock',
+      },
+    });
   }
 
   if (!user) return reply(401, { message: 'Silakan login terlebih dahulu' });

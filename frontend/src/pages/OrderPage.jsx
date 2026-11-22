@@ -23,6 +23,24 @@ function getProductThumbnail(nama = '') {
   return null;
 }
 
+function loadMidtransSnap(clientKey) {
+  return new Promise((resolve, reject) => {
+    if (window.snap) return resolve(window.snap);
+    const scriptId = 'midtrans-snap-script';
+    let script = document.getElementById(scriptId);
+    if (!script) {
+      script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+      script.setAttribute('data-client-key', clientKey);
+      script.async = true;
+      document.body.appendChild(script);
+    }
+    script.onload = () => resolve(window.snap);
+    script.onerror = () => reject(new Error('Gagal memuat Snap Midtrans. Pastikan koneksi internet aktif.'));
+  });
+}
+
 export default function OrderPage() {
   const { nomor } = useParams();
   const [order, setOrder] = useState(null);
@@ -31,6 +49,8 @@ export default function OrderPage() {
   const [copied, setCopied] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +123,58 @@ export default function OrderPage() {
         status_pembayaran: 'berhasil',
       };
     });
+  }
+
+  async function handlePayWithSnap() {
+    if (!order?.nomor_pesanan) return;
+    setPayError('');
+    setPayLoading(true);
+
+    try {
+      const res = await orderService.createPayment(order.nomor_pesanan);
+      const snapToken = res.data?.snap_token;
+      const clientKey = res.data?.client_key || 'Mid-client-7JXD3ACYuFZBZqTh';
+
+      if (!snapToken) {
+        throw new Error('Gagal mendapatkan token pembayaran dari server.');
+      }
+
+      // Jika berjalan dalam mode mock
+      if (snapToken.startsWith('mock-')) {
+        setIsQrisModalOpen(true);
+        setPayLoading(false);
+        return;
+      }
+
+      const snap = await loadMidtransSnap(clientKey);
+      if (!snap || typeof snap.pay !== 'function') {
+        throw new Error('Layanan Midtrans Snap tidak dapat dimuat.');
+      }
+
+      snap.pay(snapToken, {
+        onSuccess: () => {
+          handlePaymentSuccess();
+          orderService.get(nomor).then((r) => {
+            if (r.data) setOrder(r.data);
+          }).catch(() => {});
+        },
+        onPending: () => {
+          orderService.get(nomor).then((r) => {
+            if (r.data) setOrder(r.data);
+          }).catch(() => {});
+        },
+        onError: () => {
+          setPayError('Pembayaran gagal diproses oleh gateway.');
+        },
+        onClose: () => {
+          // Modal ditutup pengguna
+        },
+      });
+    } catch (err) {
+      setPayError(err.message || 'Gagal memproses pembayaran. Coba beberapa saat lagi.');
+    } finally {
+      setPayLoading(false);
+    }
   }
 
   if (loading) {
@@ -246,6 +318,12 @@ export default function OrderPage() {
                     {order.metode_penerimaan === 'kurir' ? 'Kurir Pihak Ketiga' : 'Ambil di Toko'}
                   </dd>
                 </div>
+                <div className="order-dl-row">
+                  <dt className="order-dl-dt">Metode Pembayaran</dt>
+                  <dd className="order-dl-dd">
+                    {order.metode_pembayaran === 'cod' ? 'COD (Bayar Tunai ke Kurir)' : 'Midtrans (QRIS / Transfer Bank)'}
+                  </dd>
+                </div>
                 {order.metode_penerimaan === 'kurir' && order.alamat_lengkap && (
                   <div className="order-dl-row">
                     <dt className="order-dl-dt">Alamat Antar</dt>
@@ -361,20 +439,43 @@ export default function OrderPage() {
                       </svg>
                       <span>Pembayaran Selesai (Lunas)</span>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="order-btn-pay-active"
-                      onClick={() => setIsQrisModalOpen(true)}
-                    >
+                  ) : order.metode_pembayaran === 'cod' ? (
+                    <div className="order-btn-cod-info" style={{ padding: '12px 16px', background: '#eef8ef', border: '1px solid #c3e6cb', borderRadius: '8px', color: '#155724', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="7" height="7" />
-                        <rect x="14" y="3" width="7" height="7" />
-                        <rect x="14" y="14" width="7" height="7" />
-                        <rect x="3" y="14" width="7" height="7" />
+                        <rect x="2" y="6" width="20" height="12" rx="2" />
+                        <circle cx="12" cy="12" r="2" />
+                        <path d="M6 12h.01M18 12h.01" />
                       </svg>
-                      <span>Bayar Sekarang (QRIS Instan)</span>
-                    </button>
+                      <span>Bayar Tunai ke Kurir (COD) saat pesanan tiba</span>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="order-btn-pay-active"
+                        disabled={payLoading}
+                        onClick={handlePayWithSnap}
+                      >
+                        {payLoading ? (
+                          <span>Membuka Pembayaran...</span>
+                        ) : (
+                          <>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="7" height="7" />
+                              <rect x="14" y="3" width="7" height="7" />
+                              <rect x="14" y="14" width="7" height="7" />
+                              <rect x="3" y="14" width="7" height="7" />
+                            </svg>
+                            <span>Bayar Sekarang (Midtrans)</span>
+                          </>
+                        )}
+                      </button>
+                      {payError && (
+                        <div style={{ marginTop: 8, padding: '8px 12px', background: '#fdf2f2', border: '1px solid #f8b4b4', borderRadius: '6px', color: '#9b1c1c', fontSize: '13px' }}>
+                          {payError}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
