@@ -59,8 +59,13 @@ React (Vite), Node.js + Express, MySQL
 6. Cek backend di http://localhost:5000/api/health dan buka alamat frontend yang ditampilkan Vite.
 
 Checkout mencari kecamatan/kota melalui backend, lalu menampilkan pilihan tarif dan layanan dari
-RajaOngkir berdasarkan berat produk di database. Permintaan ongkir memakai key yang disimpan di
-`backend/.env`; jika layanan gagal, pelanggan dapat mencoba lagi atau memilih ambil di toko.
+RajaOngkir berdasarkan jumlah berat produk di database (berat per produk dikalikan kuantitas).
+Endpoint ongkir mengembalikan total berat dalam gram (`weight`) dan kilogram (`weight_kg`) untuk
+ditampilkan di ringkasan checkout. Backend menghitung ulang berat dan tarif saat pesanan dibuat;
+tarif tujuan tidak dikirim sebagai nilai tepercaya dari browser. Permintaan ongkir memakai key
+Shipping Cost Sandbox yang disimpan di
+`backend/.env`. Jika pencarian atau perhitungan gagal atau tidak menghasilkan layanan, checkout
+menampilkan error tanpa tarif contoh; pelanggan dapat mencoba lagi atau memilih ambil di toko.
 Checkout menyediakan Midtrans Snap Sandbox dan COD untuk pesanan yang dikirim kurir. Pesanan COD
 tetap berstatus menunggu pembayaran sampai pembayaran tunai dikonfirmasi. Pembayaran Midtrans
 menggunakan token dari total pesanan yang dihitung server, sementara status lunas hanya berubah

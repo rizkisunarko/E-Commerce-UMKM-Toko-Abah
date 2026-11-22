@@ -75,6 +75,7 @@ export default function CheckoutPage() {
   function changeFulfillmentMethod(value) {
     setMetode(value);
     if (value !== 'kurir') setMetodePembayaran('midtrans');
+    if (value !== 'kurir') resetQuote();
     setErrors((prev) => ({
       ...prev,
       alamat_lengkap: undefined,
@@ -571,6 +572,7 @@ export default function CheckoutPage() {
                     value={destination}
                     onChange={(val) => {
                       setDestination(val);
+                      resetQuote();
                       if (errors.wilayah || errors.tujuan) {
                         setErrors((prev) => ({ ...prev, wilayah: undefined, tujuan: undefined }));
                       }

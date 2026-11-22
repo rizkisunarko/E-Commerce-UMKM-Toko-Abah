@@ -44,6 +44,7 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
 
   // Reset quote when destination or items change
   useEffect(() => {
+    requestIdRef.current += 1;
     if (lastQuotedParamsRef.current !== null) {
       const isDestinationChanged = lastQuotedParamsRef.current.destinationId !== destinationId;
       const isItemsChanged = lastQuotedParamsRef.current.itemsKey !== itemsKey;
@@ -80,9 +81,13 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
       const res = await shippingService.calculateCost(destId, currentItems);
       if (currentReqId !== requestIdRef.current) return;
 
+      const totalWeight = res?.weight ?? res?.data?.berat_gram ?? res?.berat_gram ?? null;
+      if (!Number.isSafeInteger(totalWeight) || totalWeight < 1) {
+        throw new Error('Berat total pesanan tidak valid. Periksa berat produk.');
+      }
+
       const rawRates = res?.data?.layanan || (Array.isArray(res?.data) ? res.data : []);
       const normalized = rawRates.map(normalizeRate).filter(Boolean);
-      const totalWeight = res?.weight ?? res?.data?.berat_gram ?? res?.berat_gram ?? null;
       setShippingWeight(totalWeight);
 
       if (normalized.length === 0) {
@@ -128,6 +133,7 @@ export function useShippingQuote({ destinationId, items = [] } = {}) {
   }, [rates]);
 
   const resetQuote = useCallback((customWarning = '') => {
+    requestIdRef.current += 1;
     setQuoteState('idle');
     setRates([]);
     setSelectedRate(null);

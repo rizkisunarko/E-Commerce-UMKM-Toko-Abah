@@ -1,7 +1,8 @@
 const express = require('express');
-const parseGram = require('../utils/weight');
+const { calculateTotalWeight } = require('../utils/weight');
 
 const REQUIRED = 'Kolom ini wajib diisi';
+const MAX_QUANTITY = 1000;
 
 function parseItems(value) {
   if (!Array.isArray(value) || value.length === 0 || value.length > 100) {
@@ -16,7 +17,11 @@ function parseItems(value) {
         !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 1000) {
       return { errors: { items: 'Data produk atau jumlah tidak valid.' } };
     }
-    quantities.set(productId, (quantities.get(productId) || 0) + quantity);
+    const combinedQuantity = (quantities.get(productId) || 0) + quantity;
+    if (combinedQuantity > MAX_QUANTITY) {
+      return { errors: { items: `Jumlah maksimal ${MAX_QUANTITY} per produk.` } };
+    }
+    quantities.set(productId, combinedQuantity);
   }
   return { quantities };
 }
@@ -73,18 +78,14 @@ function createShippingRoutes(db, shippingClient) {
         });
       }
 
-      let weight = 0;
-      for (const product of products) {
-        const itemWeight = parseGram(product.satuan);
-        if (itemWeight < 1) {
-          return res.status(422).json({
-            message: 'Berat produk belum diatur dengan benar.',
-            errors: { items: `Periksa satuan produk dengan ID ${product.id_produk}.` },
-          });
-        }
-        weight += itemWeight * quantities.get(Number(product.id_produk));
+      const { weight, invalidProductId } = calculateTotalWeight(products, quantities);
+      if (weight === null && invalidProductId !== undefined) {
+        return res.status(422).json({
+          message: 'Berat produk belum diatur dengan benar.',
+          errors: { items: `Periksa satuan produk dengan ID ${invalidProductId}.` },
+        });
       }
-      if (!Number.isSafeInteger(weight) || weight < 1) {
+      if (weight === null) {
         return res.status(422).json({ message: 'Total berat pesanan tidak valid.' });
       }
 
@@ -92,7 +93,7 @@ function createShippingRoutes(db, shippingClient) {
         destination: String(destination),
         weight,
       });
-      return res.json({ data, weight });
+      return res.json({ data, weight, weight_kg: weight / 1000 });
     } catch (error) {
       if (Number.isInteger(error.statusCode)) {
         return res.status(error.statusCode).json({ message: error.message });

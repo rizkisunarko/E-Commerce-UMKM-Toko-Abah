@@ -15,7 +15,7 @@ async function listen(t, app) {
   return `http://127.0.0.1:${server.address().port}`;
 }
 
-function createShippingFixture(t, { products = [] } = {}) {
+function createShippingFixture(t, { products = [], costError } = {}) {
   const calls = [];
   const db = {
     async query(sql, params) {
@@ -30,6 +30,7 @@ function createShippingFixture(t, { products = [] } = {}) {
     },
     async calculateDomesticCost(input) {
       calls.push({ type: 'cost', ...input });
+      if (costError) throw costError;
       return [{
         id: 'jne:REG:0',
         courier_code: 'jne',
@@ -79,6 +80,7 @@ test('tarif memakai total berat dari produk database, bukan berat kiriman browse
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.weight, 13000);
+  assert.equal(body.weight_kg, 13);
   assert.equal(body.data[0].cost, 17000);
   assert.deepEqual(calls, [{
     type: 'cost',
@@ -113,6 +115,48 @@ test('tarif ditolak bila produk hilang atau berat produk tidak valid', async (t)
   });
   assert.equal(invalidResponse.status, 422);
   assert.equal(invalidWeight.calls.length, 0);
+});
+
+test('tarif menolak kuantitas gabungan di atas batas checkout', async (t) => {
+  const { baseUrlPromise, calls } = createShippingFixture(t, {
+    products: [{ id_produk: 1, satuan: '5 kg' }],
+  });
+  const response = await fetch(`${await baseUrlPromise}/api/shipping/cost`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      destination_id: '456',
+      items: [
+        { product_id: 1, jumlah: 1000 },
+        { product_id: 1, jumlah: 1 },
+      ],
+    }),
+  });
+
+  assert.equal(response.status, 422);
+  assert.equal(calls.length, 0);
+});
+
+test('tarif mengembalikan validasi alamat saat Komerce menolak tujuan', async (t) => {
+  const { baseUrlPromise, calls } = createShippingFixture(t, {
+    products: [{ id_produk: 1, satuan: '1 kg' }],
+    costError: {
+      statusCode: 422,
+      message: 'Alamat tujuan atau data pengiriman tidak valid.',
+    },
+  });
+  const response = await fetch(`${await baseUrlPromise}/api/shipping/cost`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      destination_id: '456',
+      items: [{ product_id: 1, jumlah: 1 }],
+    }),
+  });
+
+  assert.equal(response.status, 422);
+  assert.equal((await response.json()).message, 'Alamat tujuan atau data pengiriman tidak valid.');
+  assert.equal(calls[0].type, 'cost');
 });
 
 test('RajaOngkir client authenticates requests and resolves the Kamal origin', async () => {
@@ -167,5 +211,42 @@ test('RajaOngkir client fails explicitly when API key is missing', async () => {
   await assert.rejects(client.searchDestinations('Kamal'), {
     statusCode: 503,
     message: 'RAJAONGKIR_API_KEY belum diatur pada backend/.env.',
+  });
+});
+
+test('RajaOngkir client returns a validation error for an unsupported destination', async () => {
+  const client = createRajaOngkirClient({
+    apiKey: 'sandbox-secret',
+    fetchImpl: async (url) => ({
+      ok: url.pathname.endsWith('/destination/domestic-destination'),
+      status: url.pathname.endsWith('/destination/domestic-destination') ? 200 : 400,
+      json: async () => url.pathname.endsWith('/destination/domestic-destination')
+        ? { data: [{ id: 100, label: 'Kamal, Bangkalan, Jawa Timur' }] }
+        : { meta: { status: 'error', code: 422 } },
+    }),
+  });
+
+  await assert.rejects(
+    client.calculateDomesticCost({ destination: '999999', weight: 1000 }),
+    {
+      statusCode: 422,
+      message: 'Alamat tujuan atau data pengiriman tidak valid. Pilih alamat dari hasil pencarian.',
+    },
+  );
+});
+
+test('RajaOngkir client reports upstream API failures as gateway errors', async () => {
+  const client = createRajaOngkirClient({
+    apiKey: 'sandbox-secret',
+    fetchImpl: async () => ({
+      ok: false,
+      status: 503,
+      json: async () => ({ meta: { status: 'error', code: 503 } }),
+    }),
+  });
+
+  await assert.rejects(client.searchDestinations('Surabaya'), {
+    statusCode: 502,
+    message: 'RajaOngkir gagal memproses permintaan. Periksa data tujuan dan konfigurasi akun.',
   });
 });

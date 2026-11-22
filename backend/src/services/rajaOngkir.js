@@ -40,6 +40,9 @@ function destinationId(destination) {
 }
 
 function normalizeDestination(destination) {
+  if (!destination || typeof destination !== 'object') {
+    throw new RajaOngkirError('Format data tujuan dari RajaOngkir tidak dikenali.');
+  }
   const id = destinationId(destination);
   if (id === undefined || id === null || !destinationLabel(destination)) {
     throw new RajaOngkirError('Format data tujuan dari RajaOngkir tidak dikenali.');
@@ -55,6 +58,9 @@ function normalizeDestination(destination) {
 }
 
 function normalizeRate(rate, index) {
+  if (!rate || typeof rate !== 'object') {
+    throw new RajaOngkirError('Format tarif dari RajaOngkir tidak dikenali.');
+  }
   const cost = Number(
     typeof rate.cost === 'object' && rate.cost !== null
       ? rate.cost.value
@@ -126,11 +132,18 @@ function createRajaOngkirClient({
     } catch {
       throw new RajaOngkirError('Respons RajaOngkir tidak dapat dibaca.');
     }
+    const upstreamStatus = Number(payload?.meta?.code) || response.status;
     if (!response.ok || payload?.meta?.status === 'error') {
-      if (response.status === 401 || response.status === 403) {
+      if (upstreamStatus === 401 || upstreamStatus === 403) {
         throw new RajaOngkirError(
           'RajaOngkir menolak API key. Periksa key Shipping Cost Sandbox di backend/.env.',
           502,
+        );
+      }
+      if (upstreamStatus === 400 || upstreamStatus === 422) {
+        throw new RajaOngkirError(
+          'Alamat tujuan atau data pengiriman tidak valid. Pilih alamat dari hasil pencarian.',
+          422,
         );
       }
       throw new RajaOngkirError(
