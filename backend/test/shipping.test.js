@@ -234,3 +234,19 @@ test('RajaOngkir client returns a validation error for an unsupported destinatio
     },
   );
 });
+
+test('RajaOngkir client reports upstream API failures as gateway errors', async () => {
+  const client = createRajaOngkirClient({
+    apiKey: 'sandbox-secret',
+    fetchImpl: async () => ({
+      ok: false,
+      status: 503,
+      json: async () => ({ meta: { status: 'error', code: 503 } }),
+    }),
+  });
+
+  await assert.rejects(client.searchDestinations('Surabaya'), {
+    statusCode: 502,
+    message: 'RajaOngkir gagal memproses permintaan. Periksa data tujuan dan konfigurasi akun.',
+  });
+});

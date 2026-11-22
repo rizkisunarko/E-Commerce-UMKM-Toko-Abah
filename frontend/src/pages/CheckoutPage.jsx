@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import DestinationSelect from '../components/DestinationSelect';
 import { itemIssue, useCart } from '../context/CartContext';
 import useCartCheck from '../hooks/useCartCheck';
+import useShippingQuote from '../hooks/useShippingQuote';
 import { orderService } from '../services/orderService';
 import { formatRupiah } from '../utils/format';
 
@@ -9,10 +11,11 @@ import { formatRupiah } from '../utils/format';
 const PHONE_PATTERN = /^(\+62|62|0)8\d{8,11}$/;
 
 function formatWeight(grams) {
+  if (grams === null || grams === undefined) return 'Belum dihitung';
   return `${(grams / 1000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} kg`;
 }
 
-export function validateCheckout({ nama, noHp, metode, alamatLengkap, destination, selectedRateId }) {
+export function validateCheckout({ nama, noHp, metode, alamatLengkap, destination, selectedRate, selectedRateId }) {
   const errors = {};
   if (!nama || !nama.trim()) errors.nama_pemesan = 'Kolom ini wajib diisi';
   const phone = (noHp || '').replace(/[\s-]/g, '');
@@ -25,9 +28,12 @@ export function validateCheckout({ nama, noHp, metode, alamatLengkap, destinatio
     }
     if (!destination || !destination.label || !destination.label.trim()) {
       errors.wilayah = 'Pilih kecamatan / kota tujuan';
+      errors.tujuan = 'Pilih kecamatan / kota tujuan';
     }
-    if (!selectedRateId) {
-      errors.selected_rate_id = 'Pilih layanan kurir';
+    const hasRate = Boolean(selectedRate || selectedRateId);
+    if (!hasRate) {
+      errors.layanan_kurir = 'Pilih layanan kurir terlebih dahulu';
+      errors.selected_rate_id = 'Pilih layanan kurir terlebih dahulu';
     }
   }
 
@@ -48,17 +54,19 @@ export default function CheckoutPage() {
   const [metode, setMetode] = useState('ambil_di_toko');
   const [metodePembayaran, setMetodePembayaran] = useState('midtrans');
   const [alamatLengkap, setAlamatLengkap] = useState('');
-  const [destinationSearch, setDestinationSearch] = useState('');
   const [destination, setDestination] = useState(null);
-  const [destinationOptions, setDestinationOptions] = useState([]);
-  const [destinationSearchLoading, setDestinationSearchLoading] = useState(false);
-  const [destinationError, setDestinationError] = useState('');
-  const [shippingRates, setShippingRates] = useState([]);
-  const [shippingWeight, setShippingWeight] = useState(null);
-  const [selectedRateId, setSelectedRateId] = useState('');
-  const [shippingQuoteLoading, setShippingQuoteLoading] = useState(false);
-  const [courierCalcError, setCourierCalcError] = useState('');
-  const [quoteRetry, setQuoteRetry] = useState(0);
+
+  const {
+    quoteState,
+    rates: shippingRates,
+    selectedRate,
+    shippingWeight,
+    errorMessage: courierCalcError,
+    warningMessage: courierWarning,
+    calculateQuote,
+    selectRate,
+    resetQuote,
+  } = useShippingQuote({ destinationId: destination?.id, items });
 
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
@@ -67,15 +75,17 @@ export default function CheckoutPage() {
   function changeFulfillmentMethod(value) {
     setMetode(value);
     if (value !== 'kurir') setMetodePembayaran('midtrans');
+    if (value !== 'kurir') resetQuote();
     setErrors((prev) => ({
       ...prev,
       alamat_lengkap: undefined,
       wilayah: undefined,
+      tujuan: undefined,
+      layanan_kurir: undefined,
       selected_rate_id: undefined,
     }));
   }
 
-  const selectedRate = shippingRates.find((rate) => rate.id === selectedRateId);
   const courierLabel = selectedRate
     ? `${selectedRate.courier_name} ${selectedRate.service}`
     : 'Pilih layanan kurir';
@@ -84,142 +94,12 @@ export default function CheckoutPage() {
   const ongkir = metode === 'kurir' && selectedRate ? selectedRate.cost : 0;
   const grandTotal = total + ongkir;
 
-  const quoteItems = items.map((item) => ({ product_id: item.id, jumlah: item.jumlah }));
-  const quoteItemsKey = JSON.stringify(quoteItems);
-
-  // Pencarian wilayah / kota tujuan (RajaOngkir)
-  useEffect(() => {
-    const search = destinationSearch.trim();
-    if (metode !== 'kurir' || destination || search.length < 2) {
-      setDestinationOptions([]);
-      setDestinationSearchLoading(false);
-      setDestinationError('');
-      return undefined;
-    }
-
-    let active = true;
-    const timer = setTimeout(async () => {
-      setDestinationSearchLoading(true);
-      setDestinationError('');
-      try {
-        const result = await orderService.searchDestinations(search);
-        if (active) {
-          const list = result.data || [];
-          setDestinationOptions(list);
-          if (list.length === 0) {
-            setDestinationError('Wilayah tidak ditemukan. Coba nama kecamatan atau kota lain.');
-          }
-        }
-      } catch (error) {
-        if (active) {
-          setDestinationOptions([]);
-          setDestinationError(error.message || 'Pencarian wilayah gagal. Coba lagi.');
-        }
-      } finally {
-        if (active) setDestinationSearchLoading(false);
-      }
-    }, 300);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [metode, destination, destinationSearch, quoteRetry]);
-
-  // Kalkulasi ongkir otomatis saat wilayah dipilih
-  useEffect(() => {
-    if (metode !== 'kurir' || !destination) {
-      setShippingRates([]);
-      setShippingWeight(null);
-      setSelectedRateId('');
-      setShippingQuoteLoading(false);
-      setCourierCalcError('');
-      return undefined;
-    }
-
-    let active = true;
-    setShippingRates([]);
-    setShippingWeight(null);
-    setSelectedRateId('');
-    setShippingQuoteLoading(true);
-    setCourierCalcError('');
-
-    orderService.calculateShipping(destination.id, JSON.parse(quoteItemsKey))
-      .then((result) => {
-        if (!active) return;
-        if (!Number.isSafeInteger(result.weight) || result.weight < 1) {
-          setCourierCalcError('Berat total pesanan tidak valid. Periksa berat produk.');
-          return;
-        }
-        setShippingWeight(result.weight);
-        if (!Array.isArray(result.data) || result.data.length === 0) {
-          setCourierCalcError('Tidak ada layanan kurir untuk wilayah dan berat pesanan ini.');
-          return;
-        }
-        setShippingRates(result.data);
-        setSelectedRateId(result.data[0].id);
-        setErrors((prev) => ({ ...prev, selected_rate_id: undefined }));
-      })
-      .catch((error) => {
-        if (active) {
-          setShippingRates([]);
-          setShippingWeight(null);
-          setSelectedRateId('');
-          setCourierCalcError(error.message || 'Ongkos kirim gagal dihitung. Coba lagi.');
-        }
-      })
-      .finally(() => {
-        if (active) setShippingQuoteLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [metode, destination, quoteItemsKey, quoteRetry]);
-
-  // Tombol Cek Ongkos Kirim manual
   function handleCheckShippingManual() {
     if (!destination) {
-      setErrors((prev) => ({ ...prev, wilayah: 'Pilih kecamatan / kota tujuan' }));
+      setErrors((prev) => ({ ...prev, wilayah: 'Pilih kecamatan / kota tujuan', tujuan: 'Pilih kecamatan / kota tujuan' }));
       return;
     }
-    setShippingQuoteLoading(true);
-    setCourierCalcError('');
-    setShippingRates([]);
-    setShippingWeight(null);
-    setSelectedRateId('');
-    orderService.calculateShipping(destination.id, quoteItems)
-      .then((res) => {
-        if (!Number.isSafeInteger(res.weight) || res.weight < 1) {
-          setCourierCalcError('Berat total pesanan tidak valid. Periksa berat produk.');
-          return;
-        }
-        setShippingWeight(res.weight);
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setShippingRates(res.data);
-          setSelectedRateId(res.data[0].id);
-          setErrors((prev) => ({ ...prev, selected_rate_id: undefined }));
-        } else {
-          setCourierCalcError('Tidak ada layanan kurir untuk wilayah dan berat pesanan ini.');
-        }
-      })
-      .catch((err) => {
-        setShippingWeight(null);
-        setCourierCalcError(err.message || 'Ongkos kirim gagal dihitung. Coba lagi.');
-      })
-      .finally(() => {
-        setShippingQuoteLoading(false);
-      });
-  }
-
-  function handleSendSummaryWhatsApp() {
-    const phone = '6281288997700';
-    const itemLines = items.map((it) => `- ${it.nama} (${it.jumlah}x) = ${formatRupiah(it.harga * it.jumlah)}`).join('\n');
-    const metodeText = metode === 'kurir'
-      ? `Kurir Pihak Ketiga (${courierLabel})\nAlamat: ${alamatLengkap.trim() || '-'}\nWilayah: ${destination?.label || '-'}\nOngkir: ${formatRupiah(ongkir)}`
-      : 'Ambil di Toko (Ongkos kirim Rp 0)';
-    const msg = `Halo Toko Abah, saya ingin konfirmasi pesanan sembako:\n\nNama Pemesan: ${nama.trim() || '-'}\nNomor HP/WA: ${noHp.trim() || '-'}\n\nDaftar Belanja:\n${itemLines}\n\nSubtotal: ${formatRupiah(total)}\nMetode: ${metodeText}\n\nTotal Tagihan: ${formatRupiah(grandTotal)}\nCatatan: ${catatan.trim() || '-'}`;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    calculateQuote(destination.id, items);
   }
 
   async function handleSubmit(e) {
@@ -230,7 +110,8 @@ export default function CheckoutPage() {
       metode,
       alamatLengkap,
       destination,
-      selectedRateId,
+      selectedRate,
+      selectedRateId: selectedRate?.id,
     });
     setErrors(clientErrors);
     setFormError('');
@@ -240,37 +121,50 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (metode === 'kurir' && courierCalcError) {
-      setFormError('Layanan kurir sedang mengalami kendala. Coba lagi atau pilih Ambil di Toko.');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const res = await orderService.create({
+      const payload = {
         nama_pemesan: nama.trim(),
         no_hp: noHp.replace(/[\s-]/g, ''),
         catatan: catatan.trim(),
         metode_penerimaan: metode,
         metode_pembayaran: metodePembayaran,
-        wilayah: metode === 'kurir' ? destination?.label : undefined,
-        destination_id: metode === 'kurir' ? destination?.id : undefined,
-        selected_rate_id: metode === 'kurir' ? selectedRate?.id : undefined,
-        alamat_lengkap: metode === 'kurir' ? alamatLengkap.trim() : undefined,
-        layanan_kurir: metode === 'kurir' ? courierLabel : undefined,
-        ongkir,
         items: items.map((it) => ({ product_id: it.id, jumlah: it.jumlah })),
-      });
+      };
+
+      if (metode === 'kurir') {
+        payload.alamat_pengiriman = alamatLengkap.trim();
+        payload.alamat_lengkap = alamatLengkap.trim();
+        payload.tujuan = destination.label;
+        payload.wilayah = destination.label;
+        payload.tujuan_id = destination.id;
+        payload.destination_id = String(destination.id);
+        payload.layanan_kurir = selectedRate.kode || selectedRate.id;
+        payload.selected_rate_id = selectedRate.id || selectedRate.kode;
+      }
+
+      const res = await orderService.create(payload);
       finished.current = true;
       clear();
       navigate(`/pesanan/${res.data.nomor_pesanan}`, { replace: true });
     } catch (err) {
       if (err.status === 422) {
-        setErrors(err.errors || {});
-        const stockProblem = Object.keys(err.errors || {}).some((k) => k.startsWith('items'));
+        const rawErrors = err.errors || {};
+        const mappedErrors = { ...rawErrors };
+        if (rawErrors.destination_id && !mappedErrors.wilayah) {
+          mappedErrors.wilayah = rawErrors.destination_id;
+        }
+        if (rawErrors.selected_rate_id && !mappedErrors.layanan_kurir) {
+          mappedErrors.layanan_kurir = rawErrors.selected_rate_id;
+        }
+        setErrors(mappedErrors);
+        const stockProblem = Object.keys(rawErrors).some((k) => k.startsWith('items'));
         if (stockProblem) {
           setFormError('Stok beberapa barang berubah atau tidak mencukupi. Harap periksa keranjang belanja Anda sebelum melanjutkan.');
           recheck();
+        }
+        if (rawErrors.tujuan_id || rawErrors.destination_id || rawErrors.layanan_kurir || rawErrors.selected_rate_id || rawErrors.ongkir) {
+          resetQuote('Data ongkos kirim perlu diperbarui. Hitung ulang ongkos kirim.');
         }
       } else {
         setFormError(err.message || 'Pesanan gagal dibuat. Coba lagi.');
@@ -283,7 +177,7 @@ export default function CheckoutPage() {
 
   // Cari item pertama yang memiliki masalah stok untuk banner error
   const firstIssueItem = items.find((it) => itemIssue(it));
-  const blocked = submitting || checking || Boolean(checkError) || hasIssue;
+  const blocked = submitting || checking || Boolean(checkError) || hasIssue || (metode === 'kurir' && quoteState === 'loading');
 
   if (!cartReady) {
     return <div className="ko-checkout-wrapper" role="status">Memuat keranjang...</div>;
@@ -318,7 +212,7 @@ export default function CheckoutPage() {
             <span>Konfirmasi Belanja Cepat</span>
           </div>
           <h1 className="ko-page-title">Checkout Pesanan Sembako</h1>
-          <p className="ko-page-subtitle">Lengkapi data pemesan dan konfirmasi pengantaran hari ini.</p>
+          <p className="ko-page-subtitle">Lengkapi data pemesan dan konfirmasi pesanan Anda.</p>
         </div>
 
         {/* Stepper Indikator (1. Keranjang -> 2. Checkout -> 3. Pembayaran) */}
@@ -421,7 +315,11 @@ export default function CheckoutPage() {
               <span className="ko-section-badge-num">1</span>
               <div>
                 <h2 className="ko-section-title">Data Pemesan</h2>
-                <p className="ko-section-sub">Informasi penerima sembako dan kontak penanggung jawab</p>
+                <p className="ko-section-sub">
+                  {metode === 'ambil_di_toko'
+                    ? 'Informasi identitas untuk pengambilan pesanan di counter'
+                    : 'Informasi penerima sembako dan kontak penanggung jawab'}
+                </p>
               </div>
             </div>
 
@@ -430,18 +328,25 @@ export default function CheckoutPage() {
               <label htmlFor="nama-pemesan" className="ko-input-label">
                 Nama Lengkap <span className="ko-input-star">*</span>
               </label>
-              <div className="ko-input-icon-box">
+              <div className="ko-input-icon-box relative">
+                <span className="ko-input-leading-icon" style={{ left: 14, color: errors.nama_pemesan ? '#ba1a1a' : '#707a6c' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
                 <input
                   id="nama-pemesan"
                   type="text"
                   required
-                  placeholder="Contoh: Ibu Rahmawati"
+                  placeholder="Ibu Rahmawati"
                   value={nama}
                   onChange={(e) => {
                     setNama(e.target.value);
                     if (errors.nama_pemesan) setErrors((prev) => ({ ...prev, nama_pemesan: undefined }));
                   }}
-                  className={`ko-input-control no-leading${errors.nama_pemesan ? ' error' : ''}`}
+                  className={`ko-input-control${errors.nama_pemesan ? ' error' : ''}`}
+                  style={{ paddingLeft: 44 }}
                 />
                 {isNamaValid && (
                   <span className="ko-input-trailing-icon" title="Format valid">
@@ -473,25 +378,25 @@ export default function CheckoutPage() {
               <label htmlFor="wa-pemesan" className="ko-input-label">
                 Nomor WhatsApp / HP <span className="ko-input-star">*</span>
               </label>
-              <div className="ko-input-icon-box">
-                <div className={`ko-input-leading-prefix ${errors.no_hp ? 'text-error' : ''}`}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <div className="ko-input-icon-box relative">
+                <span className="ko-input-leading-icon" style={{ left: 14, color: errors.no_hp ? '#ba1a1a' : '#707a6c' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                     <line x1="12" y1="18" x2="12.01" y2="18" />
                   </svg>
-                  <span className="font-bold">+62</span>
-                </div>
+                </span>
                 <input
                   id="wa-pemesan"
                   type="tel"
                   required
-                  placeholder="812-9876-5432"
+                  placeholder="0812-9876-5432"
                   value={noHp}
                   onChange={(e) => {
                     setNoHp(e.target.value);
                     if (errors.no_hp) setErrors((prev) => ({ ...prev, no_hp: undefined }));
                   }}
-                  className={`ko-input-control with-prefix${errors.no_hp ? ' error' : ''}`}
+                  className={`ko-input-control${errors.no_hp ? ' error' : ''}`}
+                  style={{ paddingLeft: 44 }}
                 />
                 {isHpValid && (
                   <span className="ko-input-trailing-icon" title="Format valid">
@@ -516,17 +421,11 @@ export default function CheckoutPage() {
                   <span>{errors.no_hp}</span>
                 </p>
               ) : (
-                <p className="ko-input-helper">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                <p className="ko-input-helper flex items-center gap-1 mt-1">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                   </svg>
-                  <span>
-                    {metode === 'kurir'
-                      ? 'Kurir akan menghubungi nomor ini saat pengantaran untuk konfirmasi pintu pagar.'
-                      : 'Konfirmasi pesanan dan struk akan dikirim ke nomor ini.'}
-                  </span>
+                  <span>Konfirmasi pesanan dan struk akan dikirim ke nomor ini</span>
                 </p>
               )}
             </div>
@@ -535,11 +434,11 @@ export default function CheckoutPage() {
             <div className="ko-input-field">
               <label htmlFor="catatan-pemesan" className="ko-input-label justify-between">
                 <span>Catatan Tambahan untuk Toko</span>
-                <span className="font-normal text-outline text-xs">(Opsional)</span>
+                <span className="font-normal text-outline text-xs">Opsional</span>
               </label>
               <textarea
                 id="catatan-pemesan"
-                rows={2}
+                rows={3}
                 placeholder="Contoh: Beras minta disatukan dalam karung goni kecil..."
                 value={catatan}
                 onChange={(e) => setCatatan(e.target.value)}
@@ -554,7 +453,7 @@ export default function CheckoutPage() {
               <span className="ko-section-badge-num">2</span>
               <div>
                 <h2 className="ko-section-title">Cara Menerima Pesanan</h2>
-                <p className="ko-section-sub">Pilih metode pengambilan belanjaan sembako</p>
+                <p className="ko-section-sub">Pilih metode pengambilan kebutuhan belanja Anda</p>
               </div>
             </div>
 
@@ -565,35 +464,28 @@ export default function CheckoutPage() {
                 className={`ko-pickup-selectable-card ${metode === 'ambil_di_toko' ? 'selected' : 'unselected'}`}
                 onClick={() => changeFulfillmentMethod('ambil_di_toko')}
               >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="pickup_mode"
-                    value="store"
-                    checked={metode === 'ambil_di_toko'}
-                    onChange={() => changeFulfillmentMethod('ambil_di_toko')}
-                    className="ko-native-radio"
-                  />
-                  <div className="flex flex-col flex-1">
-                    <div className="ko-pickup-card-title-row">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={metode === 'ambil_di_toko' ? '#0d631b' : '#707a6c'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                        <polyline points="9 22 9 12 15 12 15 22" />
-                      </svg>
-                      <span className="font-bold text-on-surface">Ambil di Toko</span>
-                    </div>
-                    <p className="ko-pickup-card-sub">Ongkos kirim Rp 0. Ambil pesanan di toko setelah pembayaran.</p>
-                    {metode === 'ambil_di_toko' ? (
-                      <div className="ko-pickup-card-status">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        <span>Pilihan Aktif</span>
+                <div className="flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${metode === 'ambil_di_toko' ? 'bg-primary ring-2 ring-primary-fixed' : 'border-2 border-outline'}`}>
+                        {metode === 'ambil_di_toko' && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
-                    ) : (
-                      <div className="ko-pickup-unselected-hint">Klik untuk memilih</div>
-                    )}
+                      <div className="font-bold text-on-surface text-base">Ambil di Toko</div>
+                    </div>
+                    <p className="ko-pickup-card-sub">
+                      Ongkos kirim Rp 0. Ambil pesanan di toko setelah pembayaran.
+                    </p>
                   </div>
+                  {metode === 'ambil_di_toko' ? (
+                    <div className="ko-pickup-card-status flex items-center gap-1 text-primary font-semibold text-xs mt-3">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                      <span>Pilihan Aktif</span>
+                    </div>
+                  ) : (
+                    <div className="ko-pickup-unselected-hint text-xs text-outline mt-3">Klik untuk memilih</div>
+                  )}
                 </div>
               </label>
 
@@ -602,37 +494,28 @@ export default function CheckoutPage() {
                 className={`ko-pickup-selectable-card ${metode === 'kurir' ? 'selected' : 'unselected'}`}
                 onClick={() => changeFulfillmentMethod('kurir')}
               >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="pickup_mode"
-                    value="courier"
-                    checked={metode === 'kurir'}
-                    onChange={() => changeFulfillmentMethod('kurir')}
-                    className="ko-native-radio"
-                  />
-                  <div className="flex flex-col flex-1">
-                    <div className="ko-pickup-card-title-row">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={metode === 'kurir' ? '#0d631b' : '#707a6c'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="18.5" cy="17.5" r="3.5" />
-                        <circle cx="5.5" cy="17.5" r="3.5" />
-                        <circle cx="15" cy="5" r="1" />
-                        <path d="M12 17.5V14l-3-3 4-3 2 3h2" />
-                      </svg>
-                      <span className="font-bold text-on-surface">Kurir Pihak Ketiga</span>
-                    </div>
-                    <p className="ko-pickup-card-sub">Pesanan dijemput kurir di toko dan diantar ke alamat Anda. Ongkos kirim ditanggung pelanggan.</p>
-                    {metode === 'kurir' ? (
-                      <div className="ko-pickup-card-status">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        <span>Pilihan Aktif</span>
+                <div className="flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${metode === 'kurir' ? 'bg-primary ring-2 ring-primary-fixed' : 'border-2 border-outline'}`}>
+                        {metode === 'kurir' && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
-                    ) : (
-                      <div className="ko-pickup-unselected-hint">Klik untuk memilih</div>
-                    )}
+                      <div className="font-bold text-on-surface text-base">Kurir Pihak Ketiga</div>
+                    </div>
+                    <p className="ko-pickup-card-sub">
+                      Pesanan dijemput kurir di toko dan diantar ke alamat Anda. Ongkos kirim ditanggung pelanggan.
+                    </p>
                   </div>
+                  {metode === 'kurir' ? (
+                    <div className="ko-pickup-card-status flex items-center gap-1 text-primary font-semibold text-xs mt-3">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b" aria-hidden="true">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                      <span>Pilihan Aktif</span>
+                    </div>
+                  ) : (
+                    <div className="ko-pickup-unselected-hint text-xs text-outline mt-3">Klik untuk memilih</div>
+                  )}
                 </div>
               </label>
             </div>
@@ -670,7 +553,7 @@ export default function CheckoutPage() {
                     )}
                   </div>
                   {errors.alamat_lengkap && (
-                    <p className="ko-input-err-msg flex items-center gap-1">
+                    <p className="ko-input-err-msg flex items-center gap-1" role="alert">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="#ba1a1a" aria-hidden="true">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                       </svg>
@@ -684,84 +567,24 @@ export default function CheckoutPage() {
                   <label htmlFor="wilayah-tujuan" className="ko-input-label">
                     Kecamatan / Kota Tujuan <span className="ko-input-star">*</span>
                   </label>
-                  <div className="ko-destination-search">
-                    <div className="relative">
-                      <span className="ko-input-leading-icon" style={{ color: errors.wilayah ? '#ba1a1a' : '#0d631b' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="11" cy="11" r="8" />
-                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                      </span>
-                      <input
-                        id="wilayah-tujuan"
-                        type="search"
-                        autoComplete="off"
-                        placeholder="Ketik nama kecamatan atau kelurahan..."
-                        value={destinationSearch}
-                        onChange={(event) => {
-                          setDestinationSearch(event.target.value);
-                          setDestination(null);
-                          setDestinationOptions([]);
-                          setDestinationError('');
-                          setShippingRates([]);
-                          setShippingWeight(null);
-                          setSelectedRateId('');
-                          setCourierCalcError('');
-                          if (errors.wilayah) setErrors((prev) => ({ ...prev, wilayah: undefined }));
-                        }}
-                        className={`ko-input-control${errors.wilayah ? ' error' : ''}`}
-                        role="combobox"
-                        aria-autocomplete="list"
-                        aria-expanded={!destination && destinationOptions.length > 0}
-                        aria-controls="wilayah-tujuan-options"
-                      />
-                      <span className="ko-select-trailing-arrow" style={{ pointerEvents: 'none' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </span>
-                    </div>
-
-                    {!destination && destinationOptions.length > 0 && (
-                      <ul id="wilayah-tujuan-options" className="ko-destination-options" role="listbox">
-                        {destinationOptions.map((option) => (
-                          <li key={option.id} role="option" aria-selected="false">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDestination(option);
-                                setDestinationSearch(option.label);
-                                setDestinationOptions([]);
-                                setDestinationError('');
-                                setFormError('');
-                                setErrors((prev) => ({ ...prev, wilayah: undefined }));
-                              }}
-                              className="flex items-center justify-between"
-                            >
-                              <span>{option.label}</span>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d631b">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                              </svg>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                  {destinationSearchLoading && (
-                    <p className="ko-input-helper" role="status">Mencari wilayah tujuan...</p>
-                  )}
-                  {destinationError && (
-                    <p className="ko-input-err-msg flex items-center gap-1" role="alert">
-                      <span>{destinationError}</span>
-                    </p>
-                  )}
-                  {errors.wilayah && (
+                  <DestinationSelect
+                    id="wilayah-tujuan"
+                    value={destination}
+                    onChange={(val) => {
+                      setDestination(val);
+                      resetQuote();
+                      if (errors.wilayah || errors.tujuan) {
+                        setErrors((prev) => ({ ...prev, wilayah: undefined, tujuan: undefined }));
+                      }
+                    }}
+                    error={errors.wilayah || errors.tujuan}
+                  />
+                  {(errors.wilayah || errors.tujuan) && (
                     <p className="ko-input-err-msg flex items-center gap-1" role="alert">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="#ba1a1a" aria-hidden="true">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                       </svg>
-                      <span>{errors.wilayah}</span>
+                      <span>{errors.wilayah || errors.tujuan}</span>
                     </p>
                   )}
                 </div>
@@ -772,111 +595,64 @@ export default function CheckoutPage() {
                     type="button"
                     onClick={handleCheckShippingManual}
                     className="ko-btn-cek-ongkir"
-                    disabled={shippingQuoteLoading}
+                    disabled={!alamatLengkap.trim() || !destination || quoteState === 'loading' || submitting}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={shippingQuoteLoading ? 'ko-spin-icon' : ''}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={quoteState === 'loading' ? 'ko-spin-icon' : ''}>
                       <path d="M23 4v6h-6" />
                       <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                     </svg>
-                    <span>{shippingQuoteLoading ? 'Menghitung Ongkir...' : 'Cek Ongkos Kirim'}</span>
+                    <span>{quoteState === 'loading' ? 'Menghitung ongkir...' : 'Cek Ongkos Kirim'}</span>
                   </button>
                 </div>
 
-                {/* 4. Pilih Layanan Kurir */}
-                <div>
-                  <div className="font-label-lg text-label-lg text-on-surface mb-2 font-bold flex items-center gap-1">
-                    <span>Pilih Layanan Kurir</span>
-                    <span className="ko-input-star">*</span>
-                  </div>
-
-                  {/* Wrapper with error container when validation error */}
-                  <div className={errors.selected_rate_id ? 'ko-courier-error-wrap' : 'space-y-2'}>
-                    {shippingRates.map((rate) => (
-                      <label
-                        key={rate.id}
-                        className={`ko-courier-option-row ${selectedRateId === rate.id ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSelectedRateId(rate.id);
-                          if (errors.selected_rate_id) setErrors((prev) => ({ ...prev, selected_rate_id: undefined }));
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="courier_service"
-                            value={rate.id}
-                            checked={selectedRateId === rate.id}
-                            onChange={() => {
-                              setSelectedRateId(rate.id);
-                              if (errors.selected_rate_id) setErrors((prev) => ({ ...prev, selected_rate_id: undefined }));
-                            }}
-                            className="ko-native-radio"
-                          />
-                          <div>
-                            <div className="font-semibold text-on-surface text-sm">
-                              {rate.courier_name} {rate.service}
-                            </div>
-                            <span className="text-xs text-on-surface-variant">
-                              {rate.description || (rate.etd ? `Estimasi: ${rate.etd}` : 'Estimasi: 2 - 3 hari')}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="font-bold text-primary text-base tabular-nums">
-                          {formatRupiah(rate.cost)}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-
-                  {errors.selected_rate_id && (
-                    <p className="ko-input-err-msg flex items-center gap-1" style={{ marginTop: 6 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#ba1a1a" aria-hidden="true">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                      </svg>
-                      <span>{errors.selected_rate_id}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* 5. Status & Kondisi Kurir */}
+                {/* 4. Bagian Status & Pilihan Layanan Kurir */}
                 <div className="ko-courier-status-block">
                   <div className="ko-courier-status-title">Status &amp; Kondisi Kurir:</div>
-                  {shippingQuoteLoading && (
-                    <div className="ko-courier-status-loading">
+
+                  {/* State: Loading */}
+                  {quoteState === 'loading' && (
+                    <div className="ko-courier-status-loading" role="status">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2.5" className="ko-spin-icon">
                         <path d="M23 4v6h-6" />
                         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                       </svg>
-                      <span>Menghitung ongkos kirim...</span>
+                      <span>Menghitung ongkir...</span>
                     </div>
                   )}
 
-                  {courierCalcError && (
-                    <div className="ko-courier-status-error">
+                  {/* State: Empty */}
+                  {quoteState === 'empty' && (
+                    <div className="ko-courier-status-empty" role="status">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#707a6c" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                      <span>Tidak ada layanan kurir untuk tujuan ini</span>
+                    </div>
+                  )}
+
+                  {/* State: Error */}
+                  {quoteState === 'error' && (
+                    <div className="ko-courier-status-error" role="alert">
                       <div className="ko-courier-status-error-msg">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="#ba1a1a">
                           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                         </svg>
-                        <span>{courierCalcError}</span>
+                        <span>{courierCalcError || 'Ongkos kirim tidak dapat dihitung. Coba lagi atau pilih Ambil di Toko.'}</span>
                       </div>
                       <div className="ko-courier-status-error-actions">
                         <button
                           type="button"
                           className="ko-courier-status-btn-retry"
-                          onClick={() => {
-                            setCourierCalcError('');
-                            setQuoteRetry((v) => v + 1);
-                          }}
+                          onClick={() => calculateQuote(destination?.id, items)}
                         >
                           Coba Lagi
                         </button>
                         <button
                           type="button"
                           className="ko-courier-status-btn-pickup"
-                          onClick={() => {
-                            setCourierCalcError('');
-                            changeFulfillmentMethod('ambil_di_toko');
-                          }}
+                          onClick={() => changeFulfillmentMethod('ambil_di_toko')}
                         >
                           Pilih Ambil di Toko
                         </button>
@@ -884,17 +660,100 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
-                  {!shippingQuoteLoading && !destination && !courierCalcError && (
+                  {/* State: Idle with warning */}
+                  {quoteState === 'idle' && courierWarning && (
+                    <div className="ko-courier-status-warning" role="alert" style={{ padding: '10px 14px', backgroundColor: '#fff8e1', border: '1px solid #ffe082', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#b78103' }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#b78103">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                      </svg>
+                      <span>{courierWarning}</span>
+                    </div>
+                  )}
+
+                  {/* State: Idle default */}
+                  {quoteState === 'idle' && !courierWarning && !destination && (
                     <div className="ko-courier-status-empty">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#707a6c" strokeWidth="2">
                         <circle cx="12" cy="12" r="10" />
                         <line x1="12" y1="16" x2="12" y2="12" />
                         <line x1="12" y1="8" x2="12.01" y2="8" />
                       </svg>
-                      <span>Pilih wilayah tujuan di atas untuk melihat tarif dan estimasi kurir.</span>
+                      <span>Pilih wilayah tujuan dan isi alamat, lalu tekan Cek Ongkos Kirim.</span>
                     </div>
                   )}
                 </div>
+
+                {/* 5. Daftar Layanan Kurir (Saat Sukses) */}
+                {quoteState === 'success' && shippingRates.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div className="font-label-lg text-label-lg text-on-surface mb-2 font-bold flex items-center gap-1">
+                      <span>Pilih Layanan Kurir</span>
+                      <span className="ko-input-star">*</span>
+                    </div>
+
+                    <div className={errors.layanan_kurir || errors.selected_rate_id ? 'ko-courier-error-wrap' : 'space-y-2'}>
+                      {shippingRates.map((rate) => {
+                        const isSelected = selectedRate?.id === rate.id || selectedRate?.kode === rate.kode;
+                        return (
+                          <label
+                            key={rate.id || rate.kode}
+                            className={`ko-courier-option-row ${isSelected ? 'selected' : ''}`}
+                            onClick={() => {
+                              selectRate(rate);
+                              if (errors.layanan_kurir || errors.selected_rate_id) {
+                                setErrors((prev) => ({
+                                  ...prev,
+                                  layanan_kurir: undefined,
+                                  selected_rate_id: undefined,
+                                }));
+                              }
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name="courier_service"
+                                value={rate.id || rate.kode}
+                                checked={isSelected}
+                                onChange={() => {
+                                  selectRate(rate);
+                                  if (errors.layanan_kurir || errors.selected_rate_id) {
+                                    setErrors((prev) => ({
+                                      ...prev,
+                                      layanan_kurir: undefined,
+                                      selected_rate_id: undefined,
+                                    }));
+                                  }
+                                }}
+                                className="ko-native-radio"
+                              />
+                              <div>
+                                <div className="font-semibold text-on-surface text-sm">
+                                  {rate.kurir} {rate.layanan}
+                                </div>
+                                <span className="text-xs text-on-surface-variant">
+                                  Estimasi: {rate.estimasi}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="font-bold text-primary text-base tabular-nums">
+                              {formatRupiah(rate.cost)}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {(errors.layanan_kurir || errors.selected_rate_id) && (
+                      <p className="ko-input-err-msg flex items-center gap-1" style={{ marginTop: 6 }} role="alert">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#ba1a1a" aria-hidden="true">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                        </svg>
+                        <span>{errors.layanan_kurir || errors.selected_rate_id}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -915,7 +774,7 @@ export default function CheckoutPage() {
               <span className="ko-summary-badge">{items.length} Item</span>
             </div>
 
-            {/* Daftar Produk Itemized (Clean Layout matching template) */}
+            {/* Daftar Produk Itemized */}
             <div className="ko-itemized-list">
               {items.map((it) => (
                 <div key={it.id} className="py-2 flex items-center justify-between gap-3 border-b border-surface-container-high/40 last:border-b-0">
@@ -943,13 +802,13 @@ export default function CheckoutPage() {
                 <div className="ko-checkout-calc-row">
                   <div className="flex flex-col">
                     <span>Berat Total Pesanan</span>
-                    <span className="text-xs text-on-surface-variant">
+                    <span className="text-xs text-on-surface-variant" style={{ fontSize: 11, color: '#707a6c' }}>
                       Berat produk dikalikan jumlah
                     </span>
                   </div>
                   <span className="font-semibold text-on-surface">
                     {shippingWeight === null
-                      ? shippingQuoteLoading ? 'Menghitung...' : 'Belum dihitung'
+                      ? quoteState === 'loading' ? 'Menghitung...' : 'Belum dihitung'
                       : formatWeight(shippingWeight)}
                   </span>
                 </div>
@@ -958,8 +817,8 @@ export default function CheckoutPage() {
                 <div className="flex flex-col">
                   <span>Ongkos Kirim</span>
                   {metode === 'kurir' && selectedRate && (
-                    <span className="text-xs text-on-surface-variant">
-                      {selectedRate.courier_name} {selectedRate.service}
+                    <span className="text-xs text-on-surface-variant" style={{ fontSize: 11, color: '#707a6c' }}>
+                      {selectedRate.kurir} {selectedRate.layanan} ({selectedRate.estimasi})
                     </span>
                   )}
                 </div>
@@ -968,7 +827,7 @@ export default function CheckoutPage() {
                     ? 'Rp 0 (Ambil di Toko)'
                     : selectedRate
                       ? formatRupiah(ongkir)
-                      : 'Rp 0 (Belum dipilih)'}
+                      : 'Belum dihitung'}
                 </span>
               </div>
 
@@ -982,43 +841,8 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Metode Pembayaran (Midtrans / COD) */}
-            <div className="ko-payment-options">
-              <strong className="font-bold text-on-surface">Pilih Metode Pembayaran</strong>
-              <label className="ko-payment-choice">
-                <input
-                  type="radio"
-                  name="metode_pembayaran"
-                  value="midtrans"
-                  checked={metodePembayaran === 'midtrans'}
-                  onChange={() => setMetodePembayaran('midtrans')}
-                  className="ko-native-radio"
-                />
-                <span>
-                  <strong>Midtrans</strong>
-                  <small>Transfer bank, QRIS, dan e-wallet melalui halaman pembayaran aman.</small>
-                </span>
-              </label>
-              {metode === 'kurir' && (
-                <label className="ko-payment-choice">
-                  <input
-                    type="radio"
-                    name="metode_pembayaran"
-                    value="cod"
-                    checked={metodePembayaran === 'cod'}
-                    onChange={() => setMetodePembayaran('cod')}
-                    className="ko-native-radio"
-                  />
-                  <span>
-                    <strong>COD (bayar tunai ke kurir)</strong>
-                    <small>Bayar pesanan saat kurir mengantarkannya ke alamat Anda.</small>
-                  </span>
-                </label>
-              )}
-            </div>
-
-            {/* Tombol Buat Pesanan & WhatsApp */}
-            <div className="ko-cta-btns">
+            {/* Tombol Buat Pesanan */}
+            <div className="ko-cta-btns" style={{ paddingTop: 8 }}>
               <button
                 type="submit"
                 className="ko-btn-create-order"
@@ -1035,17 +859,6 @@ export default function CheckoutPage() {
                     </svg>
                   </>
                 )}
-              </button>
-
-              <button
-                type="button"
-                className="ko-btn-wa-summary"
-                onClick={handleSendSummaryWhatsApp}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                <span>Kirim Ringkasan ke WhatsApp Toko</span>
               </button>
             </div>
           </div>
