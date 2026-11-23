@@ -520,6 +520,45 @@ export default function CheckoutPage() {
               </label>
             </div>
 
+            {metode === 'kurir' && (
+              <div className="ko-input-field" style={{ marginTop: 16 }}>
+                <div className="ko-input-label">
+                  Metode Pembayaran <span className="ko-input-star">*</span>
+                </div>
+                <div className="ko-pickup-choice-grid" role="radiogroup" aria-label="Metode pembayaran">
+                  <label
+                    className={`ko-pickup-selectable-card ${metodePembayaran === 'midtrans' ? 'selected' : 'unselected'}`}
+                    onClick={() => setMetodePembayaran('midtrans')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${metodePembayaran === 'midtrans' ? 'bg-primary ring-2 ring-primary-fixed' : 'border-2 border-outline'}`}>
+                        {metodePembayaran === 'midtrans' && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <div className="font-bold text-on-surface text-base">Midtrans Snap</div>
+                        <p className="ko-pickup-card-sub">QRIS, transfer bank, dan metode online lainnya.</p>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`ko-pickup-selectable-card ${metodePembayaran === 'cod' ? 'selected' : 'unselected'}`}
+                    onClick={() => setMetodePembayaran('cod')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${metodePembayaran === 'cod' ? 'bg-primary ring-2 ring-primary-fixed' : 'border-2 border-outline'}`}>
+                        {metodePembayaran === 'cod' && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <div className="font-bold text-on-surface text-base">COD</div>
+                        <p className="ko-pickup-card-sub">Bayar tunai langsung kepada kurir saat pesanan tiba.</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+
             {/* FORM KURIR PIHAK KETIGA */}
             {metode === 'kurir' && (
               <div className="ko-courier-fields-container" style={{ marginTop: 16 }}>
