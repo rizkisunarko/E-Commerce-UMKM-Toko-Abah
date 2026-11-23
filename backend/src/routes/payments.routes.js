@@ -30,7 +30,7 @@ function createPaymentsRoutes(db, paymentClient) {
   router.post('/midtrans/notification', async (req, res, next) => {
     if (!paymentClient.isNotificationConfigured()) {
       return res.status(503).json({
-        message: 'MIDTRANS_SIGNATURE_SECRET_KEY belum diatur pada backend/.env.',
+        message: 'MIDTRANS_SERVER_KEY belum diatur pada backend/.env.',
       });
     }
     const notification = req.body;

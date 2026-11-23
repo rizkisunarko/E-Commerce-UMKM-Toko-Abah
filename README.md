@@ -25,10 +25,9 @@ React (Vite), Node.js + Express, MySQL
    dan bila perlu `DB_HOST`/`DB_PORT`.
    Untuk tarif ongkir, isi `RAJAONGKIR_API_KEY` di `backend/.env` dengan key **Shipping Cost Sandbox**
    dari dashboard Komerce. Jangan menaruh key di frontend atau mengirimkannya ke Git.
-   Untuk pembayaran, isi `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, dan
-   `MIDTRANS_SIGNATURE_SECRET_KEY` dari dashboard Midtrans Sandbox. Gunakan Server Key aktif
-   dengan izin Snap Checkout Write; Signature Secret Key dipakai backend untuk memverifikasi webhook.
-   Simpan Server Key dan Signature Secret Key hanya di `backend/.env`; jangan kirim ke browser atau Git.
+   Untuk pembayaran, isi `MIDTRANS_SERVER_KEY` dan `MIDTRANS_CLIENT_KEY` dari dashboard Midtrans
+   Sandbox. Server Key dengan izin Snap Checkout Write juga digunakan backend untuk memverifikasi
+   signature webhook. Simpan Server Key hanya di `backend/.env`; jangan kirim ke browser atau Git.
 3. Buat database dan tabel dari dump SQL (hanya untuk database kosong):
    ```bash
    npm run db:setup

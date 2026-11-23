@@ -32,8 +32,8 @@ test('Snap client menggunakan endpoint Sandbox dan autentikasi Server Key', asyn
   assert.equal(client.getClientKey(), 'sandbox-client-key');
 });
 
-test('Snap client memverifikasi signature notifikasi dengan Signature Secret Key', () => {
-  const signatureSecretKey = 'sandbox-signature-secret-key';
+test('Snap client memverifikasi signature notifikasi dengan Server Key Midtrans', () => {
+  const serverKey = 'sandbox-server-key';
   const notification = {
     order_id: 'TA-123-attempt',
     status_code: '200',
@@ -41,13 +41,12 @@ test('Snap client memverifikasi signature notifikasi dengan Signature Secret Key
   };
   notification.signature_key = createHash('sha512')
     .update(
-      `${notification.order_id}${notification.status_code}${notification.gross_amount}${signatureSecretKey}`,
+      `${notification.order_id}${notification.status_code}${notification.gross_amount}${serverKey}`,
     )
     .digest('hex');
   const client = createMidtransSnapClient({
-    serverKey: 'sandbox-server-key',
+    serverKey,
     clientKey: 'sandbox-client-key',
-    signatureSecretKey,
   });
 
   assert.equal(client.verifyNotification(notification), true);
@@ -55,9 +54,8 @@ test('Snap client memverifikasi signature notifikasi dengan Signature Secret Key
   assert.equal(client.verifyNotification({ ...notification, signature_key: 'invalid' }), false);
 });
 
-test('Snap notification requires a configured Signature Secret Key', () => {
+test('Snap notification requires a configured Server Key', () => {
   const client = createMidtransSnapClient({
-    serverKey: 'sandbox-server-key',
     clientKey: 'sandbox-client-key',
   });
 
