@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { orderService } from '../services/orderService';
+import { loadMidtransSnap } from '../services/midtrans';
 import { formatRupiah } from '../utils/format';
 import QrisModal from '../components/QrisModal';
 import './OrderPage.css';
@@ -21,24 +22,6 @@ function getProductThumbnail(nama = '') {
   if (n.includes('mie') || n.includes('sedap') || n.includes('indomie')) return mieImg;
   if (n.includes('kopi') || n.includes('kapal')) return kopiImg;
   return null;
-}
-
-function loadMidtransSnap(clientKey) {
-  return new Promise((resolve, reject) => {
-    if (window.snap) return resolve(window.snap);
-    const scriptId = 'midtrans-snap-script';
-    let script = document.getElementById(scriptId);
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
-      script.setAttribute('data-client-key', clientKey);
-      script.async = true;
-      document.body.appendChild(script);
-    }
-    script.onload = () => resolve(window.snap);
-    script.onerror = () => reject(new Error('Gagal memuat Snap Midtrans. Pastikan koneksi internet aktif.'));
-  });
 }
 
 export default function OrderPage() {
@@ -125,6 +108,17 @@ export default function OrderPage() {
     });
   }
 
+  function refreshOrderStatus() {
+    orderService
+      .get(nomor)
+      .then((res) => {
+        if (!res.data) return;
+        setOrder(res.data);
+        setIsPaid(res.data.status_pembayaran === 'berhasil');
+      })
+      .catch(() => {});
+  }
+
   async function handlePayWithSnap() {
     if (!order?.nomor_pesanan) return;
     setPayError('');
@@ -133,7 +127,7 @@ export default function OrderPage() {
     try {
       const res = await orderService.createPayment(order.nomor_pesanan);
       const snapToken = res.data?.snap_token;
-      const clientKey = res.data?.client_key || 'Mid-client-7JXD3ACYuFZBZqTh';
+      const clientKey = res.data?.client_key;
 
       if (!snapToken) {
         throw new Error('Gagal mendapatkan token pembayaran dari server.');
@@ -146,6 +140,10 @@ export default function OrderPage() {
         return;
       }
 
+      if (!clientKey) {
+        throw new Error('Konfigurasi Client Key Midtrans tidak tersedia dari server.');
+      }
+
       const snap = await loadMidtransSnap(clientKey);
       if (!snap || typeof snap.pay !== 'function') {
         throw new Error('Layanan Midtrans Snap tidak dapat dimuat.');
@@ -153,15 +151,10 @@ export default function OrderPage() {
 
       snap.pay(snapToken, {
         onSuccess: () => {
-          handlePaymentSuccess();
-          orderService.get(nomor).then((r) => {
-            if (r.data) setOrder(r.data);
-          }).catch(() => {});
+          refreshOrderStatus();
         },
         onPending: () => {
-          orderService.get(nomor).then((r) => {
-            if (r.data) setOrder(r.data);
-          }).catch(() => {});
+          refreshOrderStatus();
         },
         onError: () => {
           setPayError('Pembayaran gagal diproses oleh gateway.');
