@@ -485,6 +485,10 @@ test('notifikasi Snap terverifikasi menandai pembayaran lunas dan pesanan dipros
   assert.equal(response.status, 200);
   assert.equal(state.payments[0].status_pembayaran, 'berhasil');
   assert.equal(state.transactions[0].status_transaksi, 'diproses');
+
+  const orderResponse = await fetch(`${baseUrl}/orders/${order.nomor_pesanan}`);
+  assert.equal(orderResponse.status, 200);
+  assert.equal((await orderResponse.json()).data.status_pembayaran, 'berhasil');
 });
 
 test('notifikasi Midtrans ditolak jika tanda tangan tidak valid atau nominal berbeda', async (t) => {

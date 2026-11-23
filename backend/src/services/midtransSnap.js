@@ -13,19 +13,14 @@ class MidtransError extends Error {
 function createMidtransSnapClient({
   serverKey = () => process.env.MIDTRANS_SERVER_KEY,
   clientKey = () => process.env.MIDTRANS_CLIENT_KEY,
-  signatureSecretKey = () => process.env.MIDTRANS_SIGNATURE_SECRET_KEY,
   fetchImpl = globalThis.fetch,
 } = {}) {
   function getKeys() {
     const server = typeof serverKey === 'function' ? serverKey() : serverKey;
     const client = typeof clientKey === 'function' ? clientKey() : clientKey;
-    const signature = typeof signatureSecretKey === 'function'
-      ? signatureSecretKey()
-      : signatureSecretKey;
     return {
       server: typeof server === 'string' ? server.trim() : '',
       client: typeof client === 'string' ? client.trim() : '',
-      signature: typeof signature === 'string' ? signature.trim() : '',
     };
   }
 
@@ -35,7 +30,7 @@ function createMidtransSnapClient({
   }
 
   function isNotificationConfigured() {
-    return Boolean(getKeys().signature);
+    return Boolean(getKeys().server);
   }
 
   async function createTransaction(parameter) {
@@ -98,8 +93,8 @@ function createMidtransSnapClient({
   }
 
   function verifyNotification(notification) {
-    const { signature: signatureSecret } = getKeys();
-    if (!signatureSecret || !notification || typeof notification !== 'object') return false;
+    const { server } = getKeys();
+    if (!server || !notification || typeof notification !== 'object') return false;
     const {
       order_id: orderId,
       status_code: statusCode,
@@ -113,7 +108,7 @@ function createMidtransSnapClient({
     }
 
     const expected = createHash('sha512')
-      .update(`${orderId}${statusCode}${grossAmount}${signatureSecret}`)
+      .update(`${orderId}${statusCode}${grossAmount}${server}`)
       .digest();
     let received;
     try {
