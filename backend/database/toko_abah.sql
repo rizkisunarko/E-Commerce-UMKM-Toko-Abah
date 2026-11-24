@@ -399,7 +399,7 @@ CREATE TABLE `transaksi` (
   `subtotal_produk` decimal(12,2) NOT NULL DEFAULT '0.00',
   `ongkos_kirim` decimal(12,2) NOT NULL DEFAULT '0.00',
   `total_bayar` decimal(12,2) NOT NULL DEFAULT '0.00',
-  `status_transaksi` enum('menunggu','diproses','siap_diambil','siap_dikirim','selesai','batal') COLLATE utf8mb4_unicode_ci DEFAULT 'menunggu',
+  `status_transaksi` enum('menunggu','dibayar','diproses','siap_diambil','siap_dikirim','selesai','batal') COLLATE utf8mb4_unicode_ci DEFAULT 'menunggu',
   `tanggal_transaksi` datetime DEFAULT CURRENT_TIMESTAMP,
   `catatan` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
