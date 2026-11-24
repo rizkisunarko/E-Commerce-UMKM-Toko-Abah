@@ -15,6 +15,7 @@ import ProductEditPage from './pages/ProductEditPage';
 import StockPage from './pages/StockPage';
 import KasirPage from './pages/KasirPage';
 import RiwayatPage from './pages/RiwayatPage';
+import ReportPage from './pages/ReportPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Halaman awal: pelanggan ke katalog, staf yang sudah login ke daftar produk
@@ -83,6 +84,16 @@ export default function App() {
           element={
             <ProtectedRoute roles={['admin']}>
               <RiwayatPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* PPL-13.2: Halaman laporan penjualan (hanya admin) */}
+        <Route
+          path="admin/laporan"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <ReportPage />
             </ProtectedRoute>
           }
         />

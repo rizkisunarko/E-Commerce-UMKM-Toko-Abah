@@ -713,6 +713,97 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
   if (!user) return reply(401, { message: 'Silakan login terlebih dahulu' });
   const isAdmin = user.role === 'admin';
 
+  // Laporan Produk Terlaris (PPL-13)
+  if (method === 'GET' && path === '/reports/top-products') {
+    if (!isAdmin) {
+      return reply(403, { message: 'Akses ditolak' });
+    }
+
+    const { period, from, to } = query;
+    const VALID_PERIODS = ['24h', '7d', 'custom'];
+
+    if (!period || !VALID_PERIODS.includes(period)) {
+      return reply(422, {
+        message: 'Data tidak valid',
+        errors: { period: 'Periode tidak valid' },
+      });
+    }
+
+    let fromIso;
+    let toIso;
+
+    if (period === 'custom') {
+      const errors = {};
+      const isValidDate = (v) =>
+        typeof v === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(v) &&
+        !Number.isNaN(new Date(v).getTime());
+
+      if (!isValidDate(from)) errors.from = 'Tanggal awal tidak valid';
+      if (!isValidDate(to)) errors.to = 'Tanggal akhir tidak valid';
+
+      if (!errors.from && !errors.to) {
+        if (from > to) {
+          errors.from = 'Tanggal awal tidak boleh setelah tanggal akhir';
+        } else {
+          const fromMs = new Date(`${from}T00:00:00.000Z`).getTime();
+          const toMs = new Date(`${to}T00:00:00.000Z`).getTime();
+          if (Math.round((toMs - fromMs) / (24 * 3600 * 1000)) > 366) {
+            errors.to = 'Rentang tanggal maksimal 366 hari';
+          }
+        }
+      }
+
+      if (Object.keys(errors).length > 0) {
+        return reply(422, { message: 'Data tidak valid', errors });
+      }
+
+      const [fy, fm, fd] = from.split('-').map(Number);
+      const [ty, tm, td] = to.split('-').map(Number);
+      fromIso = new Date(Date.UTC(fy, fm - 1, fd) - 7 * 3600 * 1000).toISOString();
+      toIso = new Date(Date.UTC(ty, tm - 1, td, 23, 59, 59) - 7 * 3600 * 1000).toISOString();
+
+      // Periode tanpa data penjualan (contoh: rentang tahun lama)
+      if (to < '2026-11-01' || from > '2026-12-31') {
+        return reply(200, {
+          data: [],
+          periode: { from: fromIso, to: toIso },
+        });
+      }
+    } else if (period === '7d') {
+      const now = new Date();
+      fromIso = new Date(now.getTime() - 6 * 24 * 3600 * 1000).toISOString();
+      toIso = now.toISOString();
+    } else if (period === '24h') {
+      const now = new Date();
+      fromIso = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
+      toIso = now.toISOString();
+    }
+
+    let mockTopProducts = [
+      { product_id: 1, nama: 'Beras 5 kg', jumlah_terjual: 42 },
+      { product_id: 2, nama: 'Minyak Goreng 1 L', jumlah_terjual: 35 },
+      { product_id: 3, nama: 'Gula Pasir 1 kg', jumlah_terjual: 28 },
+      { product_id: 4, nama: 'Telur Ayam 1 kg', jumlah_terjual: 19 },
+      { product_id: 5, nama: 'Mie Instan', jumlah_terjual: 15 },
+      { product_id: 6, nama: 'Kopi Sachet', jumlah_terjual: 11 },
+    ];
+
+    if (period === '24h') {
+      mockTopProducts = [
+        { product_id: 2, nama: 'Minyak Goreng 1 L', jumlah_terjual: 12 },
+        { product_id: 1, nama: 'Beras 5 kg', jumlah_terjual: 9 },
+        { product_id: 3, nama: 'Gula Pasir 1 kg', jumlah_terjual: 6 },
+        { product_id: 5, nama: 'Mie Instan', jumlah_terjual: 4 },
+      ];
+    }
+
+    return reply(200, {
+      data: mockTopProducts,
+      periode: { from: fromIso, to: toIso },
+    });
+  }
+
   // Manajemen Pesanan Admin & Pegawai (PPL-12)
   if (method === 'GET' && path === '/orders') {
     const { status, search, page = '1', limit = '20' } = query;
