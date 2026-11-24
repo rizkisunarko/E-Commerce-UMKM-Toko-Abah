@@ -71,8 +71,14 @@ menggunakan token dari total pesanan yang dihitung server, sementara status luna
 setelah notifikasi Midtrans dengan signature dan nominal yang valid diterima. Atur URL notifikasi
 pada dashboard Midtrans ke
 `https://<alamat-backend-publik>/api/payments/midtrans/notification`; server lokal `localhost`
-tidak dapat menerima webhook tanpa URL publik. `FRONTEND_URL` (default `http://localhost:5173`)
-dipakai sebagai URL kembali setelah metode pembayaran berbasis redirect selesai.
+tidak dapat menerima webhook tanpa URL publik. Untuk pengujian lokal, jalankan backend lalu jalankan
+`npm run tunnel` dari folder `backend` untuk memperoleh URL LocalTunnel sementara, atau
+`npm run tunnel:ngrok` jika ngrok sudah terpasang dan dikonfigurasi. Tambahkan path
+`/api/payments/midtrans/notification` ke URL publik yang diberikan tunnel dan daftarkan sebagai URL
+notifikasi di dashboard Midtrans Sandbox. URL tunnel berubah atau tidak aktif setelah proses tunnel
+berhenti. Endpoint callback tidak memerlukan login, tetapi hanya memproses notifikasi dengan signature
+dan nominal valid. `FRONTEND_URL` (default `http://localhost:5173`) dipakai sebagai URL kembali setelah
+metode pembayaran berbasis redirect selesai.
 
 ### Reset password admin
 
