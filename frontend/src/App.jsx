@@ -8,6 +8,7 @@ import CatalogPage from './pages/CatalogPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderPage from './pages/OrderPage';
+import AdminOrdersPage from './pages/AdminOrdersPage';
 import ProductListPage from './pages/ProductListPage';
 import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
@@ -46,6 +47,9 @@ export default function App() {
         }
       >
         <Route path="produk" element={<ProductListPage />} />
+
+        {/* PPL-12.2: Halaman daftar dan status pesanan (admin dan pegawai) */}
+        <Route path="admin/pesanan" element={<AdminOrdersPage />} />
 
         {/* PPL-01.2: Halaman form tambah produk */}
         <Route

@@ -4895,3 +4895,560 @@ th {
 .product-alert-close:hover {
   background: rgba(46, 125, 50, 0.12);
 }
+
+
+/* ==========================================================================
+   PPL-12.2: Halaman Daftar dan Status Pesanan (Admin & Pegawai)
+   ========================================================================== */
+
+.ord-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.ord-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.ord-title {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ord-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Alert Notification */
+.ord-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ord-alert-success {
+  background: var(--success-bg);
+  color: var(--primary);
+  border: 1px solid #b7e1cd;
+}
+
+.ord-alert-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid #f5c6cb;
+}
+
+.ord-alert-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* Toolbar & Filter Tabs */
+.ord-toolbar-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ord-search-form {
+  display: flex;
+  gap: 8px;
+}
+
+.ord-search-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.ord-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.ord-search-input {
+  width: 100%;
+  padding: 9px 36px 9px 38px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.15s ease;
+}
+
+.ord-search-input:focus {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
+.ord-search-clear-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ord-tabs-container {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.ord-tabs-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ord-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 20px;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.ord-tab-btn:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.ord-tab-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+/* State Box (Loading / Empty / Error) */
+.ord-state-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.ord-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: ordSpin 0.8s linear infinite;
+}
+
+@keyframes ordSpin {
+  to { transform: rotate(360deg); }
+}
+
+.ord-empty-icon {
+  color: var(--muted);
+}
+
+.ord-empty-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ord-error-msg {
+  color: var(--danger);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Table View */
+.ord-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.ord-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.ord-table th {
+  background: var(--bg);
+  color: var(--muted);
+  font-weight: 600;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.ord-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.ord-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ord-table tr:hover {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.ord-td-code {
+  font-family: monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ord-customer-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.ord-td-date {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.ord-td-total {
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.ord-td-actions {
+  white-space: nowrap;
+}
+
+/* Method Tag */
+.ord-method-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ord-method-tag.pickup {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.ord-method-tag.delivery {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+/* Payment Status Badge */
+.ord-pay-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.ord-pay-success {
+  background: var(--success-bg);
+  color: var(--primary);
+}
+
+.ord-pay-pending {
+  background: #fff8e1;
+  color: #b78103;
+}
+
+.ord-pay-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.ord-pay-default {
+  background: #eceff1;
+  color: #455a64;
+}
+
+/* Status Badges */
+.ord-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ord-badge-menunggu {
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffe0b2;
+}
+
+.ord-badge-dibayar {
+  background: #e8f0fe;
+  color: #1a73e8;
+  border: 1px solid #d2e3fc;
+}
+
+.ord-badge-diproses {
+  background: #f3e8fd;
+  color: #7b1fa2;
+  border: 1px solid #e1bee7;
+}
+
+.ord-badge-siap {
+  background: #e0f2f1;
+  color: #00796b;
+  border: 1px solid #b2dfdb;
+}
+
+.ord-badge-selesai {
+  background: var(--success-bg);
+  color: var(--primary);
+  border: 1px solid #c8e6c9;
+}
+
+.ord-badge-batal {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid #ffcdd2;
+}
+
+.ord-badge-default {
+  background: #eceff1;
+  color: #546e7a;
+}
+
+/* Action Buttons */
+.ord-actions-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ord-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ord-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ord-btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.ord-btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.ord-btn-success {
+  background: #2e7d32;
+  color: #ffffff;
+}
+
+.ord-btn-success:hover:not(:disabled) {
+  background: #1b5e20;
+}
+
+.ord-btn-secondary {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.ord-btn-secondary:hover:not(:disabled) {
+  background: #e8ebe8;
+}
+
+.ord-btn-danger {
+  background: #fff;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.ord-btn-danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+.ord-btn-disabled {
+  background: #f0f0f0;
+  color: #9e9e9e;
+  border-color: #e0e0e0;
+}
+
+.ord-text-muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Mobile Cards View */
+.ord-cards-mobile {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ord-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.ord-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.ord-card-order-num {
+  font-family: monospace;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.ord-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.ord-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ord-card-label {
+  color: var(--muted);
+}
+
+.ord-card-val {
+  color: var(--text);
+  font-weight: 500;
+  text-align: right;
+}
+
+.ord-card-total-row {
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.ord-card-total-val {
+  font-size: 15px;
+  color: var(--primary);
+}
+
+.ord-card-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Pagination */
+.ord-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ord-pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Responsive Breakpoints (Mobile 360px support) */
+@media (max-width: 768px) {
+  .ord-page {
+    padding: 14px 10px;
+  }
+
+  .ord-table-card {
+    display: none;
+  }
+
+  .ord-cards-mobile {
+    display: flex;
+  }
+
+  .ord-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .ord-search-form {
+    flex-direction: column;
+  }
+
+  .ord-pagination {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+}
