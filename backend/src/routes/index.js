@@ -21,7 +21,7 @@ function createRoutes(
   router.use('/auth', createAuthRoutes(db, jwtSecret));
   router.use('/cart', createCartRoutes(db));
   router.use('/payments', createPaymentsRoutes(db, paymentClient));
-  router.use('/orders', createOrdersRoutes(db, shippingClient, paymentClient));
+  router.use('/orders', createOrdersRoutes(db, jwtSecret, shippingClient, paymentClient));
   router.use('/shipping', createShippingRoutes(db, shippingClient));
   router.use('/', createProductsRoutes(db, jwtSecret));
   router.use('/transactions', createTransactionsRoutes(db, jwtSecret));

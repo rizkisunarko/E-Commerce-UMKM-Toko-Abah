@@ -1,5 +1,6 @@
 const express = require('express');
 const { randomBytes } = require('node:crypto');
+const { createAuthenticate, authorizeRoles } = require('../middleware/auth');
 const parseGram = require('../utils/weight');
 const { calculateTotalWeight } = parseGram;
 
@@ -117,16 +118,34 @@ function moneyInCents(value) {
     : null;
 }
 
-function orderStatusLabel(status) {
-  const labels = {
-    menunggu: 'Menunggu Pembayaran',
-    diproses: 'Diproses',
-    siap_diambil: 'Siap Diambil',
-    siap_dikirim: 'Siap Dikirim',
-    selesai: 'Selesai',
-    batal: 'Dibatalkan',
-  };
-  return labels[status] || status;
+const STATUS_CANONICAL = {
+  menunggu: 'menunggu',
+  'menunggu pembayaran': 'menunggu',
+  dibayar: 'dibayar',
+  diproses: 'diproses',
+  siap: 'siap',
+  'siap diambil': 'siap_diambil',
+  'siap dikirim': 'siap_dikirim',
+  'siap diambil/dikirim': 'siap',
+  siap_diambil: 'siap_diambil',
+  siap_dikirim: 'siap_dikirim',
+  siap_diambil_dikirim: 'siap',
+  selesai: 'selesai',
+  dibatalkan: 'batal',
+  batal: 'batal',
+};
+
+function orderStatusLabel(status, metodePenerimaan, statusPembayaran) {
+  if (status === 'batal') return 'Dibatalkan';
+  if (status === 'selesai') return 'Selesai';
+  if (status === 'siap_dikirim') return 'Siap Dikirim';
+  if (status === 'siap_diambil') return 'Siap Diambil';
+  if (status === 'siap_diambil_dikirim') {
+    return metodePenerimaan === 'kurir' ? 'Siap Dikirim' : 'Siap Diambil';
+  }
+  if (status === 'diproses') return 'Diproses';
+  if (status === 'dibayar' || statusPembayaran === 'berhasil') return 'Dibayar';
+  return 'Menunggu Pembayaran';
 }
 
 function formatOrder(row, items) {
@@ -136,10 +155,10 @@ function formatOrder(row, items) {
   return {
     id: Number(row.id),
     nomor_pesanan: row.nomor_pesanan,
-    status: orderStatusLabel(row.status),
+    status: orderStatusLabel(row.status, row.metode_penerimaan, row.status_pembayaran),
     status_pembayaran: row.status_pembayaran || null,
     metode_pembayaran: row.metode_pembayaran === 'cod' ? 'cod' : 'midtrans',
-    tanggal: row.tanggal,
+    tanggal: row.tanggal instanceof Date ? row.tanggal.toISOString() : new Date(row.tanggal).toISOString(),
     nama_pemesan: row.nama_pemesan,
     no_hp: row.no_hp,
     catatan: row.catatan || '',
@@ -162,8 +181,358 @@ function formatOrder(row, items) {
   };
 }
 
-function createOrdersRoutes(db, shippingClient, paymentClient) {
+function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment) {
+  let jwtSecret;
+  let shippingClient;
+  let paymentClient;
+  if (typeof jwtSecretOrShipping === 'string') {
+    jwtSecret = jwtSecretOrShipping;
+    shippingClient = maybeShipping;
+    paymentClient = maybePayment;
+  } else {
+    shippingClient = jwtSecretOrShipping;
+    paymentClient = maybeShipping;
+  }
+
   const router = express.Router();
+  const authenticate = typeof jwtSecret === 'string'
+    ? createAuthenticate(db, jwtSecret)
+    : (req, res, next) => next();
+
+  router.get(
+    '/',
+    authenticate,
+    authorizeRoles('admin', 'pegawai'),
+    async (req, res, next) => {
+      try {
+        const { status, search } = req.query;
+        let page = Number.parseInt(req.query.page, 10);
+        if (!Number.isInteger(page) || page < 1) page = 1;
+        let limit = Number.parseInt(req.query.limit, 10);
+        if (!Number.isInteger(limit) || limit < 1) limit = 20;
+        if (limit > 100) limit = 100;
+
+        const conditions = ["t.jenis_transaksi = 'online'"];
+        const params = [];
+
+        if (status !== undefined && status !== null && String(status).trim() !== '') {
+          const raw = String(status).trim().toLowerCase();
+          if (raw === 'semua') {
+            // No filter
+          } else if (!(raw in STATUS_CANONICAL)) {
+            return res.status(422).json({
+              message: 'Status pesanan tidak valid',
+              errors: { status: 'Status tidak dikenal' },
+            });
+          } else {
+            const mapped = STATUS_CANONICAL[raw];
+            if (mapped === 'menunggu') {
+              conditions.push("t.status_transaksi = 'menunggu' AND (pb.status_pembayaran IS NULL OR pb.status_pembayaran <> 'berhasil')");
+            } else if (mapped === 'dibayar') {
+              conditions.push("(t.status_transaksi = 'dibayar' OR (t.status_transaksi = 'menunggu' AND pb.status_pembayaran = 'berhasil'))");
+            } else if (mapped === 'diproses') {
+              conditions.push("t.status_transaksi = 'diproses'");
+            } else if (mapped === 'siap') {
+              conditions.push("t.status_transaksi IN ('siap_diambil', 'siap_dikirim', 'siap_diambil_dikirim')");
+            } else if (mapped === 'siap_diambil') {
+              conditions.push("(t.status_transaksi = 'siap_diambil' OR (t.status_transaksi = 'siap_diambil_dikirim' AND t.metode_penerimaan = 'pickup'))");
+            } else if (mapped === 'siap_dikirim') {
+              conditions.push("(t.status_transaksi = 'siap_dikirim' OR (t.status_transaksi = 'siap_diambil_dikirim' AND t.metode_penerimaan = 'kurir'))");
+            } else if (mapped === 'selesai') {
+              conditions.push("t.status_transaksi = 'selesai'");
+            } else if (mapped === 'batal') {
+              conditions.push("t.status_transaksi = 'batal'");
+            }
+          }
+        }
+
+        if (typeof search === 'string' && search.trim() !== '') {
+          conditions.push('(t.kode_transaksi LIKE ? OR t.nama_pelanggan LIKE ?)');
+          const term = `%${search.trim()}%`;
+          params.push(term, term);
+        }
+
+        const whereSql = conditions.join(' AND ');
+        const offset = (page - 1) * limit;
+
+        const countQuery = `
+          SELECT COUNT(DISTINCT t.id_transaksi) AS total
+          FROM transaksi t
+          LEFT JOIN (
+            SELECT p1.id_transaksi, p1.status_pembayaran
+            FROM pembayaran p1
+            INNER JOIN (
+              SELECT id_transaksi, MAX(id_pembayaran) AS max_id
+              FROM pembayaran
+              GROUP BY id_transaksi
+            ) p2 ON p1.id_pembayaran = p2.max_id
+          ) pb ON pb.id_transaksi = t.id_transaksi
+          WHERE ${whereSql}
+        `;
+        const [countRows] = await db.query(countQuery, params);
+        const total = Number(countRows[0]?.total || 0);
+
+        const listQuery = `
+          SELECT t.id_transaksi AS id, t.kode_transaksi AS nomor_pesanan,
+                 t.nama_pelanggan AS nama_pemesan,
+                 t.tanggal_transaksi AS tanggal,
+                 t.total_bayar AS total,
+                 t.metode_penerimaan,
+                 t.status_transaksi,
+                 pb.status_pembayaran
+          FROM transaksi t
+          LEFT JOIN (
+            SELECT p1.id_transaksi, p1.status_pembayaran
+            FROM pembayaran p1
+            INNER JOIN (
+              SELECT id_transaksi, MAX(id_pembayaran) AS max_id
+              FROM pembayaran
+              GROUP BY id_transaksi
+            ) p2 ON p1.id_pembayaran = p2.max_id
+          ) pb ON pb.id_transaksi = t.id_transaksi
+          WHERE ${whereSql}
+          ORDER BY t.tanggal_transaksi DESC, t.id_transaksi DESC
+          LIMIT ? OFFSET ?
+        `;
+        const [rows] = await db.query(listQuery, [...params, limit, offset]);
+
+        const data = rows.map((row) => ({
+          nomor_pesanan: row.nomor_pesanan,
+          nama_pemesan: row.nama_pemesan,
+          tanggal: row.tanggal instanceof Date ? row.tanggal.toISOString() : new Date(row.tanggal).toISOString(),
+          total: Math.round(Number(row.total)),
+          metode_penerimaan: row.metode_penerimaan === 'kurir' ? 'kurir' : 'ambil_di_toko',
+          status_pembayaran: row.status_pembayaran === 'berhasil' ? 'dibayar' : (row.status_pembayaran || 'menunggu'),
+          status: orderStatusLabel(row.status_transaksi, row.metode_penerimaan, row.status_pembayaran),
+        }));
+
+        return res.json({
+          data,
+          meta: { page, limit, total },
+        });
+      } catch (error) {
+        return next(error);
+      }
+    },
+  );
+
+  router.patch(
+    '/:nomor/status',
+    authenticate,
+    authorizeRoles('admin', 'pegawai'),
+    async (req, res, next) => {
+      const rawStatus = typeof req.body?.status === 'string' ? req.body.status.trim() : '';
+      if (!rawStatus) {
+        return res.status(422).json({
+          message: 'Status pesanan tidak valid',
+          errors: { status: 'Status wajib diisi' },
+        });
+      }
+
+      const normalized = rawStatus.toLowerCase();
+      if (!(normalized in STATUS_CANONICAL)) {
+        return res.status(422).json({
+          message: 'Status pesanan tidak valid',
+          errors: { status: 'Status tidak dikenal' },
+        });
+      }
+
+      const targetAction = STATUS_CANONICAL[normalized];
+      if (targetAction === 'menunggu' || targetAction === 'dibayar') {
+        return res.status(422).json({
+          message: 'Status Menunggu Pembayaran dan Dibayar tidak boleh diset lewat endpoint ini',
+        });
+      }
+
+      if (req.user.role === 'pegawai' && (targetAction === 'selesai' || targetAction === 'batal')) {
+        return res.status(403).json({ message: 'Akses ditolak' });
+      }
+
+      let connection;
+      let transactionStarted = false;
+      try {
+        connection = typeof db.getConnection === 'function' ? await db.getConnection() : db;
+        if (typeof connection.beginTransaction !== 'function') {
+          throw new Error('Koneksi database tidak mendukung transaksi atomik');
+        }
+        await connection.beginTransaction();
+        transactionStarted = true;
+
+        const [orders] = await connection.query(
+          `SELECT t.id_transaksi AS id, t.kode_transaksi AS nomor_pesanan,
+                  t.status_transaksi AS status, t.tanggal_transaksi AS tanggal,
+                  t.nama_pelanggan AS nama_pemesan, t.no_telepon AS no_hp,
+                  t.catatan, t.metode_penerimaan,
+                  t.alamat_pelanggan AS alamat_lengkap,
+                  t.subtotal_produk AS subtotal, t.ongkos_kirim AS ongkir,
+                  t.total_bayar AS total, p.wilayah_tujuan AS wilayah,
+                  p.layanan_kurir,
+                  (SELECT pb.status_pembayaran
+                   FROM pembayaran pb
+                   WHERE pb.id_transaksi = t.id_transaksi
+                   ORDER BY pb.id_pembayaran DESC
+                   LIMIT 1) AS status_pembayaran,
+                  (SELECT pb.metode_pembayaran
+                   FROM pembayaran pb
+                   WHERE pb.id_transaksi = t.id_transaksi
+                   ORDER BY pb.id_pembayaran DESC
+                   LIMIT 1) AS metode_pembayaran
+           FROM transaksi t
+           LEFT JOIN pengiriman p ON p.id_transaksi = t.id_transaksi
+           WHERE t.kode_transaksi = ? AND t.jenis_transaksi = 'online'
+           FOR UPDATE`,
+          [req.params.nomor],
+        );
+
+        if (!orders.length) {
+          await connection.rollback();
+          transactionStarted = false;
+          return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
+        }
+
+        const order = orders[0];
+        let currentEffective = order.status;
+        if (currentEffective === 'menunggu' && order.status_pembayaran === 'berhasil') {
+          currentEffective = 'dibayar';
+        }
+
+        if (currentEffective === 'selesai') {
+          await connection.rollback();
+          transactionStarted = false;
+          return res.status(422).json({
+            message: 'Pesanan yang sudah selesai tidak dapat diubah statusnya',
+          });
+        }
+        if (currentEffective === 'batal') {
+          await connection.rollback();
+          transactionStarted = false;
+          return res.status(422).json({
+            message: 'Pesanan yang sudah dibatalkan tidak dapat diubah statusnya',
+          });
+        }
+
+        if (currentEffective === 'menunggu') {
+          if (targetAction === 'diproses') {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(422).json({ message: 'Pesanan belum dibayar' });
+          }
+          if (targetAction !== 'batal') {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(422).json({ message: 'Transisi status tidak valid' });
+          }
+        } else if (currentEffective === 'dibayar') {
+          if (targetAction !== 'diproses' && targetAction !== 'batal') {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(422).json({ message: 'Transisi status tidak valid' });
+          }
+        } else if (currentEffective === 'diproses') {
+          if (targetAction !== 'siap' && targetAction !== 'siap_diambil' && targetAction !== 'siap_dikirim' && targetAction !== 'batal') {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(422).json({ message: 'Transisi status tidak valid' });
+          }
+        } else if (currentEffective === 'siap_diambil' || currentEffective === 'siap_dikirim' || currentEffective === 'siap_diambil_dikirim') {
+          if (targetAction !== 'selesai' && targetAction !== 'batal') {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(422).json({ message: 'Transisi status tidak valid' });
+          }
+        }
+
+        let nextDbStatus = targetAction;
+        if (targetAction === 'siap') {
+          nextDbStatus = order.metode_penerimaan === 'kurir' ? 'siap_dikirim' : 'siap_diambil';
+        }
+
+        if (targetAction === 'batal') {
+          const hadStockDeducted = (
+            currentEffective === 'dibayar' ||
+            currentEffective === 'diproses' ||
+            currentEffective === 'siap_diambil' ||
+            currentEffective === 'siap_dikirim' ||
+            currentEffective === 'siap_diambil_dikirim'
+          );
+
+          if (hadStockDeducted) {
+            const [items] = await connection.query(
+              'SELECT id_produk, jumlah FROM detail_transaksi WHERE id_transaksi = ?',
+              [order.id],
+            );
+
+            for (const item of items) {
+              const [productRows] = await connection.query(
+                'SELECT id_produk, jumlah_stok FROM produk WHERE id_produk = ? FOR UPDATE',
+                [item.id_produk],
+              );
+              if (productRows.length) {
+                const stockBefore = Number(productRows[0].jumlah_stok);
+                const stockAfter = stockBefore + Number(item.jumlah);
+                await connection.query(
+                  `UPDATE produk
+                   SET jumlah_stok = ?, status_produk = 'tersedia', updated_at = CURRENT_TIMESTAMP
+                   WHERE id_produk = ?`,
+                  [stockAfter, item.id_produk],
+                );
+                await connection.query(
+                  `INSERT INTO riwayat_stok (
+                     id_produk, id_admin, jenis_perubahan, jumlah, stok_sebelum, stok_sesudah, keterangan
+                   ) VALUES (?, ?, 'masuk', ?, ?, ?, ?)`,
+                  [
+                    item.id_produk,
+                    req.user.role === 'admin' ? req.user.id : null,
+                    Number(item.jumlah),
+                    stockBefore,
+                    stockAfter,
+                    `Pengembalian stok pesanan dibatalkan ${order.nomor_pesanan}`,
+                  ],
+                );
+              }
+            }
+          }
+        }
+
+        await connection.query(
+          'UPDATE transaksi SET status_transaksi = ? WHERE id_transaksi = ?',
+          [nextDbStatus, order.id],
+        );
+
+        order.status = nextDbStatus;
+
+        const [items] = await connection.query(
+          `SELECT dt.id_produk AS product_id, p.nama_produk AS nama,
+                  k.nama_kategori AS kategori, dt.harga_satuan AS harga,
+                  dt.jumlah, dt.subtotal
+           FROM detail_transaksi dt
+           JOIN produk p ON p.id_produk = dt.id_produk
+           LEFT JOIN kategori k ON k.id_kategori = p.id_kategori
+           WHERE dt.id_transaksi = ?
+           ORDER BY dt.id_detail_transaksi`,
+          [order.id],
+        );
+
+        await connection.commit();
+        transactionStarted = false;
+
+        return res.json({ data: formatOrder(order, items) });
+      } catch (error) {
+        if (transactionStarted) {
+          try {
+            await connection.rollback();
+          } catch (rollbackError) {
+            return next(rollbackError);
+          }
+        }
+        return next(error);
+      } finally {
+        if (connection && typeof connection.release === 'function') {
+          connection.release();
+        }
+      }
+    },
+  );
 
   router.post('/', async (req, res, next) => {
     const { errors, values, quantities } = validatePayload(req.body);
