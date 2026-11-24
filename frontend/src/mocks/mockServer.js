@@ -117,7 +117,188 @@ const transactions = [
   makeTransaction(6, daysAgo(3, 11, 10), 'tunai', [[2, 1], [5, 10]], { 2: 18000, 5: 3500 }),
 ];
 let nextTransactionId = transactions.length + 1;
-const orders = [];
+const orders = [
+  {
+    id: 1,
+    nomor_pesanan: 'TA-20261126-0001',
+    status: 'Dibayar',
+    tanggal: daysAgo(0, 10, 15),
+    nama_pemesan: 'Budi Santoso',
+    no_hp: '081234567890',
+    catatan: 'Tolong packing rapi',
+    metode_penerimaan: 'kurir',
+    wilayah: 'Kamal, Bangkalan',
+    alamat_lengkap: 'Jl. Raya Kamal No. 12',
+    layanan_kurir: 'JNE REG',
+    status_pembayaran: 'dibayar',
+    metode_pembayaran: 'payment_gateway',
+    items: [
+      { product_id: 1, nama: 'Beras 5 kg', harga: 74000, jumlah: 1, subtotal: 74000 },
+      { product_id: 2, nama: 'Minyak Goreng 1 L', harga: 18500, jumlah: 2, subtotal: 37000 },
+    ],
+    subtotal: 111000,
+    diskon: 0,
+    ongkir: 10000,
+    total: 121000,
+  },
+  {
+    id: 2,
+    nomor_pesanan: 'TA-20261126-0002',
+    status: 'Menunggu Pembayaran',
+    tanggal: daysAgo(0, 9, 30),
+    nama_pemesan: 'Siti Aminah',
+    no_hp: '081234567891',
+    catatan: '',
+    metode_penerimaan: 'ambil_di_toko',
+    wilayah: '',
+    alamat_lengkap: '',
+    layanan_kurir: null,
+    status_pembayaran: 'menunggu',
+    metode_pembayaran: 'payment_gateway',
+    items: [
+      { product_id: 3, nama: 'Gula Pasir 1 kg', harga: 17500, jumlah: 2, subtotal: 35000 },
+    ],
+    subtotal: 35000,
+    diskon: 0,
+    ongkir: 0,
+    total: 35000,
+  },
+  {
+    id: 3,
+    nomor_pesanan: 'TA-20261126-0003',
+    status: 'Diproses',
+    tanggal: daysAgo(1, 14, 20),
+    nama_pemesan: 'Agus Pratama',
+    no_hp: '081234567892',
+    catatan: 'Taruh di teras',
+    metode_penerimaan: 'kurir',
+    wilayah: 'Kamal, Bangkalan',
+    alamat_lengkap: 'Jl. Telang Indah No. 4',
+    layanan_kurir: 'SiCepat REG',
+    status_pembayaran: 'dibayar',
+    metode_pembayaran: 'payment_gateway',
+    items: [
+      { product_id: 4, nama: 'Telur Ayam 1 kg', harga: 28000, jumlah: 2, subtotal: 56000 },
+      { product_id: 5, nama: 'Mie Instan', harga: 3500, jumlah: 10, subtotal: 35000 },
+    ],
+    subtotal: 91000,
+    diskon: 0,
+    ongkir: 9000,
+    total: 100000,
+  },
+  {
+    id: 4,
+    nomor_pesanan: 'TA-20261126-0004',
+    status: 'Diproses',
+    tanggal: daysAgo(1, 11, 0),
+    nama_pemesan: 'Dewi Lestari',
+    no_hp: '081234567893',
+    catatan: '',
+    metode_penerimaan: 'ambil_di_toko',
+    wilayah: '',
+    alamat_lengkap: '',
+    layanan_kurir: null,
+    status_pembayaran: 'dibayar',
+    metode_pembayaran: 'payment_gateway',
+    items: [
+      { product_id: 6, nama: 'Kopi Sachet', harga: 1500, jumlah: 20, subtotal: 30000 },
+      { product_id: 8, nama: 'Teh Celup', harga: 8000, jumlah: 2, subtotal: 16000 },
+    ],
+    subtotal: 46000,
+    diskon: 0,
+    ongkir: 0,
+    total: 46000,
+  },
+  {
+    id: 5,
+    nomor_pesanan: 'TA-20261126-0005',
+    status: 'Siap Dikirim',
+    tanggal: daysAgo(2, 16, 45),
+    nama_pemesan: 'Hendra Setiawan',
+    no_hp: '081234567894',
+    catatan: '',
+    metode_penerimaan: 'kurir',
+    wilayah: 'Kamal, Bangkalan',
+    alamat_lengkap: 'Jl. Graha Kamal B3/12',
+    layanan_kurir: 'J&T EZ',
+    status_pembayaran: 'dibayar',
+    metode_pembayaran: 'payment_gateway',
+    items: [
+      { product_id: 1, nama: 'Beras 5 kg', harga: 74000, jumlah: 2, subtotal: 148000 },
+    ],
+    subtotal: 148000,
+    diskon: 0,
+    ongkir: 12000,
+    total: 160000,
+  },
+  {
+    id: 6,
+    nomor_pesanan: 'TA-20261126-0006',
+    status: 'Siap Diambil',
+    tanggal: daysAgo(2, 15, 10),
+    nama_pemesan: 'Rina Wijaya',
+    no_hp: '081234567895',
+    catatan: 'Nanti sore saya ambil',
+    metode_penerimaan: 'ambil_di_toko',
+    wilayah: '',
+    alamat_lengkap: '',
+    layanan_kurir: null,
+    status_pembayaran: 'dibayar',
+    metode_pembayaran: 'payment_gateway',
+    items: [
+      { product_id: 7, nama: 'Sabun Mandi', harga: 3500, jumlah: 4, subtotal: 14000 },
+    ],
+    subtotal: 14000,
+    diskon: 0,
+    ongkir: 0,
+    total: 14000,
+  },
+  {
+    id: 7,
+    nomor_pesanan: 'TA-20261126-0007',
+    status: 'Selesai',
+    tanggal: daysAgo(3, 10, 0),
+    nama_pemesan: 'Joko Widodo',
+    no_hp: '081234567896',
+    catatan: '',
+    metode_penerimaan: 'kurir',
+    wilayah: 'Kamal, Bangkalan',
+    alamat_lengkap: 'Jl. Pahlawan No. 1',
+    layanan_kurir: 'JNE REG',
+    status_pembayaran: 'dibayar',
+    metode_pembayaran: 'payment_gateway',
+    items: [
+      { product_id: 1, nama: 'Beras 5 kg', harga: 74000, jumlah: 1, subtotal: 74000 },
+      { product_id: 3, nama: 'Gula Pasir 1 kg', harga: 17500, jumlah: 1, subtotal: 17500 },
+    ],
+    subtotal: 91500,
+    diskon: 0,
+    ongkir: 10000,
+    total: 101500,
+  },
+  {
+    id: 8,
+    nomor_pesanan: 'TA-20261126-0008',
+    status: 'Dibatalkan',
+    tanggal: daysAgo(3, 8, 30),
+    nama_pemesan: 'Eko Wahyudi',
+    no_hp: '081234567897',
+    catatan: '',
+    metode_penerimaan: 'kurir',
+    wilayah: 'Kamal, Bangkalan',
+    alamat_lengkap: 'Jl. Flamboyan No. 3',
+    layanan_kurir: 'SiCepat REG',
+    status_pembayaran: 'gagal',
+    metode_pembayaran: 'payment_gateway',
+    items: [
+      { product_id: 2, nama: 'Minyak Goreng 1 L', harga: 18500, jumlah: 2, subtotal: 37000 },
+    ],
+    subtotal: 37000,
+    diskon: 0,
+    ongkir: 8500,
+    total: 45500,
+  },
+];
 const guestCarts = new Map();
 
 const REQUIRED = 'Kolom ini wajib diisi';
@@ -531,6 +712,164 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
 
   if (!user) return reply(401, { message: 'Silakan login terlebih dahulu' });
   const isAdmin = user.role === 'admin';
+
+  // Manajemen Pesanan Admin & Pegawai (PPL-12)
+  if (method === 'GET' && path === '/orders') {
+    const { status, search, page = '1', limit = '20' } = query;
+
+    const VALID_STATUSES = [
+      'semua',
+      'menunggu pembayaran',
+      'dibayar',
+      'diproses',
+      'siap diambil/dikirim',
+      'siap diambil',
+      'siap dikirim',
+      'selesai',
+      'dibatalkan',
+    ];
+
+    if (status && !VALID_STATUSES.includes(status.toLowerCase())) {
+      return reply(422, {
+        message: 'Status pesanan tidak valid',
+        errors: { status: 'Status tidak dikenal' },
+      });
+    }
+
+    let filtered = [...orders];
+
+    if (status && status.toLowerCase() !== 'semua') {
+      const s = status.toLowerCase();
+      if (s === 'siap diambil/dikirim') {
+        filtered = filtered.filter((o) =>
+          ['siap diambil', 'siap dikirim', 'siap diambil/dikirim'].includes(o.status.toLowerCase()),
+        );
+      } else {
+        filtered = filtered.filter((o) => o.status.toLowerCase() === s);
+      }
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      filtered = filtered.filter(
+        (o) =>
+          (o.nomor_pesanan && o.nomor_pesanan.toLowerCase().includes(q)) ||
+          (o.nama_pemesan && o.nama_pemesan.toLowerCase().includes(q)),
+      );
+    }
+
+    filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal) || b.id - a.id);
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const total = filtered.length;
+    const offset = (pageNum - 1) * limitNum;
+    const data = filtered.slice(offset, offset + limitNum).map((o) => ({
+      nomor_pesanan: o.nomor_pesanan,
+      nama_pemesan: o.nama_pemesan,
+      tanggal: o.tanggal,
+      total: o.total,
+      metode_penerimaan: o.metode_penerimaan,
+      status_pembayaran: o.status_pembayaran,
+      status: o.status,
+    }));
+
+    return reply(200, {
+      data,
+      meta: { page: pageNum, limit: limitNum, total },
+    });
+  }
+
+  const orderStatusMatch = path.match(/^\/orders\/([^/]+)\/status$/);
+  if (method === 'PATCH' && orderStatusMatch) {
+    const nomor = decodeURIComponent(orderStatusMatch[1]);
+    const rawTarget = body?.status;
+    if (!rawTarget || typeof rawTarget !== 'string') {
+      return reply(422, {
+        message: 'Status pesanan tidak valid',
+        errors: { status: 'Status wajib diisi' },
+      });
+    }
+
+    const VALID_ACTIONS = [
+      'menunggu pembayaran',
+      'dibayar',
+      'diproses',
+      'siap diambil',
+      'siap dikirim',
+      'siap diambil/dikirim',
+      'selesai',
+      'dibatalkan',
+    ];
+    if (!VALID_ACTIONS.includes(rawTarget.toLowerCase())) {
+      return reply(422, {
+        message: 'Status pesanan tidak valid',
+        errors: { status: 'Status tidak dikenal' },
+      });
+    }
+
+    const targetLower = rawTarget.toLowerCase();
+    if (targetLower === 'menunggu pembayaran' || targetLower === 'dibayar') {
+      return reply(422, {
+        message: 'Status Menunggu Pembayaran dan Dibayar tidak boleh diset lewat endpoint ini',
+      });
+    }
+
+    if (user.role === 'pegawai' && (targetLower === 'selesai' || targetLower === 'dibatalkan')) {
+      return reply(403, { message: 'Akses ditolak' });
+    }
+
+    let order = orders.find((o) => o.nomor_pesanan === nomor);
+    if (!order) {
+      return reply(404, { message: 'Pesanan tidak ditemukan' });
+    }
+
+    const cur = order.status.toLowerCase();
+    if (cur === 'selesai') {
+      return reply(422, { message: 'Pesanan yang sudah selesai tidak dapat diubah statusnya' });
+    }
+    if (cur === 'dibatalkan') {
+      return reply(422, { message: 'Pesanan yang sudah dibatalkan tidak dapat diubah statusnya' });
+    }
+
+    if (cur === 'menunggu pembayaran') {
+      if (targetLower === 'diproses') {
+        return reply(422, { message: 'Pesanan belum dibayar' });
+      }
+      if (targetLower !== 'dibatalkan') {
+        return reply(422, { message: 'Transisi status tidak valid' });
+      }
+    } else if (cur === 'dibayar') {
+      if (targetLower !== 'diproses' && targetLower !== 'dibatalkan') {
+        return reply(422, { message: 'Transisi status tidak valid' });
+      }
+    } else if (cur === 'diproses') {
+      if (!['siap diambil', 'siap dikirim', 'siap diambil/dikirim', 'dibatalkan'].includes(targetLower)) {
+        return reply(422, { message: 'Transisi status tidak valid' });
+      }
+    } else if (['siap diambil', 'siap dikirim', 'siap diambil/dikirim'].includes(cur)) {
+      if (targetLower !== 'selesai' && targetLower !== 'dibatalkan') {
+        return reply(422, { message: 'Transisi status tidak valid' });
+      }
+    }
+
+    // Set new status
+    if (targetLower === 'diproses') {
+      order.status = 'Diproses';
+    } else if (targetLower === 'siap diambil/dikirim') {
+      order.status = order.metode_penerimaan === 'kurir' ? 'Siap Dikirim' : 'Siap Diambil';
+    } else if (targetLower === 'siap diambil') {
+      order.status = 'Siap Diambil';
+    } else if (targetLower === 'siap dikirim') {
+      order.status = 'Siap Dikirim';
+    } else if (targetLower === 'selesai') {
+      order.status = 'Selesai';
+    } else if (targetLower === 'dibatalkan') {
+      order.status = 'Dibatalkan';
+    }
+
+    return reply(200, { data: order });
+  }
 
   if (method === 'GET' && path === '/auth/me') {
     return reply(200, { user: { id: user.id, nama: user.nama, role: user.role } });
