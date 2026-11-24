@@ -1271,3 +1271,336 @@
   }
 }
 
+/* ==========================================================================
+   CSS DOKUMEN CETAK RIWAYAT & KASIR (plan/cetak-kasir.webp & plan/struk.png)
+   ========================================================================== */
+
+.rekap-kasir-print-document,
+.struk-kasir-print-document {
+  display: none;
+}
+
+@media print {
+  /* Hilangkan margin default browser & sembunyikan semua UI website */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  aside,
+  nav,
+  .riwayat-top-nav,
+  .riwayat-header,
+  .riwayat-filter-card,
+  .riwayat-kpi-grid,
+  .riwayat-table-card,
+  .riwayat-modal-backdrop,
+  .riwayat-toast-banner {
+    display: none !important;
+  }
+
+  .riwayat-page-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 1. CETAK FORM LAPORAN KASIR (plan/cetak-kasir.webp) */
+  .rekap-kasir-print-document.is-active-print,
+  .rekap-kasir-print-document:not(.is-active-print):not(:has(~ .struk-kasir-print-document.is-active-print)) {
+    display: block !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 8mm 12mm !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    box-sizing: border-box !important;
+  }
+
+  .struk-kasir-print-document.is-active-print ~ .rekap-kasir-print-document {
+    display: none !important;
+  }
+
+  .rekap-print-header {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .rekap-print-main-title {
+    font-size: 18pt;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    margin: 0 0 2px 0;
+    text-decoration: underline;
+  }
+
+  .rekap-print-store-name {
+    font-size: 13pt;
+    font-weight: 700;
+    margin: 2px 0;
+    color: #111827;
+  }
+
+  .rekap-print-store-address {
+    font-size: 9pt;
+    color: #4b5563;
+    margin: 2px 0 6px 0;
+  }
+
+  .rekap-print-divider {
+    border-top: 2.5px solid #000000;
+    border-bottom: 1px solid #000000;
+    height: 3px;
+    margin: 6px 0 12px 0;
+  }
+
+  .rekap-print-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    font-size: 9.5pt;
+    margin-bottom: 14px;
+    border: 1px solid #94a3b8;
+    padding: 8px 14px;
+    background: #f8fafc;
+    border-radius: 4px;
+  }
+
+  .info-row {
+    display: flex;
+    margin-bottom: 4px;
+  }
+
+  .info-lbl {
+    width: 130px;
+    color: #334155;
+  }
+
+  .info-sep {
+    width: 15px;
+  }
+
+  .info-val {
+    flex: 1;
+    color: #0f172a;
+  }
+
+  .rekap-section-title {
+    font-size: 10pt;
+    font-weight: 700;
+    margin: 12px 0 6px 0;
+    text-transform: uppercase;
+    color: #0f172a;
+  }
+
+  .rekap-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-bottom: 12px;
+  }
+
+  .rekap-print-table th,
+  .rekap-print-table td {
+    border: 1px solid #333333;
+    padding: 6px 8px;
+    vertical-align: middle;
+  }
+
+  .rekap-print-table th {
+    background-color: #e2e8f0 !important;
+    font-weight: 700;
+  }
+
+  .rekap-total-row td {
+    background-color: #f1f5f9 !important;
+    border-top: 2px solid #000000;
+  }
+
+  .rekap-saldo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    font-size: 9pt;
+    margin-bottom: 12px;
+  }
+
+  .saldo-item {
+    border: 1px solid #cbd5e1;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    background: #fdfdfd;
+  }
+
+  .saldo-item.highlight {
+    background: #f0fdf4 !important;
+    border-color: #86efac;
+    font-weight: 700;
+  }
+
+  .rekap-print-table-mini {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+    margin-bottom: 16px;
+  }
+
+  .rekap-print-table-mini th,
+  .rekap-print-table-mini td {
+    border: 1px solid #64748b;
+    padding: 4px 6px;
+  }
+
+  .rekap-print-table-mini th {
+    background-color: #f1f5f9 !important;
+  }
+
+  .rekap-signatures-wrap {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    page-break-inside: avoid;
+  }
+
+  .sig-column {
+    width: 250px;
+    text-align: center;
+    font-size: 9.5pt;
+  }
+
+  .sig-title {
+    margin: 0 0 45px 0;
+    font-weight: 600;
+  }
+
+  .sig-space {
+    height: 35px;
+  }
+
+  .sig-person-name {
+    margin: 0;
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .sig-sub {
+    margin: 2px 0 0 0;
+    font-size: 8pt;
+    color: #475569;
+  }
+
+  /* 2. CETAK STRUK KASIR THERMAL 58mm/80mm (plan/struk.png) */
+  .struk-kasir-print-document.is-active-print {
+    display: block !important;
+    width: 78mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 3mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 9pt !important;
+    line-height: 1.25 !important;
+    box-sizing: border-box !important;
+  }
+
+  .receipt-thermal-paper {
+    width: 100%;
+  }
+
+  .thermal-header {
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .thermal-store-name {
+    font-size: 11.5pt;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+
+  .thermal-store-desc,
+  .thermal-store-address,
+  .thermal-store-phone {
+    font-size: 8pt;
+  }
+
+  .thermal-double-line,
+  .thermal-dash-line {
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    margin: 3px 0;
+    letter-spacing: -1px;
+    font-size: 9pt;
+  }
+
+  .thermal-meta {
+    margin: 4px 0;
+    font-size: 8.5pt;
+  }
+
+  .thermal-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  .thermal-row.font-bold {
+    font-weight: bold;
+  }
+
+  .thermal-row.large {
+    font-size: 10pt;
+  }
+
+  .thermal-items-list {
+    margin: 4px 0;
+  }
+
+  .thermal-item-entry {
+    margin-bottom: 4px;
+  }
+
+  .thermal-item-title {
+    font-weight: bold;
+    font-size: 8.5pt;
+  }
+
+  .thermal-item-calc {
+    display: flex;
+    justify-content: space-between;
+    padding-left: 6px;
+    font-size: 8.5pt;
+  }
+
+  .thermal-totals {
+    margin: 4px 0;
+    font-size: 8.5pt;
+  }
+
+  .thermal-footer {
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  .thermal-footer-title {
+    font-weight: bold;
+    font-size: 8.5pt;
+  }
+
+  .thermal-footer-sub {
+    font-weight: bold;
+    font-size: 8pt;
+  }
+
+  .thermal-footer-note {
+    font-size: 7.5pt;
+  }
+}
+
