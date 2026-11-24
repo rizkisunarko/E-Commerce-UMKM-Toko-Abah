@@ -506,7 +506,7 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     return reply(200, { data: order });
   }
 
-  const paymentMatch = path.match(/^\/orders\/([^/]+)\/pembayaran$/);
+  const paymentMatch = path.match(/^\/orders\/([^/]+)\/(?:pembayaran|payment)$/);
   if (method === 'POST' && paymentMatch) {
     const nomor = decodeURIComponent(paymentMatch[1]);
     const found = orders.find((o) => o.nomor_pesanan === nomor);
@@ -516,6 +516,17 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
         client_key: 'Mid-client-mock',
       },
     });
+  }
+
+  const simulateMatch = path.match(/^\/orders\/([^/]+)\/simulate-payment$/);
+  if (method === 'POST' && simulateMatch) {
+    const nomor = decodeURIComponent(simulateMatch[1]);
+    const found = orders.find((o) => o.nomor_pesanan === nomor);
+    if (found) {
+      found.status_pembayaran = 'berhasil';
+      found.status = 'Diproses';
+    }
+    return reply(200, { data: found || { status_pembayaran: 'berhasil', status: 'Diproses' } });
   }
 
   if (!user) return reply(401, { message: 'Silakan login terlebih dahulu' });

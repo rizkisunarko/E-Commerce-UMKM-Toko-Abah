@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { orderService } from '../services/orderService';
+import { orderService, normalizePaymentStatus } from '../services/orderService';
 import { loadMidtransSnap } from '../services/midtrans';
 import { formatRupiah } from '../utils/format';
 import QrisModal from '../components/QrisModal';
@@ -46,7 +46,13 @@ export default function OrderPage() {
         if (!cancelled) {
           if (res.data) {
             setOrder(res.data);
-            setIsPaid(res.data.status_pembayaran === 'berhasil');
+            const normalized = normalizePaymentStatus(res.data.status_pembayaran);
+            const lunas = normalized === 'dibayar' ||
+                          res.data.status === 'Diproses' ||
+                          res.data.status === 'Siap Diambil' ||
+                          res.data.status === 'Siap Dikirim' ||
+                          res.data.status === 'Selesai';
+            setIsPaid(lunas);
           } else {
             setError('Pesanan tidak ditemukan');
           }
@@ -88,6 +94,30 @@ export default function OrderPage() {
     };
   }, [nomor]);
 
+  // Polling status otomatis setiap 3 detik saat pesanan belum lunas
+  useEffect(() => {
+    if (!order || isPaid || order.metode_pembayaran === 'cod') return;
+    const interval = setInterval(() => {
+      orderService
+        .get(nomor)
+        .then((res) => {
+          if (!res.data) return;
+          const normalized = normalizePaymentStatus(res.data.status_pembayaran);
+          const lunas = normalized === 'dibayar' ||
+                        res.data.status === 'Diproses' ||
+                        res.data.status === 'Siap Diambil' ||
+                        res.data.status === 'Siap Dikirim' ||
+                        res.data.status === 'Selesai';
+          if (lunas) {
+            setOrder(res.data);
+            setIsPaid(true);
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [nomor, order, isPaid]);
+
   function handleCopyOrderId() {
     if (!order?.nomor_pesanan) return;
     navigator.clipboard.writeText(order.nomor_pesanan).then(() => {
@@ -102,7 +132,7 @@ export default function OrderPage() {
       if (!prev) return prev;
       return {
         ...prev,
-        status: 'Dibayar',
+        status: 'Diproses',
         status_pembayaran: 'berhasil',
       };
     });
@@ -114,7 +144,13 @@ export default function OrderPage() {
       .then((res) => {
         if (!res.data) return;
         setOrder(res.data);
-        setIsPaid(res.data.status_pembayaran === 'berhasil');
+        const normalized = normalizePaymentStatus(res.data.status_pembayaran);
+        const lunas = normalized === 'dibayar' ||
+                      res.data.status === 'Diproses' ||
+                      res.data.status === 'Siap Diambil' ||
+                      res.data.status === 'Siap Dikirim' ||
+                      res.data.status === 'Selesai';
+        setIsPaid(lunas);
       })
       .catch(() => {});
   }
