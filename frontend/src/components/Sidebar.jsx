@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import storeBanner from '../assets/store-banner.jpg';
 import './Sidebar.css';
 
 // Menu per peran (lihat dokumen desain PPL-18 dan PPL-22)
@@ -154,21 +155,11 @@ export default function Sidebar() {
       {/* Header Logo & Brand Toko Abah */}
       <div className="sidebar-brand-container">
         <div className="sidebar-brand-logo">
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 9l2-5h14l2 5" />
-            <path d="M21 9v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9" />
-            <path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6" />
-            <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
-          </svg>
+          <img
+            src={storeBanner}
+            alt="Logo Toko Abah"
+            className="sidebar-brand-logo-img"
+          />
         </div>
         <div className="sidebar-brand-text">
           <span className="sidebar-brand-title">Toko Abah</span>
