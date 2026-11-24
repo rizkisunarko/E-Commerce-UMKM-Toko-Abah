@@ -7,6 +7,7 @@ const { createPaymentsRoutes } = require('./payments.routes');
 const createProductsRoutes = require('./products.routes');
 const createShippingRoutes = require('./shipping.routes');
 const createTransactionsRoutes = require('./transactions.routes');
+const createReportsRoutes = require('./reports.routes');
 const { createMidtransSnapClient } = require('../services/midtransSnap');
 const { createRajaOngkirClient } = require('../services/rajaOngkir');
 
@@ -25,6 +26,7 @@ function createRoutes(
   router.use('/shipping', createShippingRoutes(db, shippingClient));
   router.use('/', createProductsRoutes(db, jwtSecret));
   router.use('/transactions', createTransactionsRoutes(db, jwtSecret));
+  router.use('/reports', createReportsRoutes(db, jwtSecret));
   return router;
 }
 
