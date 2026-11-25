@@ -9,6 +9,25 @@ import './StockPage.css';
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
 
+function formatRupiah(num) {
+  if (num == null || isNaN(num)) return 'Rp 0';
+  return 'Rp ' + Math.round(Number(num)).toLocaleString('id-ID');
+}
+
+function formatCurrentDateTime() {
+  const now = new Date();
+  return (
+    now.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }) + ' WIB'
+  );
+}
+
 function formatSku(product) {
   if (product.kode_produk) return product.kode_produk;
   if (product.sku) return product.sku;
@@ -715,6 +734,140 @@ export default function StockPage() {
           </div>
         </div>
       )}
+
+      {/* Dokumen Khusus Cetak Laporan Data Barang (Sesuai Desain Referensi plan/cetak-laporan-data-barang.png) */}
+      <div className="stock-print-document" aria-hidden="true">
+        {/* Kop Surat Resmi Toko Abah */}
+        <div className="print-kop-surat">
+          <div className="print-kop-title">TOKO ABAH SEMBAKO</div>
+          <div className="print-kop-subtitle">
+            Penyedia Sembako &amp; Kebutuhan Pokok Keluarga Murah Berkualitas
+          </div>
+          <div className="print-kop-address">
+            Jl. Raya Telang No. 15, Kec. Kamal, Kab. Bangkalan, Madura, Jawa Timur 69162
+          </div>
+          <div className="print-kop-contact">
+            No. Telp / WhatsApp: <strong>085708350575</strong> | Email: tokoabah.sembako@gmail.com
+          </div>
+          <div className="print-kop-divider" />
+        </div>
+
+        {/* Judul & Meta Informasi Laporan */}
+        <div className="print-doc-header">
+          <h2 className="print-doc-title">LAPORAN DATA BARANG</h2>
+          <div className="print-doc-meta-grid">
+            <div>
+              <span>Tanggal Cetak: </span>
+              <strong>{formatCurrentDateTime()}</strong>
+            </div>
+            <div>
+              <span>Petugas / Kasir: </span>
+              <strong>{user?.nama || 'Petugas Toko Abah'}</strong>
+            </div>
+            <div>
+              <span>Kategori: </span>
+              <strong>{selectedCategory ? selectedCategory : 'Semua Kategori'}</strong>
+            </div>
+            <div>
+              <span>Kondisi Stok: </span>
+              <strong>{onlyCritical ? 'Khusus Stok Kritis' : 'Semua Status Stok'}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabel Data Barang */}
+        <table className="print-data-table">
+          <thead>
+            <tr>
+              <th style={{ width: '35px', textAlign: 'center' }}>NO</th>
+              <th style={{ width: '120px' }}>KODE / SKU</th>
+              <th>NAMA BARANG</th>
+              <th style={{ width: '100px', textAlign: 'center' }}>JENIS</th>
+              <th style={{ width: '70px', textAlign: 'center' }}>SATUAN</th>
+              <th style={{ width: '100px', textAlign: 'right' }}>HARGA MODAL</th>
+              <th style={{ width: '100px', textAlign: 'right' }}>HARGA JUAL</th>
+              <th style={{ width: '65px', textAlign: 'center' }}>JUMLAH</th>
+              <th style={{ width: '90px', textAlign: 'center' }}>STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayRows.length === 0 ? (
+              <tr>
+                <td colSpan="9" style={{ textAlign: 'center', padding: '16px' }}>
+                  Tidak ada data barang yang tersedia.
+                </td>
+              </tr>
+            ) : (
+              displayRows.map((p, idx) => {
+                const modalEst = p.modal ?? p.harga_beli ?? Math.round((p.harga || 0) * 0.85);
+                return (
+                  <tr key={p.id || idx}>
+                    <td style={{ textAlign: 'center' }}>{idx + 1}</td>
+                    <td>{formatSku(p)}</td>
+                    <td style={{ fontWeight: 600 }}>{p.nama}</td>
+                    <td style={{ textAlign: 'center' }}>{p.kategori || 'Sembako'}</td>
+                    <td style={{ textAlign: 'center' }}>{p.satuan || 'Pcs'}</td>
+                    <td style={{ textAlign: 'right' }}>{formatRupiah(modalEst)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatRupiah(p.harga)}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{p.stok}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className={`print-badge-status ${p.status_stok === 'Stok Kritis' ? 'kritis' : p.status_stok === 'Stok Menipis' ? 'menipis' : 'aman'}`}>
+                        {p.status_stok || (p.stok <= (p.stok_minimum || 5) ? 'Stok Kritis' : 'Stok Aman')}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+          <tfoot>
+            <tr className="print-table-total-row">
+              <td colSpan="5" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                TOTAL KESELURUHAN:
+              </td>
+              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                {formatRupiah(
+                  displayRows.reduce((s, p) => {
+                    const m = p.modal ?? p.harga_beli ?? Math.round((p.harga || 0) * 0.85);
+                    return s + (Number(p.stok) || 0) * m;
+                  }, 0)
+                )}
+              </td>
+              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                {formatRupiah(
+                  displayRows.reduce((s, p) => s + (Number(p.stok) || 0) * (Number(p.harga) || 0), 0)
+                )}
+              </td>
+              <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                {displayRows.reduce((s, p) => s + (Number(p.stok) || 0), 0)}
+              </td>
+              <td style={{ textAlign: 'center', fontSize: '10px' }}>
+                {displayRows.length} Jenis Produk
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+        {/* Keterangan & Blok Tanda Tangan */}
+        <div className="print-footer-section">
+          <div className="print-footer-notes">
+            <p><strong>Catatan:</strong></p>
+            <ul>
+              <li>Data stok ini dicetak resmi dari Sistem Manajemen Toko Abah Sembako.</li>
+              <li>Periksa fisik barang secara berkala sesuai data stok di atas.</li>
+            </ul>
+          </div>
+          <div className="print-signature-box">
+            <p className="print-sig-date">
+              Bangkalan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+            <p className="print-sig-role">Penanggung Jawab Gudang / Toko,</p>
+            <div className="print-sig-space" />
+            <p className="print-sig-name">( {user?.nama || 'Petugas Toko Abah'} )</p>
+            <p className="print-sig-title">NIP / Jabatan: Petugas Inventaris</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1876,22 +1876,86 @@ th {
 }
 
 @media (max-width: 640px) {
+  .ko-empty-card {
+    padding: 28px 14px;
+    border-radius: 14px;
+  }
+  .ko-empty-title {
+    font-size: 20px;
+  }
+  .ko-empty-desc {
+    font-size: 13px;
+  }
   .ko-empty-actions {
     flex-direction: column;
+    gap: 8px;
+    width: 100%;
   }
   .ko-empty-btn-primary,
   .ko-empty-btn-secondary {
     width: 100%;
+    justify-content: center;
+    font-size: 13.5px;
+    padding: 11px 16px;
+    box-sizing: border-box;
   }
   .ko-empty-features-grid {
     grid-template-columns: 1fr;
+    gap: 8px;
+    width: 100%;
   }
-  .ko-recom-grid {
-    grid-template-columns: 1fr;
+  .ko-recom-section {
+    padding: 0 12px 24px;
   }
   .ko-recom-header {
     flex-direction: column;
     align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .ko-recom-title {
+    font-size: 18px;
+  }
+  .ko-recom-subtitle {
+    font-size: 12.5px;
+  }
+  .ko-recom-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .ko-recom-card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+  .ko-recom-thumb-box {
+    height: 120px;
+    margin-bottom: 8px;
+  }
+  .ko-recom-card-title {
+    font-size: 12.5px;
+    line-height: 1.35;
+    min-height: 34px;
+  }
+  .ko-recom-desc {
+    display: none;
+  }
+  .ko-recom-pricing {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .ko-recom-price {
+    font-size: 14.5px;
+  }
+  .ko-recom-save-pill {
+    font-size: 9.5px;
+    padding: 2px 5px;
+  }
+  .ko-recom-btn {
+    height: 36px;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 0 8px;
   }
   .ko-empty-loc-tag {
     display: none;
@@ -2663,34 +2727,375 @@ th {
 }
 
 @media (max-width: 640px) {
+  /* Cart & Checkout Container Mobile */
+  .ko-page-container,
+  .ko-checkout-wrapper {
+    padding: 12px 12px 36px;
+  }
+
+  .ko-header-meta,
+  .ko-checkout-header-row {
+    margin-bottom: 16px;
+    gap: 10px;
+  }
+
+  .ko-page-title {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .ko-page-subtitle {
+    font-size: 13px;
+  }
+
+  .ko-location-badge {
+    font-size: 11.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+
+  /* Cart Item Card Mobile */
+  .ko-item-card {
+    position: relative;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
   .ko-item-row {
     flex-direction: column;
     align-items: flex-start;
+    gap: 10px;
   }
 
+  .ko-item-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    padding-right: 36px; /* ruang tombol hapus di sudut kanan atas */
+    box-sizing: border-box;
+  }
+
+  .ko-item-thumb-wrapper {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  .ko-item-name {
+    font-size: 14.5px;
+    line-height: 1.35;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ko-item-desc {
+    display: none;
+  }
+
+  .ko-item-price-unit {
+    font-size: 13.5px;
+    margin-top: 3px;
+  }
+
+  /* Tombol Hapus: Floating di sudut kanan atas kartu pada mobile */
+  .ko-btn-remove-action {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 6px;
+    font-size: 0;
+    color: #ba1a1a;
+    background: #fff1f0;
+    border: 1px solid #ffdcd8;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .ko-btn-remove-action:hover {
+    background: #ffdcd8;
+  }
+
+  .ko-btn-remove-action svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Baris Kontrol Bawah Kartu Item: Subtotal di Kiri, Stepper di Kanan */
   .ko-item-controls {
     width: 100%;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    min-width: 0;
+    gap: 8px;
   }
 
-  .ko-pickup-choice-grid {
-    grid-template-columns: 1fr;
+  .ko-subtotal-block {
+    text-align: left;
+    order: 1;
   }
 
-  .ko-pickup-2col {
-    grid-template-columns: 1fr;
+  .ko-subtotal-label {
+    font-size: 11px;
+    color: #707a6c;
+  }
+
+  .ko-subtotal-val {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .ko-item-stepper-wrap {
+    order: 2;
+    padding: 2px;
+    background: #f1f5f9;
+    border-radius: 8px;
+  }
+
+  .ko-stepper-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+  }
+
+  .ko-stepper-input {
+    width: 38px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .ko-item-action-btns {
+    order: 3;
+    display: flex;
+    align-items: center;
+  }
+
+  .ko-item-action-btns .ko-btn-fix-action {
+    display: inline-flex;
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  /* Tombol di Bawah Daftar Keranjang */
+  .ko-cart-bottom-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .ko-btn-continue-shopping {
+    width: 100%;
+    justify-content: center;
+    font-size: 13.5px;
+    padding: 11px 16px;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+
+  .ko-btn-empty-cart {
+    width: 100%;
+    justify-content: center;
+    font-size: 12.5px;
+    padding: 8px;
   }
 
   .ko-grosir-callout {
     flex-direction: column;
     align-items: flex-start;
+    padding: 14px;
+    gap: 12px;
   }
 
+  .ko-grosir-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 13px;
+    padding: 9px 14px;
+    box-sizing: border-box;
+  }
+
+  .ko-summary-card {
+    padding: 16px 14px;
+    border-radius: 12px;
+    gap: 14px;
+  }
+
+  .ko-total-big-price {
+    font-size: 24px;
+  }
+
+  .ko-btn-checkout-primary {
+    height: 48px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  /* Checkout Stepper & Sections Mobile */
   .ko-bento-stepper {
     width: 100%;
     justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 10px;
+  }
+
+  .ko-bento-line {
+    width: 20px;
+  }
+
+  .ko-checkout-section {
+    padding: 16px 14px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+
+  .ko-section-head {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    gap: 10px;
+  }
+
+  .ko-section-badge-num {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+
+  .ko-section-title {
+    font-size: 16px;
+  }
+
+  .ko-section-sub {
+    font-size: 11.5px;
+  }
+
+  .ko-input-control {
+    height: 46px;
+    font-size: 14.5px;
+  }
+
+  .ko-pickup-choice-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .ko-pickup-selectable-card {
+    padding: 14px 12px;
+    border-radius: 10px;
+  }
+
+  .ko-btn-cek-ongkir {
+    width: 100%;
+    height: 46px;
+    font-size: 13.5px;
+    border-radius: 8px;
+  }
+
+  .ko-courier-option-row {
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .ko-checkout-summary-card {
+    padding: 16px 14px;
+    border-radius: 12px;
+  }
+
+  .ko-btn-create-order {
+    height: 48px;
+    font-size: 14.5px;
+    border-radius: 10px;
+  }
+
+  .ko-total-big-val {
+    font-size: 20px;
+  }
+
+  .ko-state-error-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .ko-state-error-btn {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  /* QRIS Modal Mobile */
+  .ko-qris-modal-card {
+    max-width: calc(100% - 24px);
+    border-radius: 16px;
+    margin: 12px auto;
+  }
+
+  .ko-qris-header {
+    padding: 14px 16px 12px;
+  }
+
+  .ko-qris-title {
+    font-size: 15px;
+  }
+
+  .ko-qris-body {
+    padding: 14px 16px 16px;
+  }
+
+  .ko-qris-amount-card {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .ko-qris-amount-val {
+    font-size: 24px;
+  }
+
+  .ko-qris-qr-box {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .ko-qris-svg-wrapper {
+    width: 175px;
+    height: 175px;
+    padding: 4px;
+  }
+
+  .ko-qris-instruction-text {
+    font-size: 11.5px;
+  }
+
+  .ko-qris-badges-row {
+    gap: 4px;
+  }
+
+  .ko-qris-primary-btn {
+    height: 44px;
+    font-size: 13.5px;
+    border-radius: 8px;
+  }
+
+  .ko-qris-sub-actions {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .ko-qris-secondary-btn,
+  .ko-qris-tertiary-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -5450,5 +5855,378 @@ th {
     flex-direction: column;
     gap: 10px;
     align-items: center;
+  }
+}
+
+
+/* ==========================================================================
+   PPL-13.2: Halaman Laporan Penjualan Produk Terlaris (Admin)
+   ========================================================================== */
+
+.rep-page {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.rep-header {
+  margin-bottom: 20px;
+}
+
+.rep-title {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rep-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Filter Card */
+.rep-filter-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rep-period-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rep-period-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.rep-period-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.rep-period-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+/* Custom Date Range Form */
+.rep-custom-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.rep-date-inputs {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.rep-date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.rep-date-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.rep-date-input {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rep-date-input:focus {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
+.rep-btn {
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.rep-btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.rep-btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+/* Alert Notification */
+.rep-alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.rep-alert-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid #f5c6cb;
+}
+
+/* Period Banner & Table Card */
+.rep-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.rep-period-banner {
+  background: #f0f7f0;
+  border-bottom: 1px solid #d4ecd4;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.rep-period-label {
+  color: var(--muted);
+}
+
+.rep-period-val {
+  color: var(--primary-dark);
+}
+
+.rep-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.rep-th {
+  background: var(--bg);
+  color: var(--muted);
+  font-weight: 600;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rep-th-rank {
+  width: 60px;
+  text-align: center;
+}
+
+.rep-th-qty {
+  width: 150px;
+  text-align: right;
+}
+
+.rep-tr:hover {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.rep-td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.rep-tr:last-child .rep-td {
+  border-bottom: none;
+}
+
+.rep-td-rank {
+  text-align: center;
+}
+
+.rep-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  background: #eceff1;
+  color: #455a64;
+}
+
+.rep-rank-badge.rank-1 {
+  background: #fff8e1;
+  color: #b78103;
+  border: 1px solid #ffe082;
+}
+
+.rep-rank-badge.rank-2 {
+  background: #f5f5f5;
+  color: #616161;
+  border: 1px solid #e0e0e0;
+}
+
+.rep-rank-badge.rank-3 {
+  background: #fbe9e7;
+  color: #bf360c;
+  border: 1px solid #ffccbc;
+}
+
+.rep-td-name {
+  color: var(--text);
+}
+
+.rep-td-qty {
+  text-align: right;
+}
+
+.rep-qty-val {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--primary);
+  background: var(--success-bg);
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+/* State Box (Loading / Empty / Error) */
+.rep-state-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.rep-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: repSpin 0.8s linear infinite;
+}
+
+@keyframes repSpin {
+  to { transform: rotate(360deg); }
+}
+
+.rep-empty-icon {
+  color: var(--muted);
+}
+
+.rep-empty-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.rep-text-muted {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+  max-width: 440px;
+}
+
+.rep-error-msg {
+  color: var(--danger);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Responsive Breakpoints (Mobile 360px without horizontal scroll) */
+@media (max-width: 640px) {
+  .rep-page {
+    padding: 14px 10px;
+  }
+
+  .rep-period-tabs {
+    flex-direction: column;
+  }
+
+  .rep-period-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .rep-custom-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rep-date-inputs {
+    flex-direction: column;
+  }
+
+  .rep-date-group {
+    min-width: 100%;
+  }
+
+  .rep-btn {
+    width: 100%;
+  }
+
+  .rep-th, .rep-td {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  .rep-th-rank {
+    width: 36px;
+  }
+
+  .rep-th-qty {
+    width: 90px;
+  }
+
+  .rep-qty-val {
+    font-size: 13px;
+    padding: 2px 6px;
   }
 }

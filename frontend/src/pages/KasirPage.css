@@ -1948,3 +1948,154 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ==========================================================================
+   CSS DOKUMEN CETAK STRUK KASIR THERMAL (plan/struk.png)
+   ========================================================================== */
+
+.kasir-thermal-print-document {
+  display: none;
+}
+
+@media print {
+  /* Hilangkan margin default browser & sembunyikan semua UI website */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 9pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  aside,
+  nav,
+  .kasir-header-panel,
+  .kasir-pos-workspace,
+  .kasir-catalog-col,
+  .kasir-cart-col,
+  .kasir-payment-modal-backdrop,
+  .kasir-toast-banner {
+    display: none !important;
+  }
+
+  .kasir-page-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Tampilkan hanya struk kasir thermal */
+  .kasir-thermal-print-document {
+    display: block !important;
+    width: 78mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 3mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 9pt !important;
+    line-height: 1.25 !important;
+    box-sizing: border-box !important;
+  }
+
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+
+  .receipt-thermal-paper {
+    width: 100%;
+  }
+
+  .thermal-header {
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .thermal-store-name {
+    font-size: 11.5pt;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+
+  .thermal-store-desc,
+  .thermal-store-address,
+  .thermal-store-phone {
+    font-size: 8pt;
+  }
+
+  .thermal-double-line,
+  .thermal-dash-line {
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    margin: 3px 0;
+    letter-spacing: -1px;
+    font-size: 9pt;
+  }
+
+  .thermal-meta {
+    margin: 4px 0;
+    font-size: 8.5pt;
+  }
+
+  .thermal-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  .thermal-row.font-bold {
+    font-weight: bold;
+  }
+
+  .thermal-row.large {
+    font-size: 10pt;
+  }
+
+  .thermal-items-list {
+    margin: 4px 0;
+  }
+
+  .thermal-item-entry {
+    margin-bottom: 4px;
+  }
+
+  .thermal-item-title {
+    font-weight: bold;
+    font-size: 8.5pt;
+  }
+
+  .thermal-item-calc {
+    display: flex;
+    justify-content: space-between;
+    padding-left: 6px;
+    font-size: 8.5pt;
+  }
+
+  .thermal-totals {
+    margin: 4px 0;
+    font-size: 8.5pt;
+  }
+
+  .thermal-footer {
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  .thermal-footer-title {
+    font-weight: bold;
+    font-size: 8.5pt;
+  }
+
+  .thermal-footer-sub {
+    font-weight: bold;
+    font-size: 8pt;
+  }
+
+  .thermal-footer-note {
+    font-size: 7.5pt;
+  }
+}

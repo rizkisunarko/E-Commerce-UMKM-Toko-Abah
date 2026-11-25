@@ -495,3 +495,129 @@
   opacity: 0.85;
   margin: 0 0 16px;
 }
+
+/* ==========================================================================
+   Responsif Mobile Order Success (Screen <= 640px)
+   ========================================================================== */
+@media (max-width: 640px) {
+  .order-success-page {
+    padding: 16px 12px 36px;
+  }
+
+  .order-hero {
+    margin: 0 auto 20px;
+  }
+
+  .order-hero-icon-circle {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 10px;
+  }
+
+  .order-hero-icon-circle svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .order-hero-title {
+    font-size: 20px;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+
+  .order-hero-subtitle {
+    font-size: 13px;
+  }
+
+  .order-col {
+    gap: 14px;
+  }
+
+  .order-card {
+    padding: 14px 12px;
+    border-radius: 12px;
+  }
+
+  .order-card-header {
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+  }
+
+  .order-no-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .order-no-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .order-no-val {
+    font-size: 18px;
+  }
+
+  .order-badge-paid,
+  .order-badge-pending {
+    align-self: flex-start;
+    font-size: 11.5px;
+    padding: 3px 10px;
+  }
+
+  .order-dl-row {
+    padding: 8px 0;
+    font-size: 13px;
+  }
+
+  .order-item-row {
+    padding: 8px 0;
+    gap: 10px;
+  }
+
+  .order-item-thumb {
+    width: 42px;
+    height: 42px;
+    border-radius: 6px;
+  }
+
+  .order-item-name {
+    font-size: 13px;
+  }
+
+  .order-item-sub {
+    font-size: 11.5px;
+  }
+
+  .order-item-total {
+    font-size: 13.5px;
+  }
+
+  .order-cost-breakdown {
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .order-cost-row.total-row {
+    font-size: 15px;
+  }
+
+  .order-total-highlight {
+    font-size: 17px;
+  }
+
+  .order-actions-stack {
+    margin-top: 18px;
+    gap: 10px;
+  }
+
+  .order-btn-pay-active,
+  .order-btn-paid-done,
+  .order-btn-wa {
+    height: 46px;
+    font-size: 13.5px;
+    border-radius: 8px;
+  }
+}
+

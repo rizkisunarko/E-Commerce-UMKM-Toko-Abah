@@ -162,7 +162,7 @@ export default function KasirPage() {
       } else if (e.key === 'F9') {
         e.preventDefault();
         if (receipt) {
-          showToast('Mencetak struk ke printer kasir...');
+          handlePrintReceipt();
         } else if (!submitting && cart.length > 0) {
           handleSubmit();
         }
@@ -256,6 +256,74 @@ export default function KasirPage() {
 
   function removeItem(id) {
     setCart((prev) => prev.filter((it) => it.product.id !== id));
+  }
+
+  function handlePrintReceipt() {
+    if (!receipt) return;
+    window.print();
+  }
+
+  function handleSendWhatsAppReceipt() {
+    if (!receipt) return;
+
+    const noNota = `#TRX-1024-0${receipt.id < 10 ? `0${receipt.id}` : receipt.id}`;
+    const tanggalStr = `${new Date(receipt.tanggal || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}, ${new Date(receipt.tanggal || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+    const kasirNama = user?.nama || 'Abah Rohim';
+    const metodeStr = receipt.metode_bayar === 'qris' ? 'QRIS / E-Wallet' : 'Tunai / Cash';
+
+    let itemsList = '';
+    if (receipt.items && receipt.items.length > 0) {
+      itemsList = receipt.items
+        .map(
+          (it) =>
+            `• *${it.nama}*\n  ${it.jumlah}x @${formatRupiah(it.harga)} = *${formatRupiah(it.subtotal)}*`
+        )
+        .join('\n');
+    } else {
+      itemsList = `• Total Belanja = *${formatRupiah(receipt.total)}*`;
+    }
+
+    const pesan =
+      `🧾 *STRUK BELANJA RESMI - TOKO ABAH SEMBAKO*\n` +
+      `_Penyedia Kebutuhan Pokok & Sembako Murah Berkualitas_\n` +
+      `📍 Jl. Raya Telang No. 15 Kamal, Bangkalan, Madura\n` +
+      `📞 No. WhatsApp Toko: 085708350575\n` +
+      `====================================\n` +
+      `*No. Nota :* ${noNota}\n` +
+      `*Tanggal  :* ${tanggalStr}\n` +
+      `*Kasir    :* ${kasirNama}\n` +
+      `*Metode   :* ${metodeStr}\n` +
+      `====================================\n` +
+      `*RINCIAN BARANG:*\n` +
+      `${itemsList}\n` +
+      `====================================\n` +
+      `*TOTAL PEMBAYARAN : ${formatRupiah(receipt.total)}*\n` +
+      `*STATUS           : LUNAS*\n` +
+      `====================================\n` +
+      `Terima kasih banyak telah berbelanja di *Toko Abah Sembako*! Semoga rezeki berkah dan ditunggu belanja berikutnya. 🙏✨`;
+
+    const inputPhone = window.prompt(
+      'Masukkan nomor WhatsApp pelanggan (contoh: 085708350575) atau kosongkan untuk memilih kontak manual di WhatsApp:',
+      ''
+    );
+
+    if (inputPhone === null) return;
+
+    let waUrl = '';
+    const cleanPhone = inputPhone.replace(/[^0-9]/g, '');
+    if (cleanPhone) {
+      const normalizedPhone = cleanPhone.startsWith('0')
+        ? '62' + cleanPhone.slice(1)
+        : cleanPhone.startsWith('62')
+        ? cleanPhone
+        : '62' + cleanPhone;
+      waUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(pesan)}`;
+    } else {
+      waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(pesan)}`;
+    }
+
+    window.open(waUrl, '_blank');
+    showToast('Membuka WhatsApp untuk mengirimkan struk digital...');
   }
 
   function handleResetCart() {
@@ -732,7 +800,7 @@ export default function KasirPage() {
                       <button
                         type="button"
                         className="btn-receipt-secondary"
-                        onClick={() => showToast('Mencetak struk ke printer kasir...')}
+                        onClick={handlePrintReceipt}
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <polyline points="6 9 6 2 18 2 18 9" />
@@ -745,7 +813,7 @@ export default function KasirPage() {
                       <button
                         type="button"
                         className="btn-receipt-secondary"
-                        onClick={() => showToast('Struk dikirimkan via WhatsApp')}
+                        onClick={handleSendWhatsAppReceipt}
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -1349,6 +1417,107 @@ export default function KasirPage() {
               </button>
             </div>
           </section>
+        </div>
+      )}
+
+      {/* Dokumen Cetak Struk Kasir Thermal (Sesuai Desain Referensi plan/struk.png) */}
+      {receipt && (
+        <div className="kasir-thermal-print-document" aria-hidden="true">
+          <div className="receipt-thermal-paper">
+            <div className="thermal-header">
+              <div className="thermal-store-name">TOKO ABAH SEMBAKO</div>
+              <div className="thermal-store-desc">Kebutuhan Pokok &amp; Sembako Murah</div>
+              <div className="thermal-store-address">Jl. Raya Telang No. 15 Kamal, Bangkalan</div>
+              <div className="thermal-store-phone">Telp/WA: 085708350575</div>
+              <div className="thermal-double-line">================================</div>
+            </div>
+
+            <div className="thermal-meta">
+              <div className="thermal-row">
+                <span>No. Trx :</span>
+                <span>#TRX-1024-0{receipt.id < 10 ? `0${receipt.id}` : receipt.id}</span>
+              </div>
+              <div className="thermal-row">
+                <span>Tanggal :</span>
+                <span>
+                  {new Date(receipt.tanggal || Date.now()).toLocaleDateString('id-ID')}{' '}
+                  {new Date(receipt.tanggal || Date.now()).toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+              <div className="thermal-row">
+                <span>Kasir   :</span>
+                <span>{user?.nama || 'Abah Rohim'}</span>
+              </div>
+              <div className="thermal-row">
+                <span>Metode  :</span>
+                <span>{receipt.metode_bayar === 'qris' ? 'QRIS INSTAN' : 'TUNAI / CASH'}</span>
+              </div>
+              <div className="thermal-dash-line">--------------------------------</div>
+            </div>
+
+            <div className="thermal-items-list">
+              {receipt.items && receipt.items.length > 0 ? (
+                receipt.items.map((it, idx) => (
+                  <div key={idx} className="thermal-item-entry">
+                    <div className="thermal-item-title">{it.nama}</div>
+                    <div className="thermal-item-calc">
+                      <span>{it.jumlah} x {formatRupiah(it.harga)}</span>
+                      <span>{formatRupiah(it.subtotal)}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="thermal-item-entry">
+                  <div className="thermal-item-title">Total Pembelian Produk Sembako</div>
+                  <div className="thermal-item-calc">
+                    <span>1 x {formatRupiah(receipt.total)}</span>
+                    <span>{formatRupiah(receipt.total)}</span>
+                  </div>
+                </div>
+              )}
+              <div className="thermal-dash-line">--------------------------------</div>
+            </div>
+
+            <div className="thermal-totals">
+              <div className="thermal-row">
+                <span>Total Item :</span>
+                <span>{receipt.items?.reduce((s, it) => s + (it.jumlah || 1), 0) || 1} Pcs</span>
+              </div>
+              <div className="thermal-row font-bold">
+                <span>SUBTOTAL   :</span>
+                <span>{formatRupiah(receipt.total)}</span>
+              </div>
+              <div className="thermal-row">
+                <span>Ongkir     :</span>
+                <span>Rp 0</span>
+              </div>
+              <div className="thermal-dash-line">--------------------------------</div>
+              <div className="thermal-row font-bold large">
+                <span>TOTAL      :</span>
+                <span>{formatRupiah(receipt.total)}</span>
+              </div>
+              <div className="thermal-row">
+                <span>BAYAR ({receipt.metode_bayar === 'qris' ? 'QRIS' : 'TUNAI'}) :</span>
+                <span>{formatRupiah(receipt.jumlah_diterima ?? receipt.total)}</span>
+              </div>
+              <div className="thermal-row font-bold">
+                <span>KEMBALI    :</span>
+                <span>{formatRupiah(receipt.kembalian ?? 0)}</span>
+              </div>
+              <div className="thermal-double-line">================================</div>
+            </div>
+
+            <div className="thermal-footer">
+              <div className="thermal-footer-title">TERIMA KASIH TELAH BERBELANJA</div>
+              <div className="thermal-footer-sub">DI TOKO ABAH SEMBAKO</div>
+              <div className="thermal-footer-note">Barang yang sudah dibeli tidak dapat</div>
+              <div className="thermal-footer-note">ditukar atau dikembalikan</div>
+              <div className="thermal-double-line">================================</div>
+            </div>
+          </div>
         </div>
       )}
     </div>

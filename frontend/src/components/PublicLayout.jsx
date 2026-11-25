@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router-dom';
 import { CartProvider, useCart } from '../context/CartContext';
+import storeBanner from '../assets/store-banner.jpg';
 import './PublicLayout.css';
 
 function PublicHeader() {
@@ -47,7 +48,11 @@ function PublicHeader() {
         <div className="katalog-header-inner">
           {/* Logo & Identitas Toko */}
           <Link to="/katalog" className="katalog-brand-group">
-            <div className="katalog-brand-logo-badge">TA</div>
+            <img
+              src={storeBanner}
+              alt="Logo Toko Abah"
+              className="katalog-brand-logo-img"
+            />
             <div className="katalog-brand-text">
               <span className="katalog-brand-title">Toko Abah</span>
               <span className="katalog-brand-subtitle">Grosir &amp; Sembako Segar</span>
@@ -124,7 +129,12 @@ function PublicFooter() {
           {/* Kolom 1: Profil */}
           <div className="katalog-footer-col">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div className="katalog-brand-logo-badge" style={{ width: 34, height: 34, fontSize: 14 }}>TA</div>
+              <img
+                src={storeBanner}
+                alt="Logo Toko Abah"
+                className="katalog-brand-logo-img"
+                style={{ width: 34, height: 34 }}
+              />
               <span style={{ fontWeight: 700, fontSize: 17, color: '#15803d' }}>Toko Abah</span>
             </div>
             <p>
