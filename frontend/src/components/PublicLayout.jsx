@@ -89,6 +89,7 @@ function PublicHeader() {
 
             {/* Keranjang Belanja */}
             <Link
+              id="katalog-header-cart-btn"
               to="/keranjang"
               className="katalog-cart-button"
               aria-label={`Keranjang berisi ${count} barang`}

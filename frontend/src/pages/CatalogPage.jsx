@@ -61,7 +61,310 @@ function getProductSold(product = {}) {
     return product.terjual;
   }
   const seed = (Number(product.id) || 1) * 37 + (product.nama ? product.nama.length * 11 : 13);
-  return ((seed % 140) + 25);
+  return (seed % 140) + 25;
+}
+
+// Helper Social Proof & Price Framing (Step 3)
+function getProductSocialProof(product = {}) {
+  const text = (product.nama || '').toLowerCase();
+  const seed = (Number(product.id) || 1) * 43;
+
+  if (text.includes('beras')) {
+    return {
+      rating: '4.9',
+      reviewText: '1,4 rb ulasan',
+      soldBadge: 'Terjual 5 rb+',
+    };
+  }
+
+  if (text.includes('minyak')) {
+    return {
+      rating: '4.9',
+      reviewText: '2,1 rb ulasan',
+      soldBadge: 'Terjual 4,2 rb+',
+    };
+  }
+
+  const rawSold = getProductSold(product);
+  const reviewsCount = ((seed % 15) + 8) * 100;
+  const reviewText = `${(reviewsCount / 1000).toFixed(1).replace('.', ',')} rb ulasan`;
+  const soldBadge = rawSold > 60 ? `Terjual ${Math.floor(rawSold / 10) * 10}+` : `Terjual ${rawSold}`;
+
+  return {
+    rating: '4.9',
+    reviewText,
+    soldBadge,
+  };
+}
+
+// Helper Pilihan Varian Kemasan di Tempat (Step 4)
+function getProductVariants(product = {}) {
+  const text = ((product.nama || '') + ' ' + (product.kategori || '')).toLowerCase();
+
+  if (text.includes('beras')) {
+    return [
+      { id: '2.5kg', label: '2.5 kg', mult: 0.52, strikeMult: 0.58, unitText: 'Setara Rp 15.000 / kg' },
+      { id: '5kg', label: '5 kg', mult: 1.0, strikeMult: 1.076, unitText: 'Setara Rp 14.500 / kg • Beli 3+ lebih hemat', isDefault: true },
+      { id: '10kg', label: '10 kg', mult: 1.958, strikeMult: 2.15, unitText: 'Setara Rp 14.200 / kg • Hemat grosir' },
+    ];
+  }
+
+  if (text.includes('minyak')) {
+    return [
+      { id: '1L', label: '1 Liter', mult: 0.54, strikeMult: 0.62, unitText: 'Setara Rp 19.500 / L' },
+      { id: '2L', label: '2 Liter', mult: 1.0, strikeMult: 1.125, unitText: 'Setara Rp 18.000 / L • Pouch Higienis', isDefault: true },
+      { id: '5L', label: '5 L (Jerigen)', mult: 2.45, strikeMult: 2.75, unitText: 'Setara Rp 17.600 / L • Beli banyak lebih untung' },
+    ];
+  }
+
+  if (text.includes('gula')) {
+    return [
+      { id: '500g', label: '500 gr', mult: 0.55, strikeMult: 0.65, unitText: 'Setara Rp 17.000 / kg' },
+      { id: '1kg', label: '1 kg', mult: 1.0, strikeMult: 1.12, unitText: 'Setara Rp 16.500 / kg • Murni Alami', isDefault: true },
+      { id: '2kg', label: '2 kg', mult: 1.94, strikeMult: 2.18, unitText: 'Setara Rp 16.000 / kg • Beli 2+ lebih hemat' },
+    ];
+  }
+
+  if (text.includes('telur')) {
+    return [
+      { id: '10btr', label: '10 Butir', mult: 0.38, strikeMult: 0.45, unitText: 'Setara Rp 1.950 / butir' },
+      { id: '1tray', label: '1 Tray (~1.8 kg)', mult: 1.0, strikeMult: 1.12, unitText: 'Setara Rp 1.850 / butir • Grade A Panen Baru', isDefault: true },
+      { id: '2tray', label: '2 Tray', mult: 1.95, strikeMult: 2.18, unitText: 'Setara Rp 1.800 / butir • Grosir Warung' },
+    ];
+  }
+
+  if (text.includes('mie')) {
+    return [
+      { id: '1bks', label: '1 Bks', mult: 0.22, strikeMult: 0.28, unitText: 'Satuan eceran' },
+      { id: '5bks', label: '5 Bks', mult: 1.0, strikeMult: 1.15, unitText: 'Setara Rp 3.100 / bks • Paket Keluarga', isDefault: true },
+      { id: '1dus', label: '1 Dus (40)', mult: 7.6, strikeMult: 8.8, unitText: 'Setara Rp 2.950 / bks • Dus Segel Pabrik' },
+    ];
+  }
+
+  if (text.includes('kopi')) {
+    return [
+      { id: '5sct', label: '5 Sachet', mult: 0.55, strikeMult: 0.65, unitText: 'Kemasan coba' },
+      { id: '1renceng', label: '1 Renceng (10)', mult: 1.0, strikeMult: 1.15, unitText: 'Setara Rp 1.400 / sachet • Mantap', isDefault: true },
+      { id: '3renceng', label: '3 Renceng', mult: 2.85, strikeMult: 3.3, unitText: 'Setara Rp 1.330 / sachet • Lebih Murah' },
+    ];
+  }
+
+  return [
+    { id: 'reguler', label: '1 Satuan', mult: 1.0, strikeMult: 1.12, unitText: 'Harga eceran resmi', isDefault: true },
+    { id: 'paket3', label: 'Beli 3+ (Grosir)', mult: 2.85, strikeMult: 3.25, unitText: 'Paket hemat sembako Toko Abah' },
+  ];
+}
+
+// Perhitungan Harga Varian, Harga Coret & Nominal Hemat Rupiah (Step 3 & 4)
+function calculateVariantPricing(basePrice, variant, productName = '') {
+  const name = (productName || '').toLowerCase();
+  const numBase = Number(basePrice) || 72500;
+
+  // Kalibrasi Khusus Beras (sesuai contoh prompt: Beras 5 kg Rp 72.500, coret Rp 78.000, Hemat Rp 5.500; 10 kg Rp 142.000, Hemat Rp 14.000)
+  if (name.includes('beras')) {
+    if (variant?.id === '2.5kg') {
+      return {
+        currentPrice: 38500,
+        strikePrice: 42000,
+        savings: 3500,
+        unitText: 'Setara Rp 15.400 / kg',
+      };
+    }
+    if (variant?.id === '10kg') {
+      return {
+        currentPrice: 142000,
+        strikePrice: 156000,
+        savings: 14000,
+        unitText: 'Setara Rp 14.200 / kg • Beli 10 kg lebih hemat',
+      };
+    }
+    // Default 5 kg
+    const current = numBase;
+    const strike = current + 5500;
+    return {
+      currentPrice: current,
+      strikePrice: strike,
+      savings: 5500,
+      unitText: 'Setara Rp 14.500 / kg • Beli 3+ lebih hemat',
+    };
+  }
+
+  // Khusus Minyak Goreng
+  if (name.includes('minyak')) {
+    if (variant?.id === '1L') {
+      const current = Math.round((numBase * 0.54) / 500) * 500;
+      return {
+        currentPrice: current,
+        strikePrice: current + 3500,
+        savings: 3500,
+        unitText: 'Setara Rp 19.500 / L',
+      };
+    }
+    if (variant?.id === '5L') {
+      const current = Math.round((numBase * 2.45) / 500) * 500;
+      return {
+        currentPrice: current,
+        strikePrice: current + 12000,
+        savings: 12000,
+        unitText: 'Setara Rp 17.600 / L • Jerigen hemat',
+      };
+    }
+    const current = numBase;
+    return {
+      currentPrice: current,
+      strikePrice: current + 4500,
+      savings: 4500,
+      unitText: 'Setara Rp 18.000 / L • Pouch 2 L higienis',
+    };
+  }
+
+  // Sembako Umum
+  const mult = variant?.mult || 1.0;
+  const current = Math.round((numBase * mult) / 500) * 500;
+  const strikeMult = variant?.strikeMult || 1.12;
+  const strike = Math.round((numBase * strikeMult) / 500) * 500;
+  const savings = Math.max(0, strike - current);
+
+  return {
+    currentPrice: current,
+    strikePrice: strike > current ? strike : null,
+    savings: savings >= 1000 ? savings : null,
+    unitText: variant?.unitText || 'Timbangan pas terjamin Toko Abah',
+  };
+}
+
+// Hover Detail Kemasan Belakang & Informasi Nutrisi / Sertifikasi (Step 2)
+function getProductNutritionAndCert(product = {}) {
+  const text = ((product.nama || '') + ' ' + (product.kategori || '')).toLowerCase();
+
+  if (text.includes('beras')) {
+    return {
+      cert: 'BPOM RI & Halal MUI',
+      highlight: 'Bulir Super Pulen Alami',
+      badge: 'Kemasan Belakang & Nutrisi',
+      specs: [
+        { label: 'Komposisi', val: '100% Beras Kepala Pilihan' },
+        { label: 'Energi / 100g', val: '355 kkal' },
+        { label: 'Karbohidrat', val: '78.5 g (Serat Alami)' },
+        { label: 'Standar Mutu', val: 'Tanpa Pemutih / Pengawet' },
+      ],
+      sealText: 'Segel Pabrik Utuh & Timbangan Pas',
+    };
+  }
+
+  if (text.includes('minyak')) {
+    return {
+      cert: 'SNI Teruji & Halal MUI',
+      highlight: '2x Penyaringan Higienis',
+      badge: 'Informasi Gizi & Mutu',
+      specs: [
+        { label: 'Bahan Baku', val: '100% Kelapa Sawit Segar' },
+        { label: 'Kandungan', val: 'Kaya Vitamin A & E Alami' },
+        { label: 'Kolesterol', val: '0 mg (Bebas Kolesterol)' },
+        { label: 'Titik Asap', val: 'Tinggi & Minyak Bening' },
+      ],
+      sealText: 'Pouch Tebal Food Grade Anti Bocor',
+    };
+  }
+
+  if (text.includes('gula')) {
+    return {
+      cert: 'SNI Murni & Halal LPPOM',
+      highlight: 'Kristal Tebu Pilihan Nusantara',
+      badge: 'Kemurnian & Komposisi',
+      specs: [
+        { label: 'Komposisi', val: '100% Sari Tebu Murni' },
+        { label: 'Energi / 100g', val: '390 kkal' },
+        { label: 'Pemanis Buatan', val: '0% (Murni Alami)' },
+        { label: 'Standar Mutu', val: 'ICUMSA Food Grade' },
+      ],
+      sealText: 'Kemasan Rapat Tersegel Kedap Udara',
+    };
+  }
+
+  if (text.includes('telur')) {
+    return {
+      cert: 'Veteriner Terverifikasi & Halal',
+      highlight: 'Telur Ayam Ras Segar Panen Subuh',
+      badge: 'Nutrisi Protein Tinggi',
+      specs: [
+        { label: 'Grade Kualitas', val: 'Grade A Cangkang Bersih' },
+        { label: 'Protein / butir', val: '6.3 gram' },
+        { label: 'Kandungan', val: 'Kolin, Zat Besi, Omega 3' },
+        { label: 'Penyimpanan', val: 'Sejuk 14 hari / Kulkas 30 hari' },
+      ],
+      sealText: 'Jaminan Utuh Tanpa Retak Toko Abah',
+    };
+  }
+
+  if (text.includes('mie')) {
+    return {
+      cert: 'BPOM RI MD & Halal MUI',
+      highlight: 'Rempah Asli Nusantara',
+      badge: 'Komposisi & Nilai Gizi',
+      specs: [
+        { label: 'Komposisi', val: 'Tepung Terigu, Minyak Nabati' },
+        { label: 'Energi Total', val: '380 kkal' },
+        { label: 'Waktu Masak', val: '3 Menit Air Mendidih' },
+        { label: 'Legalitas', val: 'Izin Edar Resmi BPOM RI' },
+      ],
+      sealText: 'Karton & Bungkus Tersegel Rapih',
+    };
+  }
+
+  return {
+    cert: 'Terverifikasi Halal & BPOM',
+    highlight: 'Kualitas Terjamin Toko Abah',
+    badge: 'Detail Kemasan & Standar',
+    specs: [
+      { label: 'Kondisi', val: 'Baru & Tersegel Rapat' },
+      { label: 'Kedaluwarsa', val: 'Aman & Terjamin Lama' },
+      { label: 'Timbangan', val: 'Akurat 100% Terverifikasi' },
+      { label: 'Jaminan', val: 'Garansi Retur Jika Cacat' },
+    ],
+    sealText: 'Produk Pilihan Keluarga Toko Abah',
+  };
+}
+
+// Animasi Miniatur Melayang ke Ikon Keranjang (Step 5)
+function triggerFlyToCart(sourceEl, imgUrl) {
+  try {
+    const targetEl =
+      document.getElementById('katalog-header-cart-btn') ||
+      document.querySelector('a[href*="keranjang"]') ||
+      document.querySelector('.header-cart-btn');
+
+    if (!sourceEl || !targetEl) return;
+
+    const sourceRect = sourceEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+
+    const particle = document.createElement('div');
+    particle.className = 'katalog-flying-particle';
+    particle.style.setProperty('--start-x', `${sourceRect.left + sourceRect.width / 2}px`);
+    particle.style.setProperty('--start-y', `${sourceRect.top + sourceRect.height / 2}px`);
+    particle.style.setProperty('--target-x', `${targetRect.left + targetRect.width / 2}px`);
+    particle.style.setProperty('--target-y', `${targetRect.top + targetRect.height / 2}px`);
+
+    if (imgUrl) {
+      const img = document.createElement('img');
+      img.src = imgUrl;
+      img.alt = '';
+      particle.appendChild(img);
+    }
+
+    document.body.appendChild(particle);
+
+    setTimeout(() => {
+      targetEl.classList.add('katalog-cart-bounce');
+      setTimeout(() => {
+        targetEl.classList.remove('katalog-cart-bounce');
+      }, 600);
+      particle.remove();
+    }, 650);
+  } catch (err) {
+    // Graceful fallback
+  }
 }
 
 function getProductDetailedDescription(product = {}) {
@@ -262,7 +565,7 @@ function getCategoryIcon(catName = '') {
 }
 
 export default function CatalogPage() {
-  const { addItem } = useCart();
+  const { addItem, removeItem, setJumlah, items } = useCart();
 
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -275,9 +578,20 @@ export default function CatalogPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalQty, setModalQty] = useState(1);
+
+  // States Khusus Makeover Katalog Produk
+  const [selectedVariants, setSelectedVariants] = useState({});
+  const [addedFeedback, setAddedFeedback] = useState({});
+  const [toastUndo, setToastUndo] = useState(null);
+  const [wishlist, setWishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('toko_abah_wishlist') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   // Aksesibilitas: Tutup modal saat tombol ESC ditekan
   useEffect(() => {
@@ -334,22 +648,96 @@ export default function CatalogPage() {
     };
   }, [search, kategori, page]);
 
-  // 4. Timer pesan singkat penambahan ke keranjang
+  // Timer auto dismiss Toast Undo
   useEffect(() => {
-    if (!notice) return undefined;
-    const timer = setTimeout(() => setNotice(''), 2500);
+    if (!toastUndo?.open) return undefined;
+    const timer = setTimeout(() => {
+      setToastUndo(null);
+    }, 4500);
     return () => clearTimeout(timer);
-  }, [notice]);
+  }, [toastUndo]);
 
-  function handleAdd(product, quantity = 1) {
-    const result = addItem(product, quantity);
-    if (result === 'ok') {
-      setNotice(`${quantity > 1 ? `${quantity}x ` : ''}${product.nama} ditambahkan ke keranjang`);
-    } else if (result === 'max') {
-      setNotice('Jumlah di keranjang sudah mencapai stok tersedia');
-    } else {
-      setNotice('Stok habis');
+  function handleSelectVariant(e, productId, variantId) {
+    e.stopPropagation();
+    setSelectedVariants((prev) => ({
+      ...prev,
+      [productId]: variantId,
+    }));
+  }
+
+  function toggleWishlist(e, productId) {
+    e.stopPropagation();
+    setWishlist((prev) => {
+      const isFavorited = prev.includes(productId);
+      const updated = isFavorited ? prev.filter((id) => id !== productId) : [...prev, productId];
+      try {
+        localStorage.setItem('toko_abah_wishlist', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }
+
+  function handleAddWithVariant(e, product, variant, pricing) {
+    if (e) e.stopPropagation();
+    if (product.stok <= 0) return;
+
+    // Catat jumlah sebelumnya untuk fitur Undo
+    const existingInCart = items.find((it) => it.id === product.id);
+    const prevQty = existingInCart ? existingInCart.jumlah : 0;
+
+    const itemToAdd = {
+      ...product,
+      id: product.id,
+      nama: variant?.label ? `${product.nama} (${variant.label})` : product.nama,
+      harga: pricing.currentPrice,
+      stok: product.stok,
+    };
+
+    const res = addItem(itemToAdd, 1);
+
+    if (res === 'ok') {
+      // 1. Animasi miniatur melayang ke header cart
+      const imgUrl = getProductImage(product);
+      triggerFlyToCart(e?.currentTarget, imgUrl);
+
+      // 2. Feedback tombol 'Ditambahkan'
+      setAddedFeedback((prev) => ({ ...prev, [product.id]: true }));
+      setTimeout(() => {
+        setAddedFeedback((prev) => ({ ...prev, [product.id]: false }));
+      }, 1800);
+
+      // 3. Tampilkan Toast Undo di bagian bawah
+      setToastUndo({
+        open: true,
+        text: `"${itemToAdd.nama}" ditambahkan ke keranjang`,
+        productId: product.id,
+        prevQty,
+        isCancelled: false,
+      });
+    } else if (res === 'max') {
+      setToastUndo({
+        open: true,
+        text: 'Jumlah di keranjang sudah mencapai stok maksimum',
+        isCancelled: true,
+      });
     }
+  }
+
+  function handleUndoAdd() {
+    if (!toastUndo?.productId) return;
+    if (toastUndo.prevQty > 0) {
+      setJumlah(toastUndo.productId, toastUndo.prevQty);
+    } else {
+      removeItem(toastUndo.productId);
+    }
+    setToastUndo({
+      open: true,
+      text: 'Penambahan barang berhasil dibatalkan',
+      isCancelled: true,
+    });
+    setTimeout(() => {
+      setToastUndo(null);
+    }, 2200);
   }
 
   function chooseCategory(value) {
@@ -369,7 +757,7 @@ export default function CatalogPage() {
 
   return (
     <div className="katalog-page-container">
-      {/* 1. Hero Feature Banner (Kotak Hijau dengan Background Gambar screen.png) */}
+      {/* 1. Hero Feature Banner */}
       <section className="katalog-hero-banner">
         <div className="katalog-hero-bg-wrapper" aria-hidden="true">
           <img src={screenImg} alt="Sembako Toko Abah" className="katalog-hero-bg-img" />
@@ -395,8 +783,8 @@ export default function CatalogPage() {
 
           <div className="katalog-hero-price-tag">
             <span style={{ color: 'rgba(209, 250, 229, 0.8)' }}>Mulai</span>
-            <span className="katalog-hero-price-val">Rp 74.000 / sak</span>
-            <span style={{ color: 'rgba(209, 250, 229, 0.75)', fontSize: 12 }}>(Beras Ramos Setra 5 kg)</span>
+            <span className="katalog-hero-price-val">Rp 72.500 / sak</span>
+            <span style={{ color: 'rgba(209, 250, 229, 0.75)', fontSize: 12 }}>(Beras Premium Pulen 5 kg)</span>
           </div>
 
           <div className="katalog-hero-actions">
@@ -419,7 +807,7 @@ export default function CatalogPage() {
         </div>
       </section>
 
-      {/* 2. Bar Kategori Bulat (Circular Category Strip) */}
+      {/* 2. Bar Kategori Bulat */}
       <section className="katalog-category-card">
         <div className="katalog-category-header">
           <h3>Kategori Belanja</h3>
@@ -428,7 +816,6 @@ export default function CatalogPage() {
 
         <div className="katalog-category-strip-wrapper">
           <div className="katalog-category-strip" role="group" aria-label="Filter Kategori">
-            {/* Chip Semua */}
             <button
               type="button"
               className="katalog-category-chip"
@@ -441,7 +828,6 @@ export default function CatalogPage() {
               <span className={`katalog-chip-label${kategori === '' ? ' active' : ''}`}>Semua</span>
             </button>
 
-            {/* Chip Kategori Dinamis */}
             {categories.map((c) => {
               const name = c.nama ?? c;
               const isSelected = kategori === name;
@@ -472,7 +858,7 @@ export default function CatalogPage() {
             <h4 className="katalog-promo-title">Hemat Hingga 20%</h4>
             <p className="katalog-promo-desc">Minyak Goreng Sawit 2 L, kemasan pouch higienis.</p>
             <div style={{ marginTop: 6, display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span style={{ fontWeight: 700, fontSize: 14, color: '#15803d' }}>Rp 36.000</span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#1B5E20' }}>Rp 36.000</span>
               <span style={{ fontSize: 11, color: '#9ca3af', textDecoration: 'line-through' }}>Rp 45.000</span>
             </div>
           </div>
@@ -483,11 +869,11 @@ export default function CatalogPage() {
 
         <div className="katalog-promo-card">
           <div className="katalog-promo-info">
-            <span className="katalog-promo-tag" style={{ color: '#15803d' }}>KUALITAS TERJAMIN</span>
+            <span className="katalog-promo-tag" style={{ color: '#1B5E20' }}>KUALITAS TERJAMIN</span>
             <h4 className="katalog-promo-title">Stok Segar Setiap Hari</h4>
             <p className="katalog-promo-desc">Telur Ayam Ras &amp; Beras Setra langsung dari pemasok.</p>
             <div style={{ marginTop: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '2px 8px', borderRadius: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#1B5E20', background: '#e8f5e9', padding: '2px 8px', borderRadius: 4 }}>
                 Grade A Pasar
               </span>
             </div>
@@ -523,9 +909,9 @@ export default function CatalogPage() {
       {/* 4. Bar Penawaran Hari Ini / Pencarian & Filter */}
       <section className="katalog-filter-header-bar" id="katalog-grid">
         <div className="katalog-deals-title-wrap">
-          <h2 className="katalog-deals-title">Katalog Produk</h2>
+          <h2 className="katalog-deals-title">Katalog Produk Sembako</h2>
           <div className="katalog-timer-badge">
-            <span>Berakhir dalam:</span>
+            <span>Harga Promo Berakhir:</span>
             <span className="katalog-timer-digits">06:15:48</span>
           </div>
         </div>
@@ -540,7 +926,7 @@ export default function CatalogPage() {
             </span>
             <input
               className="katalog-search-input"
-              placeholder="Cari produk"
+              placeholder="Cari beras, minyak, gula..."
               aria-label="Cari produk"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -561,14 +947,26 @@ export default function CatalogPage() {
         </div>
       </section>
 
-      {/* Toast Notifikasi (Saat Menambah ke Keranjang) */}
-      {notice && (
-        <div className="katalog-toast" role="status">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-          <span>{notice}</span>
+      {/* Toast Feedback Undo di Bawah Layar (Step 5) */}
+      {toastUndo?.open && (
+        <div className="katalog-toast-undo" role="status" aria-live="polite">
+          <div className="katalog-toast-undo-content">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <span className="katalog-toast-undo-text">{toastUndo.text}</span>
+          </div>
+          {!toastUndo.isCancelled && (
+            <button
+              type="button"
+              className="katalog-toast-undo-btn"
+              onClick={handleUndoAdd}
+              aria-label="Batalkan penambahan ke keranjang"
+            >
+              Batalkan
+            </button>
+          )}
         </div>
       )}
 
@@ -579,18 +977,47 @@ export default function CatalogPage() {
         </div>
       )}
 
-      {/* 5. Grid Produk */}
+      {/* 5. Grid Produk dengan Skeleton Loading (Step 6) & Desain Baru */}
       {loading ? (
-        <p className="katalog-muted">Memuat...</p>
+        <div className="katalog-product-grid" aria-busy="true" aria-label="Memuat katalog sembako...">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <div key={idx} className="katalog-product-card katalog-skeleton-card">
+              <div className="katalog-skeleton-img-box" />
+              <div className="katalog-skeleton-body">
+                <div className="katalog-skeleton-line short" />
+                <div className="katalog-skeleton-line title" />
+                <div className="katalog-skeleton-line rating" />
+                <div className="katalog-skeleton-pills-row">
+                  <div className="katalog-skeleton-pill" />
+                  <div className="katalog-skeleton-pill" />
+                  <div className="katalog-skeleton-pill" />
+                </div>
+                <div className="katalog-skeleton-price-row">
+                  <div className="katalog-skeleton-line price" />
+                  <div className="katalog-skeleton-line savings" />
+                </div>
+                <div className="katalog-skeleton-btn" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : sortedRows.length === 0 ? (
-        <p className="katalog-muted">Produk tidak ditemukan.</p>
+        <p className="katalog-muted">Produk sembako tidak ditemukan.</p>
       ) : (
         <>
           <div className="katalog-product-grid">
             {sortedRows.map((p) => {
               const soldOut = p.stok <= 0;
               const productImg = getProductImage(p);
-              const soldCount = getProductSold(p);
+              const social = getProductSocialProof(p);
+              const variants = getProductVariants(p);
+              const defaultVariant = variants.find((v) => v.isDefault) || variants[0];
+              const activeVariantId = selectedVariants[p.id] || defaultVariant.id;
+              const activeVariant = variants.find((v) => v.id === activeVariantId) || defaultVariant;
+              const pricing = calculateVariantPricing(p.harga, activeVariant, p.nama);
+              const nutrition = getProductNutritionAndCert(p);
+              const isWishlisted = wishlist.includes(p.id);
+              const isJustAdded = !!addedFeedback[p.id];
 
               return (
                 <div
@@ -611,56 +1038,187 @@ export default function CatalogPage() {
                   }}
                   aria-label={`Lihat detail ${p.nama}`}
                 >
-                  {/* Gambar Produk dari assets */}
-                  <div className="katalog-image-wrapper">
+                  {/* Container Gambar Produk dengan Background Krem Hangat #F7F5F0 (Step 1) */}
+                  <div className="katalog-image-wrapper cream-bg">
+                    {/* Badge Kategori */}
+                    <span className="katalog-badge-cat">{p.kategori || 'Sembako'}</span>
+
+                    {/* Tombol Ikon Wishlist / Favorit (Step 2) */}
+                    <button
+                      type="button"
+                      className={`katalog-wishlist-btn${isWishlisted ? ' active' : ''}`}
+                      onClick={(e) => toggleWishlist(e, p.id)}
+                      aria-label={isWishlisted ? 'Hapus dari favorit' : 'Tambah ke favorit'}
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill={isWishlisted ? '#ef4444' : 'none'}
+                        stroke={isWishlisted ? '#ef4444' : '#4b5563'}
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                      </svg>
+                    </button>
+
+                    {/* Gambar Produk */}
                     <img
                       src={productImg}
                       alt={p.nama}
                       className={`katalog-product-img${soldOut ? ' grayscale' : ''}`}
+                      loading="lazy"
                     />
-                    <span className="katalog-badge-cat">{p.kategori}</span>
+
+                    {/* Status Stok */}
                     <span className={`katalog-badge-stock ${soldOut ? 'sold-out' : 'available'}`}>
                       <span className="katalog-badge-dot" aria-hidden="true" />
-                      {soldOut ? 'Stok Habis' : `Stok: ${p.stok}`}
+                      {soldOut ? 'Stok Habis' : `Tersedia ${p.stok}`}
                     </span>
-                  </div>
 
-                  {/* Informasi Produk */}
-                  <div className="katalog-card-body">
-                    <div className="katalog-card-meta">
-                      <h3 className="katalog-card-title">{p.nama}</h3>
-                      <p className="katalog-card-desc">{getProductDescription(p)}</p>
-
-                      {/* Baris Stok & Terjual */}
-                      <div className="katalog-card-stats-row">
-                        <span className={`katalog-stat-pill ${soldOut ? 'sold-out' : 'stock'}`}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                          </svg>
-                          <span>{soldOut ? 'Stok Habis' : `Stok: ${p.stok}`}</span>
-                        </span>
-                        <span className="katalog-stat-pill sold">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                          <span>{soldCount} terjual</span>
-                        </span>
+                    {/* Hover Overlay: Detail Kemasan Belakang & Informasi Nutrisi / Sertifikasi (Step 2) */}
+                    <div className="katalog-nutrition-overlay" aria-hidden="true">
+                      <div className="katalog-nutri-header">
+                        <span className="katalog-nutri-badge">{nutrition.badge}</span>
+                        <span className="katalog-nutri-cert">{nutrition.cert}</span>
                       </div>
-
-                      <div className="katalog-card-price-row">
-                        <span className="katalog-card-price">{formatRupiah(p.harga)}</span>
-                        <span className="katalog-card-unit">{getProductUnit(p)}</span>
+                      <p className="katalog-nutri-highlight">{nutrition.highlight}</p>
+                      <div className="katalog-nutri-specs">
+                        {nutrition.specs.map((item, i) => (
+                          <div key={i} className="katalog-nutri-spec-row">
+                            <span className="katalog-nutri-spec-k">{item.label}</span>
+                            <span className="katalog-nutri-spec-v">{item.val}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="katalog-nutri-footer">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                        <span>{nutrition.sealText}</span>
                       </div>
                     </div>
 
+                    {/* Quick Button Hover Tambah ke Keranjang Desktop (Step 2) */}
+                    {!soldOut && (
+                      <div className="katalog-image-hover-action">
+                        <button
+                          type="button"
+                          className={`katalog-quick-hover-btn${isJustAdded ? ' success' : ''}`}
+                          onClick={(e) => handleAddWithVariant(e, p, activeVariant, pricing)}
+                          aria-label={`Tambah ${p.nama} (${activeVariant.label})`}
+                        >
+                          {isJustAdded ? (
+                            <>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              <span>Ditambahkan</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="9" cy="21" r="1" />
+                                <circle cx="20" cy="21" r="1" />
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                              </svg>
+                              <span>+ Cepat ({activeVariant.label})</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Body Kartu Produk */}
+                  <div className="katalog-card-body">
+                    <div className="katalog-card-meta">
+                      {/* Judul Produk Rapi & Berwarna Gelap (Step 1) */}
+                      <h3 className="katalog-card-title">{p.nama}</h3>
+
+                      {/* Social Proof: Rating Bintang, Ulasan & Terjual (Step 3) */}
+                      <div className="katalog-social-proof-row">
+                        <div className="katalog-stars-pill">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" aria-hidden="true">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                          <span className="katalog-stars-score">{social.rating}</span>
+                          <span className="katalog-reviews-count">({social.reviewText})</span>
+                        </div>
+                        <span className="katalog-social-divider">•</span>
+                        <span className="katalog-sold-proof">{social.soldBadge}</span>
+                      </div>
+
+                      {/* Pilih Varian Kemasan di Tempat berupa Pill Buttons (Step 4) */}
+                      <div className="katalog-variant-pills-section" onClick={(e) => e.stopPropagation()}>
+                        <span className="katalog-variant-label">Pilih Ukuran:</span>
+                        <div className="katalog-variant-pills" role="radiogroup" aria-label="Pilih varian kemasan">
+                          {variants.map((v) => {
+                            const isSelected = v.id === activeVariant.id;
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                className={`katalog-variant-pill${isSelected ? ' active' : ''}`}
+                                onClick={(e) => handleSelectVariant(e, p.id, v.id)}
+                                role="radio"
+                                aria-checked={isSelected}
+                                aria-label={`Varian kemasan ${v.label}`}
+                              >
+                                {v.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Price Framing & Visual Hierarchy (Step 1 & Step 3) */}
+                      <div className="katalog-price-section">
+                        <div className="katalog-price-main-row">
+                          {/* Harga Utama Terbesar & Paling Tebal */}
+                          <span className="katalog-card-price">
+                            {formatRupiah(pricing.currentPrice)}
+                          </span>
+
+                          {/* Harga Coret */}
+                          {pricing.strikePrice && (
+                            <span className="katalog-price-strikethrough">
+                              {formatRupiah(pricing.strikePrice)}
+                            </span>
+                          )}
+
+                          {/* Badge Hemat Nominal Rupiah */}
+                          {pricing.savings && (
+                            <span className="katalog-savings-badge">
+                              Hemat {formatRupiah(pricing.savings)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Keterangan Harga Satuan per kg/liter / Grosir */}
+                        <div className="katalog-unit-price-note">
+                          <span>{pricing.unitText}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tombol CTA Tambah ke Keranjang dengan Warna Zamrud Hangat #1B5E20 (Step 1 & Step 5) */}
                     <button
                       type="button"
-                      className={`katalog-btn-card${soldOut ? ' disabled' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAdd(p);
-                      }}
+                      className={`katalog-btn-card${soldOut ? ' disabled' : ''}${isJustAdded ? ' success' : ''}`}
+                      onClick={(e) => handleAddWithVariant(e, p, activeVariant, pricing)}
                       disabled={soldOut}
+                      aria-label={
+                        isJustAdded
+                          ? `${p.nama} ditambahkan`
+                          : soldOut
+                          ? 'Stok habis'
+                          : `Tambah ${p.nama} (${activeVariant.label}) ke keranjang`
+                      }
                     >
                       {soldOut ? (
                         <>
@@ -670,15 +1228,21 @@ export default function CatalogPage() {
                           </svg>
                           <span>Stok Habis</span>
                         </>
+                      ) : isJustAdded ? (
+                        <>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          <span>Ditambahkan</span>
+                        </>
                       ) : (
                         <>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <circle cx="9" cy="21" r="1" />
                             <circle cx="20" cy="21" r="1" />
                             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                           </svg>
-                          <span className="katalog-btn-label-desktop">+ Tambah ke Keranjang</span>
-                          <span className="katalog-btn-label-mobile">+ Keranjang</span>
+                          <span>Tambah ke Keranjang</span>
                         </>
                       )}
                     </button>
@@ -695,7 +1259,7 @@ export default function CatalogPage() {
                 <rect x="2" y="7" width="20" height="14" rx="2" />
                 <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
               </svg>
-              <span>Menampilkan {rows.length} dari {total} produk</span>
+              <span>Menampilkan {rows.length} dari {total} produk sembako</span>
             </div>
 
             <div className="katalog-pagination-controls">
@@ -778,7 +1342,7 @@ export default function CatalogPage() {
             <div className="katalog-modal-body">
               {/* Kolom Kiri: Gambar & Badge Trust */}
               <div className="katalog-modal-image-col">
-                <div className="katalog-modal-img-wrap">
+                <div className="katalog-modal-img-wrap cream-bg">
                   <img
                     src={getProductImage(selectedProduct)}
                     alt={selectedProduct.nama}
@@ -790,7 +1354,7 @@ export default function CatalogPage() {
                 </div>
 
                 <div className="katalog-modal-trust-box">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B5E20" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     <path d="M9 12l2 2 4-4" />
                   </svg>
@@ -826,16 +1390,18 @@ export default function CatalogPage() {
                     <span className="katalog-modal-rating-score">4.9</span>
                   </div>
                   <span className="katalog-modal-divider">•</span>
-                  <span className="katalog-modal-sold-text">{getProductSold(selectedProduct)} telah terjual</span>
+                  <span className="katalog-modal-sold-text">{getProductSocialProof(selectedProduct).soldBadge}</span>
                 </div>
 
-                {/* Harga Resmi */}
+                {/* Harga Resmi & Framing */}
                 <div className="katalog-modal-price-box">
                   <div className="katalog-modal-price-row">
                     <span className="katalog-modal-price-val">{formatRupiah(selectedProduct.harga)}</span>
                     <span className="katalog-modal-price-unit">{getProductUnit(selectedProduct)}</span>
                   </div>
-                  <p className="katalog-modal-price-note">Harga grosir &amp; eceran terbaik di Telang-Kamal, Bangkalan</p>
+                  <p className="katalog-modal-price-note">
+                    Harga grosir &amp; eceran terbaik di Telang-Kamal, Bangkalan • Garansi timbangan akurat
+                  </p>
                 </div>
 
                 {/* Deskripsi Barang Terperinci */}
@@ -915,8 +1481,9 @@ export default function CatalogPage() {
                       type="button"
                       className="katalog-modal-add-cart-btn"
                       disabled={selectedProduct.stok <= 0}
-                      onClick={() => {
-                        handleAdd(selectedProduct, modalQty);
+                      onClick={(e) => {
+                        const pricing = { currentPrice: selectedProduct.harga };
+                        handleAddWithVariant(e, selectedProduct, null, pricing);
                         setSelectedProduct(null);
                       }}
                     >

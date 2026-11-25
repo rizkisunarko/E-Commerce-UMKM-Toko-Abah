@@ -598,71 +598,125 @@
 
 .katalog-product-card {
   background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #e5e7eb;
+  border-radius: 18px; /* rounded-2xl */
+  border: 1px solid #f1f3f5;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease;
+  position: relative;
 }
 
 .katalog-product-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.09), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-color: #e2e8f0;
 }
 
 .katalog-product-card.sold-out {
-  opacity: 0.88;
+  opacity: 0.85;
 }
 
+/* Container Gambar Produk dengan Background Krem Hangat #F7F5F0 (Step 1) */
 .katalog-image-wrapper {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  background: #f3f4f6;
+  background-color: #F7F5F0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
+.katalog-image-wrapper.cream-bg {
+  background-color: #F7F5F0;
+}
+
 .katalog-product-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .katalog-product-card:hover .katalog-product-img {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
 .katalog-product-img.grayscale {
   filter: grayscale(100%) contrast(75%);
-  opacity: 0.8;
+  opacity: 0.75;
 }
 
+/* Badge Kategori */
 .katalog-badge-cat {
   position: absolute;
   top: 10px;
   left: 10px;
   background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
   color: #374151;
   font-size: 11px;
   font-weight: 600;
   padding: 3px 9px;
   border-radius: 9999px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  z-index: 5;
 }
 
-.katalog-badge-stock {
+/* Tombol Ikon Wishlist / Favorit (Step 2) */
+.katalog-wishlist-btn {
   position: absolute;
   top: 10px;
   right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 8;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s, box-shadow 0.15s;
+}
+
+.katalog-wishlist-btn:hover {
+  transform: scale(1.15);
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.katalog-wishlist-btn.active {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  animation: katalogHeartPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes katalogHeartPop {
+  0% {
+    transform: scale(0.85);
+  }
+  50% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Badge Status Stok */
+.katalog-badge-stock {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -670,18 +724,20 @@
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 9999px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  z-index: 5;
 }
 
 .katalog-badge-stock.available {
-  background: #cbffc2;
-  color: #005312;
+  background: #e8f5e9;
+  color: #1B5E20;
+  border: 1px solid #c8e6c9;
 }
 
 .katalog-badge-stock.sold-out {
-  background: #d9e3f1;
-  color: #707a6c;
-  border: 1px solid #bfcaba;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
 }
 
 .katalog-badge-dot {
@@ -691,20 +747,158 @@
 }
 
 .available .katalog-badge-dot {
-  background: #0d631b;
+  background: #1B5E20;
 }
 
 .sold-out .katalog-badge-dot {
-  background: #707a6c;
+  background: #94a3b8;
 }
 
+/* Hover Interaction: Detail Kemasan Belakang & Informasi Nutrisi / Sertifikasi (Step 2) */
+.katalog-nutrition-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 38, 23, 0.93);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 6;
+  text-align: left;
+}
+
+.katalog-product-card:hover .katalog-nutrition-overlay {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.katalog-nutri-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.katalog-nutri-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #86efac;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.katalog-nutri-cert {
+  font-size: 9.5px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #f1f5f9;
+}
+
+.katalog-nutri-highlight {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 4px 0 6px;
+  line-height: 1.3;
+}
+
+.katalog-nutri-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.katalog-nutri-spec-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  gap: 4px;
+}
+
+.katalog-nutri-spec-k {
+  color: #cbd5e1;
+}
+
+.katalog-nutri-spec-v {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.katalog-nutri-footer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #86efac;
+}
+
+/* Quick Action Tombol Hover Tambah ke Keranjang Desktop (Step 2) */
+.katalog-image-hover-action {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 9;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.katalog-product-card:hover .katalog-image-hover-action {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.katalog-quick-hover-btn {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  background: #1B5E20;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: background-color 0.15s, transform 0.1s;
+}
+
+.katalog-quick-hover-btn:hover {
+  background: #144919;
+  transform: scale(1.02);
+}
+
+.katalog-quick-hover-btn.success {
+  background: #15803D !important;
+}
+
+/* Body Kartu Produk */
 .katalog-card-body {
-  padding: 16px;
+  padding: 16px 16px 18px;
   display: flex;
   flex-direction: column;
   flex: 1;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
 }
 
 .katalog-card-meta {
@@ -713,6 +907,7 @@
   gap: 4px;
 }
 
+/* Nama Produk Berwarna Gelap dengan Ukuran Sedang & Rapi (Step 1) */
 .katalog-card-title {
   font-size: 15px;
   font-weight: 700;
@@ -720,74 +915,421 @@
   margin: 0;
   line-height: 1.35;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: 40px;
 }
 
-.katalog-card-desc {
+/* Social Proof: Rating Bintang, Ulasan, dan Terjual (Step 3) */
+.katalog-social-proof-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.katalog-stars-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.katalog-reviews-count {
+  font-weight: 500;
   font-size: 11.5px;
   color: #6b7280;
-  line-height: 1.4;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-.katalog-card-price-row {
+.katalog-social-divider {
+  color: #d1d5db;
+  font-size: 10px;
+}
+
+.katalog-sold-proof {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1B5E20;
+  background: #e8f5e9;
+  padding: 2px 7px;
+  border-radius: 9999px;
+}
+
+/* Pilih Varian Kemasan di Tempat berupa Pill Buttons (Step 4) */
+.katalog-variant-pills-section {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.katalog-variant-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.katalog-variant-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.katalog-variant-pill {
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+  line-height: 1.2;
+}
+
+.katalog-variant-pill:hover {
+  border-color: #1B5E20;
+  color: #1B5E20;
+  background: #f0fdf4;
+}
+
+.katalog-variant-pill.active {
+  border-color: #1B5E20;
+  background: #e8f5e9;
+  color: #1B5E20;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px #1B5E20;
+}
+
+/* Price Framing & Visual Hierarchy (Step 1 & Step 3) */
+.katalog-price-section {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.katalog-price-main-row {
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  margin-top: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
+/* Harga Utama Paling Besar dan Tebal (Step 1) */
 .katalog-card-price {
-  font-size: 17px;
+  font-size: 21px;
   font-weight: 800;
-  color: #15803d;
+  color: #1B5E20;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
-.katalog-card-unit {
-  font-size: 12px;
-  color: #6b7280;
+/* Harga Coret */
+.katalog-price-strikethrough {
+  font-size: 12.5px;
+  color: #9ca3af;
+  text-decoration: line-through;
   font-weight: 500;
 }
 
+/* Badge Hemat Nominal Rupiah (Step 3) */
+.katalog-savings-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9a3412;
+  background: #ffedd5;
+  border: 1px solid #fed7aa;
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.01em;
+}
+
+/* Informasi Harga Satuan per kg/liter / Grosir (Step 3) */
+.katalog-unit-price-note {
+  font-size: 11px;
+  color: #4b5563;
+  font-weight: 500;
+  line-height: 1.35;
+  margin-top: 1px;
+}
+
+/* Tombol CTA Tambah ke Keranjang dengan Warna Zamrud Gelap #1B5E20 (Step 1 & Step 5) */
 .katalog-btn-card {
   width: 100%;
   height: 44px;
-  border-radius: 9px;
-  background: #15803d;
+  border-radius: 10px;
+  background: #1B5E20;
   color: #ffffff;
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background-color 0.15s, transform 0.1s;
-  box-shadow: 0 1px 3px rgba(21, 128, 61, 0.2);
+  transition: background-color 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.1s, box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(27, 94, 32, 0.25);
 }
 
-.katalog-btn-card:hover {
-  background: #166534;
+.katalog-btn-card:hover:not(:disabled) {
+  background: #144919;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(27, 94, 32, 0.35);
 }
 
-.katalog-btn-card:active {
+.katalog-btn-card:active:not(:disabled) {
   transform: scale(0.98);
+}
+
+.katalog-btn-card.success {
+  background: #15803D !important;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
 }
 
 .katalog-btn-card.disabled,
 .katalog-btn-card:disabled {
-  background: #dfe9f7;
-  color: #707a6c;
+  background: #e2e8f0;
+  color: #94a3b8;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+}
+
+/* ==========================================================================
+   FEEDBACK ADD TO CART: ANIMASI TERBANG, BOUNCE & TOAST UNDO (Step 5)
+   ========================================================================== */
+.katalog-flying-particle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid #1B5E20;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+  z-index: 99999;
+  pointer-events: none;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(calc(var(--start-x) - 21px), calc(var(--start-y) - 21px));
+  animation: katalogFlyCurve 0.65s cubic-bezier(0.25, 0.9, 0.3, 1) forwards;
+}
+
+.katalog-flying-particle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes katalogFlyCurve {
+  0% {
+    transform: translate(calc(var(--start-x) - 21px), calc(var(--start-y) - 21px)) scale(1);
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(calc(var(--target-x) - 15px), calc(var(--target-y) - 15px)) scale(0.32);
+    opacity: 0;
+  }
+}
+
+.katalog-cart-bounce {
+  animation: katalogCartBadgeBounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+@keyframes katalogCartBadgeBounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.38) rotate(-7deg);
+  }
+  60% {
+    transform: scale(0.92) rotate(4deg);
+  }
+}
+
+/* Toast Undo di Bagian Bawah Layar */
+.katalog-toast-undo {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: #111827;
+  color: #f9fafb;
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  animation: katalogToastSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 320px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes katalogToastSlideUp {
+  from {
+    transform: translate(-50%, 30px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.katalog-toast-undo-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.katalog-toast-undo-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #f3f4f6;
+}
+
+.katalog-toast-undo-btn {
+  background: #22c55e;
+  color: #052e16;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.katalog-toast-undo-btn:hover {
+  background: #4ade80;
+  transform: scale(1.04);
+}
+
+.katalog-toast-undo-btn:active {
+  transform: scale(0.96);
+}
+
+/* ==========================================================================
+   SKELETON LOADING SIMULASI (Step 6)
+   ========================================================================== */
+.katalog-skeleton-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #f1f3f5;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.katalog-skeleton-img-box {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(90deg, #f0efe9 25%, #f9f8f4 50%, #f0efe9 75%);
+  background-size: 200% 100%;
+  animation: katalogShimmer 1.5s infinite;
+}
+
+.katalog-skeleton-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.katalog-skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: katalogShimmer 1.5s infinite;
+}
+
+.katalog-skeleton-line.short {
+  width: 35%;
+  height: 10px;
+}
+
+.katalog-skeleton-line.title {
+  width: 85%;
+  height: 16px;
+}
+
+.katalog-skeleton-line.rating {
+  width: 60%;
+  height: 11px;
+}
+
+.katalog-skeleton-pills-row {
+  display: flex;
+  gap: 6px;
+}
+
+.katalog-skeleton-pill {
+  width: 44px;
+  height: 22px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: katalogShimmer 1.5s infinite;
+}
+
+.katalog-skeleton-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.katalog-skeleton-line.price {
+  width: 45%;
+  height: 20px;
+}
+
+.katalog-skeleton-line.savings {
+  width: 35%;
+  height: 16px;
+}
+
+.katalog-skeleton-btn {
+  width: 100%;
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: katalogShimmer 1.5s infinite;
+}
+
+@keyframes katalogShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* 7. Bar Paginasi & Statistik */
@@ -1641,27 +2183,42 @@
     box-sizing: border-box;
   }
 
-  /* 5. Product Card 2-Kolom Touch Friendly Mobile */
+  /* 5. Product Card 2-Kolom Touch Friendly Mobile (Step 6) */
   .katalog-product-grid {
     gap: 10px;
   }
 
   .katalog-product-card {
-    border-radius: 12px;
+    border-radius: 16px;
+  }
+
+  .katalog-image-wrapper {
+    background-color: #F7F5F0;
   }
 
   .katalog-badge-cat {
-    top: 6px;
-    left: 6px;
+    top: 7px;
+    left: 7px;
     font-size: 9.5px;
     padding: 2px 7px;
   }
 
+  .katalog-wishlist-btn {
+    top: 7px;
+    right: 7px;
+    width: 30px;
+    height: 30px;
+  }
+
   .katalog-badge-stock {
-    top: 6px;
-    right: 6px;
+    bottom: 7px;
+    left: 7px;
     font-size: 9.5px;
     padding: 2px 7px;
+  }
+
+  .katalog-image-hover-action {
+    display: none;
   }
 
   .katalog-card-body {
@@ -1670,61 +2227,105 @@
   }
 
   .katalog-card-title {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 13.5px;
+    font-weight: 700;
     line-height: 1.35;
     -webkit-line-clamp: 2;
-    min-height: 35px;
+    min-height: 36px;
   }
 
-  .katalog-card-desc {
-    display: none;
-  }
-
-  .katalog-card-stats-row {
-    margin: 2px 0 0;
+  .katalog-social-proof-row {
     gap: 4px;
+    margin-top: 1px;
   }
 
-  .katalog-stat-pill {
-    font-size: 9.5px;
-    padding: 2px 5px;
-    border-radius: 4px;
-    gap: 3px;
-  }
-
-  .katalog-stat-pill svg {
-    width: 10px;
-    height: 10px;
-  }
-
-  .katalog-card-price-row {
-    margin-top: 2px;
-  }
-
-  .katalog-card-price {
-    font-size: 15px;
-    font-weight: 800;
-  }
-
-  .katalog-card-unit {
+  .katalog-stars-pill {
     font-size: 11px;
   }
 
-  .katalog-btn-card {
-    height: 38px;
-    font-size: 12px;
-    padding: 0 8px;
-    border-radius: 8px;
+  .katalog-reviews-count {
+    font-size: 10px;
+  }
+
+  .katalog-sold-proof {
+    font-size: 9.5px;
+    padding: 1px 5px;
+  }
+
+  .katalog-variant-pills-section {
+    margin-top: 5px;
+    gap: 3px;
+  }
+
+  .katalog-variant-label {
+    font-size: 10px;
+  }
+
+  .katalog-variant-pills {
     gap: 4px;
   }
 
-  .katalog-btn-label-desktop {
-    display: none;
+  .katalog-variant-pill {
+    font-size: 10.5px;
+    padding: 4px 8px;
+    min-height: 28px;
+    border-radius: 9999px;
   }
 
-  .katalog-btn-label-mobile {
-    display: inline;
+  .katalog-price-section {
+    margin-top: 5px;
+    gap: 2px;
+  }
+
+  .katalog-price-main-row {
+    gap: 4px;
+    align-items: baseline;
+  }
+
+  .katalog-card-price {
+    font-size: 17px;
+    font-weight: 800;
+  }
+
+  .katalog-price-strikethrough {
+    font-size: 11px;
+  }
+
+  .katalog-savings-badge {
+    font-size: 9.5px;
+    padding: 1px 5px;
+  }
+
+  .katalog-unit-price-note {
+    font-size: 9.5px;
+    line-height: 1.25;
+  }
+
+  .katalog-btn-card {
+    height: 40px;
+    font-size: 12px;
+    padding: 0 8px;
+    border-radius: 9px;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  /* Toast Undo Mobile */
+  .katalog-toast-undo {
+    bottom: 16px;
+    width: calc(100% - 24px);
+    min-width: 0;
+    padding: 10px 14px;
+    border-radius: 10px;
+  }
+
+  .katalog-toast-undo-text {
+    font-size: 12px;
+  }
+
+  .katalog-toast-undo-btn {
+    padding: 5px 12px;
+    font-size: 11.5px;
   }
 
   /* 6. Paginasi & Bantuan WA Mobile */
