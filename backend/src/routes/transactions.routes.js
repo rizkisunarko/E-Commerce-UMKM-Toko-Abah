@@ -446,6 +446,20 @@ function createTransactionsRoutes(db, jwtSecret) {
       }
 
       try {
+        const [transactions] = await db.query(
+          `SELECT id_transaksi, kode_transaksi, status_transaksi, jenis_transaksi
+           FROM transaksi WHERE id_transaksi = ?`,
+          [id],
+        );
+        if (!transactions.length) {
+          return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
+        }
+        if (transactions[0].jenis_transaksi === 'online') {
+          return res.status(409).json({
+            message: 'Status pesanan online harus diubah melalui endpoint pesanan',
+          });
+        }
+
         await db.query(
           'UPDATE transaksi SET status_transaksi = ? WHERE id_transaksi = ?',
           [status, id],
@@ -455,10 +469,6 @@ function createTransactionsRoutes(db, jwtSecret) {
            FROM transaksi WHERE id_transaksi = ?`,
           [id],
         );
-
-        if (!rows.length) {
-          return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
-        }
         return res.json({ data: rows[0] });
       } catch (error) {
         return next(error);

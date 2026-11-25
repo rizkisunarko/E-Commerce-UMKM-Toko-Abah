@@ -18,6 +18,10 @@ function notificationStatus(notification) {
        notification.fraud_status === 'challenge')) {
     return 'menunggu';
   }
+  if (notification.transaction_status === 'capture' &&
+      notification.fraud_status === 'deny') {
+    return 'gagal';
+  }
   if (['deny', 'cancel', 'expire', 'failure'].includes(notification.transaction_status)) {
     return 'gagal';
   }

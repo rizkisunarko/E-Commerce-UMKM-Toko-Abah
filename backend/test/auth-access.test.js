@@ -13,7 +13,12 @@ async function createFixture(t) {
     { id: 3, username: 'nonaktif', password: bcrypt.hashSync('inactive-pass', 4), nama: 'Pegawai Nonaktif', role: 'pegawai', status: 'nonaktif' },
   ];
   const transactions = new Map([
-    [10, { id_transaksi: 10, kode_transaksi: 'TRX-10', status_transaksi: 'menunggu' }],
+    [10, {
+      id_transaksi: 10,
+      kode_transaksi: 'TRX-10',
+      status_transaksi: 'menunggu',
+      jenis_transaksi: 'online',
+    }],
   ]);
   const products = [
     {
@@ -157,14 +162,15 @@ test('login menghasilkan sesi, menolak kredensial salah dan pegawai nonaktif', a
   assert.equal((await login(baseUrl, 'nonaktif', 'inactive-pass')).response.status, 401);
 });
 
-test('pegawai hanya dapat mengatur status diproses atau siap diambil/dikirim', async (t) => {
+test('perubahan status online harus memakai endpoint pesanan', async (t) => {
   const baseUrl = await createFixture(t);
   const { body } = await login(baseUrl, 'pegawai', 'employee-pass');
 
   for (const status of ['diproses', 'siap_diambil', 'siap_dikirim']) {
     const response = await updateStatus(baseUrl, body.token, 10, status);
-    assert.equal(response.status, 200);
-    assert.equal((await response.json()).data.status_transaksi, status);
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).message,
+      'Status pesanan online harus diubah melalui endpoint pesanan');
   }
 
   const denied = await updateStatus(baseUrl, body.token, 10, 'batal');
@@ -182,13 +188,12 @@ test('pegawai hanya dapat mengatur status diproses atau siap diambil/dikirim', a
   assert.equal(stillUncancelled.status, 403);
 });
 
-test('admin dapat membatalkan pesanan dan request tanpa token ditolak', async (t) => {
+test('endpoint transaksi tidak dapat mengubah status online dan request tanpa token ditolak', async (t) => {
   const baseUrl = await createFixture(t);
   const { body } = await login(baseUrl, 'admin', 'admin-pass');
 
   const cancelled = await updateStatus(baseUrl, body.token, 10, 'batal');
-  assert.equal(cancelled.status, 200);
-  assert.equal((await cancelled.json()).data.status_transaksi, 'batal');
+  assert.equal(cancelled.status, 409);
   assert.equal((await updateStatus(baseUrl, null, 10, 'diproses')).status, 401);
 });
 

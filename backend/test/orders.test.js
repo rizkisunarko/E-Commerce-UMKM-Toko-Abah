@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { once } = require('node:events');
 const test = require('node:test');
+const jwt = require('jsonwebtoken');
 const createApp = require('../src/app');
 
 const JWT_SECRET = 'test-secret-that-is-at-least-32-characters';
@@ -20,12 +21,19 @@ async function createFixture(t, products = [{
     details: [],
     shipments: [],
     payments: [],
+    stockHistory: [],
     nextTransactionId: 1,
   };
   const shippingCalls = [];
   let snapshot;
 
   async function query(sql, params = []) {
+    if (sql.includes('FROM admin WHERE id_admin')) {
+      return params[0] === 1 ? [[{ id: 1, nama: 'Admin Toko' }], []] : [[], []];
+    }
+    if (sql.includes('FROM pegawai WHERE id_pegawai')) {
+      return params[0] === 2 ? [[{ id: 2, nama: 'Pegawai Toko' }], []] : [[], []];
+    }
     if (sql.includes('SELECT id_produk, satuan')) {
       return [state.products
         .filter((product) => !product.archived_at && params.includes(product.id_produk))
@@ -48,11 +56,33 @@ async function createFixture(t, products = [{
         ongkos_kirim: params[6],
         total_bayar: params[7],
         status_transaksi: 'menunggu',
+        stock_reserved: 1,
         catatan: params[8],
         tanggal_transaksi: new Date(),
       };
       state.transactions.push(transaction);
       return [{ insertId: transaction.id_transaksi }, []];
+    }
+    if (sql.startsWith('UPDATE produk') && sql.includes('jumlah_stok = ?')) {
+      const productId = params.length === 3 ? params[2] : params[1];
+      const product = state.products.find((item) => item.id_produk === productId);
+      if (product) {
+        product.jumlah_stok = params[0];
+        product.status_produk = params.length === 3 ? params[1] : 'tersedia';
+      }
+      return [{ affectedRows: product ? 1 : 0 }, []];
+    }
+    if (sql.includes('INSERT INTO riwayat_stok')) {
+      const isStockOut = sql.includes("'keluar'");
+      state.stockHistory.push({
+        id_produk: params[0],
+        jenis_perubahan: isStockOut ? 'keluar' : 'masuk',
+        jumlah: params[isStockOut ? 1 : 2],
+        stok_sebelum: params[isStockOut ? 2 : 3],
+        stok_sesudah: params[isStockOut ? 3 : 4],
+        keterangan: params[isStockOut ? 4 : 5],
+      });
+      return [{ insertId: state.stockHistory.length }, []];
     }
     if (sql.includes('INSERT INTO detail_transaksi')) {
       state.details.push({
@@ -121,6 +151,30 @@ async function createFixture(t, products = [{
         status_transaksi: transaction.status_transaksi,
       }] : [], []];
     }
+    if (sql.includes("UPDATE transaksi SET status_transaksi = ?") &&
+        sql.includes('stock_reserved = 0')) {
+      const transaction = state.transactions.find((item) => item.id_transaksi === params[1]);
+      if (transaction) {
+        transaction.status_transaksi = params[0];
+        transaction.stock_reserved = 0;
+      }
+      return [{ affectedRows: transaction ? 1 : 0 }, []];
+    }
+    if (sql.includes('UPDATE transaksi SET status_transaksi = ?')) {
+      const transaction = state.transactions.find((item) => item.id_transaksi === params[1]);
+      if (transaction) transaction.status_transaksi = params[0];
+      return [{ affectedRows: transaction ? 1 : 0 }, []];
+    }
+    if (sql.includes('UPDATE pembayaran') &&
+        sql.includes("metode_pembayaran = 'cod'") &&
+        sql.includes("status_pembayaran = 'berhasil'")) {
+      const payment = state.payments.find((item) =>
+        item.id_transaksi === params[0] &&
+        item.metode_pembayaran === 'cod' &&
+        item.status_pembayaran === 'menunggu');
+      if (payment) payment.status_pembayaran = 'berhasil';
+      return [{ affectedRows: payment ? 1 : 0 }, []];
+    }
     if (sql.includes("UPDATE pembayaran") &&
         sql.includes("status_pembayaran = 'berhasil'")) {
       const payment = state.payments.find((item) => item.id_pembayaran === params[0]);
@@ -152,17 +206,43 @@ async function createFixture(t, products = [{
       const transaction = state.transactions.find(
         (item) => item.kode_transaksi === params[0] && item.jenis_transaksi === 'online',
       );
-      return [transaction ? [{
+      if (!transaction) return [[], []];
+      const shipment = state.shipments.find(
+        (item) => item.id_transaksi === transaction.id_transaksi,
+      );
+      return [[{
+        id: transaction.id_transaksi,
         id_transaksi: transaction.id_transaksi,
+        nomor_pesanan: transaction.kode_transaksi,
         kode_transaksi: transaction.kode_transaksi,
-        nama_pelanggan: transaction.nama_pelanggan,
-        no_telepon: transaction.no_telepon,
-        total_bayar: transaction.total_bayar,
+        status: transaction.status_transaksi,
         status_transaksi: transaction.status_transaksi,
+        tanggal: transaction.tanggal_transaksi,
+        tanggal_transaksi: transaction.tanggal_transaksi,
+        nama_pemesan: transaction.nama_pelanggan,
+        nama_pelanggan: transaction.nama_pelanggan,
+        no_hp: transaction.no_telepon,
+        no_telepon: transaction.no_telepon,
+        catatan: transaction.catatan,
+        metode_penerimaan: transaction.metode_penerimaan,
+        alamat_lengkap: transaction.alamat_pelanggan,
+        alamat_pelanggan: transaction.alamat_pelanggan,
+        subtotal: transaction.subtotal_produk,
+        subtotal_produk: transaction.subtotal_produk,
+        ongkir: transaction.ongkos_kirim,
+        ongkos_kirim: transaction.ongkos_kirim,
+        total: transaction.total_bayar,
+        total_bayar: transaction.total_bayar,
+        stock_reserved: transaction.stock_reserved,
+        wilayah: shipment?.wilayah_tujuan || null,
+        layanan_kurir: shipment?.layanan_kurir || null,
+        status_pembayaran: state.payments
+          .filter((payment) => payment.id_transaksi === transaction.id_transaksi)
+          .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0]?.status_pembayaran || null,
         metode_pembayaran: state.payments
           .filter((payment) => payment.id_transaksi === transaction.id_transaksi)
           .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0]?.metode_pembayaran || null,
-      }] : [], []];
+      }], []];
     }
     if (sql.includes('FROM pembayaran') && sql.includes("status_pembayaran = 'menunggu'")) {
       const payment = state.payments
@@ -218,6 +298,11 @@ async function createFixture(t, products = [{
             subtotal: item.subtotal,
           };
         }), []];
+    }
+    if (sql.includes('SELECT id_produk, jumlah FROM detail_transaksi')) {
+      return [state.details
+        .filter((item) => item.id_transaksi === params[0])
+        .map(({ id_produk, jumlah }) => ({ id_produk, jumlah })), []];
     }
     throw new Error(`Query test tidak dikenal: ${sql}`);
   }
@@ -302,7 +387,7 @@ const pickupOrder = {
   ],
 };
 
-test('checkout tamu membuat pesanan berdasarkan harga server tanpa mengurangi stok', async (t) => {
+test('checkout tamu mereservasi stok dan memakai harga server', async (t) => {
   const { baseUrl, state } = await createFixture(t);
   const response = await createOrder(baseUrl, {
     ...pickupOrder,
@@ -325,9 +410,55 @@ test('checkout tamu membuat pesanan berdasarkan harga server tanpa mengurangi st
   assert.equal(state.transactions[0].jenis_transaksi, 'online');
   assert.equal(state.transactions[0].metode_penerimaan, 'pickup');
   assert.equal(state.transactions[0].status_transaksi, 'menunggu');
+  assert.equal(state.transactions[0].stock_reserved, 1);
   assert.equal(state.payments[0].metode_pembayaran, 'payment_gateway');
-  assert.equal(state.products[0].jumlah_stok, 5);
+  assert.equal(state.products[0].jumlah_stok, 3);
   assert.equal(state.details.length, 1);
+  assert.equal(state.stockHistory.length, 1);
+  assert.equal(state.stockHistory[0].jenis_perubahan, 'keluar');
+  assert.equal(state.stockHistory[0].jumlah, 2);
+});
+
+test('checkout kedua ditolak bila stok telah direservasi pesanan pertama', async (t) => {
+  const { baseUrl, state } = await createFixture(t);
+  const first = await createOrder(baseUrl, {
+    ...pickupOrder,
+    items: [{ product_id: 20, jumlah: 4 }],
+  });
+  assert.equal(first.status, 201);
+
+  const second = await createOrder(baseUrl, {
+    ...pickupOrder,
+    items: [{ product_id: 20, jumlah: 2 }],
+  });
+  assert.equal(second.status, 422);
+  assert.match((await second.json()).errors['items.20'], /Stok tidak mencukupi/);
+  assert.equal(state.transactions.length, 1);
+  assert.equal(state.products[0].jumlah_stok, 1);
+});
+
+test('pembatalan pesanan menunggu mengembalikan stok yang direservasi', async (t) => {
+  const { baseUrl, state } = await createFixture(t);
+  const createResponse = await createOrder(baseUrl, pickupOrder);
+  const order = (await createResponse.json()).data;
+  const adminToken = jwt.sign(
+    { role: 'admin' },
+    JWT_SECRET,
+    { subject: '1', expiresIn: '1h' },
+  );
+  const cancelResponse = await fetch(`${baseUrl}/orders/${order.nomor_pesanan}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({ status: 'Dibatalkan' }),
+  });
+
+  assert.equal(cancelResponse.status, 200);
+  assert.equal(state.products[0].jumlah_stok, 5);
+  assert.equal(state.transactions[0].stock_reserved, 0);
+  assert.deepEqual(state.stockHistory.map((entry) => entry.jenis_perubahan), ['keluar', 'masuk']);
 });
 
 test('checkout meminta nama dan nomor HP yang valid tanpa meminta login', async (t) => {
@@ -378,6 +509,52 @@ test('checkout COD menyimpan pembayaran tunai dan hanya berlaku untuk kurir', as
   });
   assert.equal(pickupResponse.status, 422);
   assert.equal(state.transactions.length, 1);
+});
+
+test('COD dapat diproses pegawai dan lunas saat admin menyelesaikan pesanan', async (t) => {
+  const { baseUrl, state } = await createFixture(t);
+  const courierOrder = {
+    ...pickupOrder,
+    metode_penerimaan: 'kurir',
+    metode_pembayaran: 'cod',
+    alamat_lengkap: 'Jl. Raya Telang No. 10',
+    wilayah: 'Kamal, Bangkalan, Jawa Timur',
+    destination_id: '123',
+    selected_rate_id: 'jne:REG:0',
+    items: [{ product_id: 20, jumlah: 2 }],
+  };
+  const createResponse = await createOrder(baseUrl, courierOrder);
+  const order = (await createResponse.json()).data;
+  const employeeToken = jwt.sign(
+    { role: 'pegawai' },
+    JWT_SECRET,
+    { subject: '2', expiresIn: '1h' },
+  );
+  const adminToken = jwt.sign(
+    { role: 'admin' },
+    JWT_SECRET,
+    { subject: '1', expiresIn: '1h' },
+  );
+  const updateStatus = (token, status) => fetch(
+    `${baseUrl}/orders/${order.nomor_pesanan}/status`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    },
+  );
+
+  assert.equal(createResponse.status, 201);
+  assert.equal(state.products[0].jumlah_stok, 3);
+  assert.equal((await updateStatus(employeeToken, 'Diproses')).status, 200);
+  assert.equal((await updateStatus(employeeToken, 'Siap Diambil/Dikirim')).status, 200);
+  assert.equal((await updateStatus(adminToken, 'Selesai')).status, 200);
+  assert.equal(state.transactions[0].status_transaksi, 'selesai');
+  assert.equal(state.payments[0].status_pembayaran, 'berhasil');
+  assert.equal(state.products[0].jumlah_stok, 3);
 });
 
 test('checkout menolak stok yang tidak cukup dan membatalkan transaksi', async (t) => {
@@ -517,6 +694,29 @@ test('notifikasi Midtrans ditolak jika tanda tangan tidak valid atau nominal ber
   });
   assert.equal(invalidAmount.status, 422);
   assert.equal(state.payments[0].status_pembayaran, 'menunggu');
+  assert.equal(state.transactions[0].status_transaksi, 'menunggu');
+});
+
+test('notifikasi capture dengan fraud deny menandai pembayaran gagal', async (t) => {
+  const { baseUrl, state, paymentCalls } = await createFixture(t);
+  const createdOrder = await createOrder(baseUrl, pickupOrder);
+  const order = (await createdOrder.json()).data;
+  await fetch(`${baseUrl}/orders/${order.nomor_pesanan}/pembayaran`, { method: 'POST' });
+  const response = await fetch(`${baseUrl}/payments/midtrans/notification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      order_id: paymentCalls[0].transaction_details.order_id,
+      status_code: '200',
+      gross_amount: '130000.00',
+      signature_key: 'valid',
+      transaction_status: 'capture',
+      fraud_status: 'deny',
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(state.payments[0].status_pembayaran, 'gagal');
   assert.equal(state.transactions[0].status_transaksi, 'menunggu');
 });
 
