@@ -567,29 +567,33 @@
   font-size: 15px;
 }
 
-/* 6. Grid Produk */
+/* 6. Grid Produk (2 Kolom di Ponsel / Mobile, 3 di Tablet, 4 di Desktop) */
 .katalog-product-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
 
-@media (min-width: 480px) {
-  .katalog-product-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 840px) {
+@media (min-width: 768px) {
   .katalog-product-grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
   }
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1040px) {
   .katalog-product-grid {
     grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
   }
+}
+
+.katalog-btn-label-desktop {
+  display: inline;
+}
+
+.katalog-btn-label-mobile {
+  display: none;
 }
 
 .katalog-product-card {
@@ -1435,3 +1439,524 @@
   background: #22c55e;
   color: #ffffff;
 }
+
+/* ==========================================================================
+   RESPONSIF MOBILE / TABLET KATALOG TOKO ABAH (Screen <= 768px)
+   Lebih Rapi, Profesional, dan User-Friendly (Touch Targets & 2-Col Grid)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .katalog-page-container {
+    padding: 12px 12px 36px;
+    gap: 16px;
+  }
+
+  /* 1. Hero Feature Banner Mobile */
+  .katalog-hero-banner {
+    padding: 22px 14px;
+    border-radius: 14px;
+  }
+
+  .katalog-hero-content {
+    gap: 12px;
+  }
+
+  .katalog-hero-pill {
+    padding: 4px 12px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  .katalog-hero-title {
+    font-size: 20px;
+    line-height: 1.25;
+  }
+
+  .katalog-hero-desc {
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .katalog-hero-price-tag {
+    font-size: 11.5px;
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .katalog-hero-price-val {
+    font-size: 13.5px;
+  }
+
+  .katalog-hero-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .katalog-hero-btn-primary {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 16px;
+    font-size: 13.5px;
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+
+  .katalog-hero-badge-tag {
+    width: 100%;
+    justify-content: center;
+    padding: 9px 12px;
+    font-size: 12px;
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+
+  /* 2. Kategori Belanja Mobile */
+  .katalog-category-card {
+    padding: 14px 12px;
+    border-radius: 12px;
+  }
+
+  .katalog-category-header {
+    margin-bottom: 12px;
+  }
+
+  .katalog-category-header h3 {
+    font-size: 15px;
+  }
+
+  .katalog-category-header span {
+    font-size: 11.5px;
+  }
+
+  .katalog-category-strip {
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+
+  .katalog-category-chip {
+    width: 66px;
+    gap: 6px;
+    padding: 2px;
+  }
+
+  .katalog-chip-circle {
+    width: 50px;
+    height: 50px;
+  }
+
+  .katalog-chip-circle svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .katalog-chip-label {
+    font-size: 11px;
+    min-height: 26px;
+    line-height: 1.2;
+  }
+
+  /* 3. Promo Row: Swipeable Strip di Mobile */
+  .katalog-promo-row {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 10px;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .katalog-promo-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .katalog-promo-card {
+    flex: 0 0 85%;
+    max-width: 320px;
+    scroll-snap-align: start;
+    padding: 12px 14px;
+    border-radius: 12px;
+    gap: 10px;
+  }
+
+  .katalog-promo-title {
+    font-size: 14px;
+  }
+
+  .katalog-promo-desc {
+    font-size: 11.5px;
+  }
+
+  .katalog-promo-img-wrap,
+  .katalog-promo-icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+  }
+
+  /* 4. Filter & Search Bar Mobile */
+  .katalog-filter-header-bar {
+    padding: 12px 14px;
+    border-radius: 12px;
+    gap: 10px;
+  }
+
+  .katalog-deals-title-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .katalog-deals-title {
+    font-size: 17px;
+  }
+
+  .katalog-timer-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .katalog-search-filter-wrap {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .katalog-search-box {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .katalog-search-input {
+    height: 40px;
+    font-size: 13.5px;
+    padding: 8px 12px 8px 34px;
+  }
+
+  .katalog-sort-select {
+    width: 100%;
+    height: 40px;
+    font-size: 13px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+  }
+
+  /* 5. Product Card 2-Kolom Touch Friendly Mobile */
+  .katalog-product-grid {
+    gap: 10px;
+  }
+
+  .katalog-product-card {
+    border-radius: 12px;
+  }
+
+  .katalog-badge-cat {
+    top: 6px;
+    left: 6px;
+    font-size: 9.5px;
+    padding: 2px 7px;
+  }
+
+  .katalog-badge-stock {
+    top: 6px;
+    right: 6px;
+    font-size: 9.5px;
+    padding: 2px 7px;
+  }
+
+  .katalog-card-body {
+    padding: 10px 10px 12px;
+    gap: 8px;
+  }
+
+  .katalog-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    -webkit-line-clamp: 2;
+    min-height: 35px;
+  }
+
+  .katalog-card-desc {
+    display: none;
+  }
+
+  .katalog-card-stats-row {
+    margin: 2px 0 0;
+    gap: 4px;
+  }
+
+  .katalog-stat-pill {
+    font-size: 9.5px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    gap: 3px;
+  }
+
+  .katalog-stat-pill svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .katalog-card-price-row {
+    margin-top: 2px;
+  }
+
+  .katalog-card-price {
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .katalog-card-unit {
+    font-size: 11px;
+  }
+
+  .katalog-btn-card {
+    height: 38px;
+    font-size: 12px;
+    padding: 0 8px;
+    border-radius: 8px;
+    gap: 4px;
+  }
+
+  .katalog-btn-label-desktop {
+    display: none;
+  }
+
+  .katalog-btn-label-mobile {
+    display: inline;
+  }
+
+  /* 6. Paginasi & Bantuan WA Mobile */
+  .katalog-pagination-bar {
+    padding: 12px 14px;
+    gap: 10px;
+    border-radius: 10px;
+  }
+
+  .katalog-pagination-stat {
+    font-size: 11.5px;
+  }
+
+  .katalog-pagination-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .katalog-page-btn {
+    padding: 6px 12px;
+    font-size: 12.5px;
+  }
+
+  .katalog-page-info {
+    font-size: 12px;
+  }
+
+  .katalog-help-banner {
+    padding: 16px 14px;
+    border-radius: 14px;
+    gap: 14px;
+  }
+
+  .katalog-help-left {
+    gap: 12px;
+  }
+
+  .katalog-help-icon-circle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .katalog-help-icon-circle svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .katalog-help-text h2 {
+    font-size: 15px;
+  }
+
+  .katalog-help-text p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .katalog-help-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 13px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+
+  /* 7. Modal Bottom Sheet & Sticky Quick-Buy di Mobile */
+  .katalog-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .katalog-modal-card {
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    width: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: katalogModalSheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes katalogModalSheetUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0.6;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .katalog-modal-close-btn {
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    background: rgba(243, 244, 246, 0.9);
+  }
+
+  .katalog-modal-body {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 16px 0;
+    gap: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+  }
+
+  .katalog-modal-image-col {
+    gap: 10px;
+  }
+
+  .katalog-modal-img-wrap {
+    max-height: 220px;
+    aspect-ratio: 16 / 10;
+    border-radius: 12px;
+  }
+
+  .katalog-modal-trust-box {
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+
+  .katalog-modal-trust-title {
+    font-size: 12px;
+  }
+
+  .katalog-modal-trust-sub {
+    font-size: 10.5px;
+  }
+
+  .katalog-modal-info-col {
+    gap: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .katalog-modal-title {
+    font-size: 19px;
+    line-height: 1.3;
+  }
+
+  .katalog-modal-rating-row {
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .katalog-modal-price-box {
+    padding: 10px 14px;
+    border-radius: 10px;
+  }
+
+  .katalog-modal-price-val {
+    font-size: 22px;
+  }
+
+  .katalog-modal-price-unit {
+    font-size: 13px;
+  }
+
+  .katalog-modal-desc-p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .katalog-modal-specs-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  /* Sticky Quick Action Box di Bawah Modal */
+  .katalog-modal-action-box {
+    position: sticky;
+    bottom: 0;
+    background: #ffffff;
+    padding: 12px 16px 16px;
+    margin: 8px -16px 0;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+    z-index: 20;
+    gap: 10px;
+  }
+
+  .katalog-modal-qty-row {
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .katalog-modal-qty-label {
+    font-size: 12.5px;
+  }
+
+  .katalog-modal-subtotal-val {
+    font-size: 16px;
+  }
+
+  .katalog-modal-buttons-row {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .katalog-modal-add-cart-btn {
+    height: 46px;
+    font-size: 13.5px;
+    border-radius: 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 0 12px;
+  }
+
+  .katalog-modal-wa-btn {
+    height: 46px;
+    padding: 0 14px;
+    font-size: 12.5px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  /* Toast Notifikasi Mobile */
+  .katalog-toast {
+    left: 14px;
+    right: 14px;
+    bottom: 16px;
+    max-width: calc(100% - 28px);
+    justify-content: center;
+    font-size: 13px;
+    padding: 10px 16px;
+    box-sizing: border-box;
+  }
+}
+
