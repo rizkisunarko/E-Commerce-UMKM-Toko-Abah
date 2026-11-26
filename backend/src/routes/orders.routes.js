@@ -148,29 +148,38 @@ function orderStatusLabel(status, metodePenerimaan, statusPembayaran) {
   return 'Menunggu Pembayaran';
 }
 
-function formatOrder(row, items) {
-  const subtotal = Number(row.subtotal);
-  const ongkir = Number(row.ongkir);
-  const total = Number(row.total);
+function formatOrder(row, items = []) {
+  const subtotal = Number(row.subtotal ?? row.subtotal_produk ?? 0);
+  const ongkir = Number(row.ongkir ?? row.ongkos_kirim ?? 0);
+  const total = Number(row.total ?? row.total_bayar ?? 0);
+  const rawDate = row.tanggal ?? row.tanggal_transaksi;
+  let tanggalIso;
+  try {
+    const d = rawDate instanceof Date ? rawDate : (rawDate ? new Date(rawDate) : new Date());
+    tanggalIso = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  } catch {
+    tanggalIso = new Date().toISOString();
+  }
+
   return {
-    id: Number(row.id),
-    nomor_pesanan: row.nomor_pesanan,
-    status: orderStatusLabel(row.status, row.metode_penerimaan, row.status_pembayaran),
+    id: Number(row.id ?? row.id_transaksi),
+    nomor_pesanan: row.nomor_pesanan ?? row.kode_transaksi,
+    status: orderStatusLabel(row.status ?? row.status_transaksi, row.metode_penerimaan, row.status_pembayaran),
     status_pembayaran: row.status_pembayaran || null,
     metode_pembayaran: row.metode_pembayaran === 'cod' ? 'cod' : 'midtrans',
-    tanggal: row.tanggal instanceof Date ? row.tanggal.toISOString() : new Date(row.tanggal).toISOString(),
-    nama_pemesan: row.nama_pemesan,
-    no_hp: row.no_hp,
+    tanggal: tanggalIso,
+    nama_pemesan: row.nama_pemesan ?? row.nama_pelanggan,
+    no_hp: row.no_hp ?? row.no_telepon,
     catatan: row.catatan || '',
     metode_penerimaan: row.metode_penerimaan === 'kurir' ? COURIER_METHOD : PICKUP_METHOD,
     wilayah: row.wilayah || '',
-    alamat_lengkap: row.alamat_lengkap || '',
+    alamat_lengkap: row.alamat_lengkap ?? row.alamat_pelanggan ?? '',
     layanan_kurir: row.layanan_kurir || null,
-    items: items.map((item) => ({
-      product_id: Number(item.product_id),
-      nama: item.nama,
-      kategori: item.kategori,
-      harga: Number(item.harga),
+    items: (items || []).map((item) => ({
+      product_id: Number(item.product_id ?? item.id_produk),
+      nama: item.nama ?? item.nama_produk,
+      kategori: item.kategori ?? item.nama_kategori,
+      harga: Number(item.harga ?? item.harga_satuan),
       jumlah: Number(item.jumlah),
       subtotal: Number(item.subtotal),
     })),
@@ -365,7 +374,8 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
                   t.catatan, t.metode_penerimaan,
                   t.alamat_pelanggan AS alamat_lengkap,
                   t.subtotal_produk AS subtotal, t.ongkos_kirim AS ongkir,
-                  t.total_bayar AS total, p.wilayah_tujuan AS wilayah,
+                  t.total_bayar AS total, t.stock_reserved,
+                  p.wilayah_tujuan AS wilayah,
                   p.layanan_kurir,
                   (SELECT pb.status_pembayaran
                    FROM pembayaran pb
@@ -391,7 +401,8 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         }
 
         const order = orders[0];
-        let currentEffective = order.status;
+        const orderId = order.id ?? order.id_transaksi;
+        let currentEffective = order.status ?? order.status_transaksi;
         if (currentEffective === 'menunggu' && order.status_pembayaran === 'berhasil') {
           currentEffective = 'dibayar';
         }
@@ -412,12 +423,13 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         }
 
         if (currentEffective === 'menunggu') {
-          if (targetAction === 'diproses') {
+          if (targetAction === 'diproses' && order.metode_pembayaran !== 'cod') {
             await connection.rollback();
             transactionStarted = false;
             return res.status(422).json({ message: 'Pesanan belum dibayar' });
           }
-          if (targetAction !== 'batal') {
+          if (targetAction !== 'batal' &&
+              !(targetAction === 'diproses' && order.metode_pembayaran === 'cod')) {
             await connection.rollback();
             transactionStarted = false;
             return res.status(422).json({ message: 'Transisi status tidak valid' });
@@ -448,18 +460,10 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         }
 
         if (targetAction === 'batal') {
-          const hadStockDeducted = (
-            currentEffective === 'dibayar' ||
-            currentEffective === 'diproses' ||
-            currentEffective === 'siap_diambil' ||
-            currentEffective === 'siap_dikirim' ||
-            currentEffective === 'siap_diambil_dikirim'
-          );
-
-          if (hadStockDeducted) {
+          if (Number(order.stock_reserved) === 1) {
             const [items] = await connection.query(
               'SELECT id_produk, jumlah FROM detail_transaksi WHERE id_transaksi = ?',
-              [order.id],
+              [orderId],
             );
 
             for (const item of items) {
@@ -472,9 +476,9 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
                 const stockAfter = stockBefore + Number(item.jumlah);
                 await connection.query(
                   `UPDATE produk
-                   SET jumlah_stok = ?, status_produk = 'tersedia', updated_at = CURRENT_TIMESTAMP
+                   SET jumlah_stok = ?, status_produk = ?, updated_at = CURRENT_TIMESTAMP
                    WHERE id_produk = ?`,
-                  [stockAfter, item.id_produk],
+                  [stockAfter, stockAfter === 0 ? 'habis' : 'tersedia', item.id_produk],
                 );
                 await connection.query(
                   `INSERT INTO riwayat_stok (
@@ -486,7 +490,7 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
                     Number(item.jumlah),
                     stockBefore,
                     stockAfter,
-                    `Pengembalian stok pesanan dibatalkan ${order.nomor_pesanan}`,
+                    `Pengembalian stok pesanan dibatalkan ${order.nomor_pesanan ?? order.kode_transaksi}`,
                   ],
                 );
               }
@@ -494,12 +498,25 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
           }
         }
 
+        if (targetAction === 'selesai' && order.metode_pembayaran === 'cod') {
+          await connection.query(
+            `UPDATE pembayaran
+             SET status_pembayaran = 'berhasil', tanggal_pembayaran = CURRENT_TIMESTAMP
+             WHERE id_transaksi = ? AND metode_pembayaran = 'cod'
+               AND status_pembayaran = 'menunggu'`,
+            [orderId],
+          );
+        }
+
         await connection.query(
-          'UPDATE transaksi SET status_transaksi = ? WHERE id_transaksi = ?',
-          [nextDbStatus, order.id],
+          targetAction === 'batal'
+            ? 'UPDATE transaksi SET status_transaksi = ?, stock_reserved = 0 WHERE id_transaksi = ?'
+            : 'UPDATE transaksi SET status_transaksi = ? WHERE id_transaksi = ?',
+          [nextDbStatus, orderId],
         );
 
         order.status = nextDbStatus;
+        order.status_transaksi = nextDbStatus;
 
         const [items] = await connection.query(
           `SELECT dt.id_produk AS product_id, p.nama_produk AS nama,
@@ -510,7 +527,7 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
            LEFT JOIN kategori k ON k.id_kategori = p.id_kategori
            WHERE dt.id_transaksi = ?
            ORDER BY dt.id_detail_transaksi`,
-          [order.id],
+          [orderId],
         );
 
         await connection.commit();
@@ -650,6 +667,7 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
           hargaCents: priceCents,
           jumlah: quantity,
           subtotalCents,
+          stockBefore: stock,
         });
       }
 
@@ -685,8 +703,8 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         `INSERT INTO transaksi (
            kode_transaksi, jenis_transaksi, nama_pelanggan, no_telepon, alamat_pelanggan,
            metode_penerimaan, subtotal_produk, ongkos_kirim, total_bayar,
-           status_transaksi, catatan
-         ) VALUES (?, 'online', ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)`,
+           status_transaksi, stock_reserved, catatan
+         ) VALUES (?, 'online', ?, ?, ?, ?, ?, ?, ?, 'menunggu', 1, ?)`,
         [
           nomorPesanan,
           values.nama,
@@ -700,6 +718,28 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         ],
       );
       const transactionId = result.insertId;
+      for (const line of lines) {
+        const stockAfter = line.stockBefore - line.jumlah;
+        await connection.query(
+          `UPDATE produk
+           SET jumlah_stok = ?, status_produk = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id_produk = ?`,
+          [stockAfter, stockAfter === 0 ? 'habis' : 'tersedia', line.id],
+        );
+        await connection.query(
+          `INSERT INTO riwayat_stok (
+             id_produk, jenis_perubahan, jumlah, stok_sebelum, stok_sesudah, keterangan
+           ) VALUES (?, 'keluar', ?, ?, ?, ?)`,
+          [
+            line.id,
+            line.jumlah,
+            line.stockBefore,
+            stockAfter,
+            `Reservasi stok pesanan ${nomorPesanan}`,
+          ],
+        );
+      }
+
       const databasePaymentMethod = values.metodePembayaran === 'cod'
         ? 'cod'
         : 'payment_gateway';

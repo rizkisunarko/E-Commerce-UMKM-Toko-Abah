@@ -48,6 +48,7 @@ async function createFixture(t, initialData = {}) {
       ongkos_kirim: '10000.00',
       total_bayar: '78000.00',
       status_transaksi: 'dibayar',
+      stock_reserved: 1,
       catatan: 'Tolong packing rapi',
       tanggal_transaksi: new Date('2026-11-26T03:10:00.000Z'),
     },
@@ -63,6 +64,7 @@ async function createFixture(t, initialData = {}) {
       ongkos_kirim: '0.00',
       total_bayar: '36000.00',
       status_transaksi: 'menunggu',
+      stock_reserved: 0,
       catatan: '',
       tanggal_transaksi: new Date('2026-11-26T04:20:00.000Z'),
     },
@@ -78,6 +80,7 @@ async function createFixture(t, initialData = {}) {
       ongkos_kirim: '9000.00',
       total_bayar: '27000.00',
       status_transaksi: 'diproses',
+      stock_reserved: 1,
       catatan: '',
       tanggal_transaksi: new Date('2026-11-26T05:30:00.000Z'),
     },
@@ -217,6 +220,7 @@ async function createFixture(t, initialData = {}) {
           id: order.id_transaksi,
           nomor_pesanan: order.kode_transaksi,
           status: order.status_transaksi,
+          stock_reserved: order.stock_reserved,
           tanggal: order.tanggal_transaksi,
           nama_pemesan: order.nama_pelanggan,
           no_hp: order.no_telepon,
@@ -327,9 +331,12 @@ async function createFixture(t, initialData = {}) {
       }
 
       // UPDATE status on transaksi
-      if (sql.startsWith('UPDATE transaksi SET status_transaksi = ? WHERE id_transaksi = ?')) {
+      if (sql.startsWith('UPDATE transaksi SET status_transaksi = ?')) {
         const order = orders.find((o) => o.id_transaksi === params[1]);
-        if (order) order.status_transaksi = params[0];
+        if (order) {
+          order.status_transaksi = params[0];
+          if (sql.includes('stock_reserved = 0')) order.stock_reserved = 0;
+        }
         return [{ affectedRows: order ? 1 : 0 }, []];
       }
 
@@ -341,7 +348,8 @@ async function createFixture(t, initialData = {}) {
 
       // UPDATE produk stock
       if (sql.startsWith('UPDATE produk') && sql.includes('jumlah_stok = ?')) {
-        const prod = products.find((p) => p.id_produk === params[1]);
+        const productId = params.length === 3 ? params[2] : params[1];
+        const prod = products.find((p) => p.id_produk === productId);
         if (prod) prod.jumlah_stok = params[0];
         return [{ affectedRows: prod ? 1 : 0 }, []];
       }
@@ -548,6 +556,22 @@ test('B8: Admin batalkan pesanan Dibayar memulihkan stok dan mengubah status ke 
   assert.equal(stockHistory.length, 1);
   assert.equal(stockHistory[0].jenis_perubahan, 'masuk');
   assert.equal(stockHistory[0].jumlah, 1);
+});
+
+test('pembatalan pesanan lama tanpa reservasi tidak menambah stok', async (t) => {
+  const { baseUrl, adminToken, products, stockHistory } = await createFixture(t);
+  const response = await fetch(`${baseUrl}/orders/TA-20261126-0002/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({ status: 'Dibatalkan' }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(products[1].jumlah_stok, 20);
+  assert.equal(stockHistory.length, 0);
 });
 
 // B9: Nomor pesanan tidak ada -> 404

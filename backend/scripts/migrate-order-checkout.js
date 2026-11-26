@@ -3,6 +3,18 @@ const db = require('../src/config/db');
 
 async function main() {
   try {
+    const [stockReservedColumns] = await db.query(
+      "SHOW COLUMNS FROM transaksi LIKE 'stock_reserved'",
+    );
+    if (stockReservedColumns.length === 0) {
+      await db.query(
+        "ALTER TABLE transaksi ADD COLUMN stock_reserved TINYINT(1) NOT NULL DEFAULT 0 AFTER status_transaksi",
+      );
+      console.log('Kolom transaksi.stock_reserved berhasil ditambahkan.');
+    } else {
+      console.log('Kolom transaksi.stock_reserved sudah tersedia.');
+    }
+
     const [guestTokenColumns] = await db.query(
       "SHOW COLUMNS FROM keranjang LIKE 'guest_token_hash'",
     );

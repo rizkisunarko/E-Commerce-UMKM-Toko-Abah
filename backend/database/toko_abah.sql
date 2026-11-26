@@ -400,6 +400,7 @@ CREATE TABLE `transaksi` (
   `ongkos_kirim` decimal(12,2) NOT NULL DEFAULT '0.00',
   `total_bayar` decimal(12,2) NOT NULL DEFAULT '0.00',
   `status_transaksi` enum('menunggu','dibayar','diproses','siap_diambil','siap_dikirim','selesai','batal') COLLATE utf8mb4_unicode_ci DEFAULT 'menunggu',
+  `stock_reserved` tinyint(1) NOT NULL DEFAULT '0',
   `tanggal_transaksi` datetime DEFAULT CURRENT_TIMESTAMP,
   `catatan` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
