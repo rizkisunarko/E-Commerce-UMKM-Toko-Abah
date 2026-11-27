@@ -24,13 +24,13 @@ function getStockStatus(stok, batasStokKritis) {
 }
 
 // status_stok dihitung, tidak disimpan (AC-04.1)
-function formatProduct(row) {
+function formatProduct(row, { includeCost = true } = {}) {
   if (!row) return null;
   const berat = row.berat !== undefined && row.berat !== null
     ? Number(row.berat)
     : parseGram(row.satuan);
 
-  return {
+  const formatted = {
     ...row,
     id: typeof row.id === 'string' ? Number(row.id) : row.id,
     nama: row.nama,
@@ -38,6 +38,10 @@ function formatProduct(row) {
     berat,
     status_stok: getStockStatus(row.stok, row.batas_stok_kritis),
   };
+  if (!includeCost) {
+    delete formatted.harga_beli;
+  }
+  return formatted;
 }
 
 async function findCategoryId(connection, category) {

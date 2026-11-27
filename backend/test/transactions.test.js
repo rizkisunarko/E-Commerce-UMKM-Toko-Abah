@@ -400,5 +400,12 @@ test('riwayat admin memfilter tanggal, memberi detail, dan merekap tiap metode b
   })).status, 403);
   assert.equal((await fetch(`${baseUrl}/transactions`)).status, 401);
 
+  const removedStatusRoute = await fetch(`${baseUrl}/transactions/${qrisTransaction.id}/status`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ status: 'diproses' }),
+  });
+  assert.equal(removedStatusRoute.status, 404);
+
   assert.equal(state.transactions.length, 3);
 });

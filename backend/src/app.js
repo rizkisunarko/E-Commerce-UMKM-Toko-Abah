@@ -1,6 +1,15 @@
 const cors = require('cors');
 const express = require('express');
+const helmet = require('helmet');
 const createRoutes = require('./routes');
+
+function getAllowedOrigins() {
+  const configured = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((item) => item.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  return new Set(['http://localhost:5173', ...configured]);
+}
 
 function createApp({ db, jwtSecret, shippingClient, paymentClient }) {
   if (!db || typeof db.query !== 'function') {
@@ -11,8 +20,18 @@ function createApp({ db, jwtSecret, shippingClient, paymentClient }) {
   }
 
   const app = express();
-  app.use(cors());
-  app.use(express.json());
+  const allowedOrigins = getAllowedOrigins();
+  app.use(helmet());
+  app.use(
+    cors({
+      origin(origin, callback) {
+        if (!origin) return callback(null, true);
+        const normalized = origin.replace(/\/+$/, '');
+        return callback(null, allowedOrigins.has(normalized));
+      },
+    }),
+  );
+  app.use(express.json({ limit: '100kb' }));
   app.use('/api', createRoutes(db, jwtSecret, shippingClient, paymentClient));
   app.use((req, res) => res.status(404).json({ message: 'Endpoint tidak ditemukan' }));
   app.use((error, req, res, next) => {
