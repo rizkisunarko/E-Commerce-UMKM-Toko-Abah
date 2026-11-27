@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AUTH_MESSAGE_KEY } from '../services/api';
 import storeBanner from '../assets/store-banner.jpg';
 import './LoginPage.css';
 
@@ -12,13 +13,29 @@ export default function LoginPage() {
   const location = useLocation();
   const from = location.state?.from?.pathname || '/produk';
 
-  const [username, setUsername] = useState('pakabah');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState(() => {
+    try {
+      const msg = sessionStorage.getItem(AUTH_MESSAGE_KEY);
+      if (msg) {
+        sessionStorage.removeItem(AUTH_MESSAGE_KEY);
+        return msg;
+      }
+    } catch {
+      // abaikan
+    }
+    return location.state?.authMessage || '';
+  });
   const [submitting, setSubmitting] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    if (location.state?.authMessage) {
+      setFormError(location.state.authMessage);
+    }
+  }, [location.state]);
 
   // Jika pengguna sudah login, langsung alihkan
   if (user) {
@@ -160,13 +177,9 @@ export default function LoginPage() {
                 <label htmlFor="passwordInput" className="login-field-label">
                   Kata Sandi
                 </label>
-                <button
-                  type="button"
-                  className="login-forgot-btn"
-                  onClick={() => alert('Silakan hubungi Abah atau Manajer Toko untuk reset kata sandi master kasir.')}
-                >
-                  Lupa Kata Sandi?
-                </button>
+                <span className="login-forgot-help" style={{ fontSize: '12px', color: '#6b7280' }}>
+                  Hubungi admin toko untuk mengatur ulang kata sandi.
+                </span>
               </div>
               <div className={`login-input-shell${errors.password ? ' error' : ''}`}>
                 <span className="login-input-left-icon">
@@ -239,17 +252,8 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Remember Me & Active Session Row */}
-            <div className="login-options-bar">
-              <label className="login-remember-checkbox-label">
-                <input
-                  type="checkbox"
-                  className="login-native-checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <span>Ingat saya di perangkat ini</span>
-              </label>
+            {/* Active Session Row */}
+            <div className="login-options-bar" style={{ justifyContent: 'flex-end' }}>
               <div className="login-active-session-tag">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

@@ -1,22 +1,24 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import PublicLayout from './components/PublicLayout';
 import ProtectedRoute from './components/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import CatalogPage from './pages/CatalogPage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import OrderPage from './pages/OrderPage';
-import AdminOrdersPage from './pages/AdminOrdersPage';
-import ProductListPage from './pages/ProductListPage';
-import ProductCreatePage from './pages/ProductCreatePage';
-import ProductEditPage from './pages/ProductEditPage';
-import StockPage from './pages/StockPage';
-import KasirPage from './pages/KasirPage';
-import RiwayatPage from './pages/RiwayatPage';
-import ReportPage from './pages/ReportPage';
-import NotFoundPage from './pages/NotFoundPage';
+
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const CatalogPage = lazy(() => import('./pages/CatalogPage'));
+const CartPage = lazy(() => import('./pages/CartPage'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const OrderPage = lazy(() => import('./pages/OrderPage'));
+const AdminOrdersPage = lazy(() => import('./pages/AdminOrdersPage'));
+const ProductListPage = lazy(() => import('./pages/ProductListPage'));
+const ProductCreatePage = lazy(() => import('./pages/ProductCreatePage'));
+const ProductEditPage = lazy(() => import('./pages/ProductEditPage'));
+const StockPage = lazy(() => import('./pages/StockPage'));
+const KasirPage = lazy(() => import('./pages/KasirPage'));
+const RiwayatPage = lazy(() => import('./pages/RiwayatPage'));
+const ReportPage = lazy(() => import('./pages/ReportPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Halaman awal: pelanggan ke katalog, staf yang sudah login ke daftar produk
 function HomeRedirect() {
@@ -27,7 +29,8 @@ function HomeRedirect() {
 
 export default function App() {
   return (
-    <Routes>
+    <Suspense fallback={<p className="muted" style={{ padding: 24 }}>Memuat...</p>}>
+      <Routes>
       <Route path="/" element={<HomeRedirect />} />
       <Route path="/login" element={<LoginPage />} />
 
@@ -100,6 +103,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

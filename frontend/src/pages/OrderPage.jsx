@@ -24,11 +24,31 @@ function getProductThumbnail(nama = '') {
   return null;
 }
 
+function getOrderStatusBadgeClass(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'dibayar') return 'order-badge-dibayar';
+  if (s === 'diproses') return 'order-badge-diproses';
+  if (s.includes('siap')) return 'order-badge-siap';
+  if (s === 'selesai') return 'order-badge-paid';
+  if (s.includes('batal')) return 'order-badge-batal';
+  return 'order-badge-pending';
+}
+
+function resolveDisplayOrderStatus(order) {
+  if (!order) return 'Menunggu Pembayaran';
+  if (order.status === 'Siap Diambil/Dikirim') {
+    return order.metode_penerimaan === 'kurir' ? 'Siap Dikirim' : 'Siap Diambil';
+  }
+  return order.status || 'Menunggu Pembayaran';
+}
+
 export default function OrderPage() {
   const { nomor } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [errorType, setErrorType] = useState('fetch_error');
+  const [reloadCount, setReloadCount] = useState(0);
   const [copied, setCopied] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
@@ -48,43 +68,30 @@ export default function OrderPage() {
             setOrder(res.data);
             const normalized = normalizePaymentStatus(res.data.status_pembayaran);
             const lunas = normalized === 'dibayar' ||
+                          res.data.status === 'Dibayar' ||
                           res.data.status === 'Diproses' ||
                           res.data.status === 'Siap Diambil' ||
                           res.data.status === 'Siap Dikirim' ||
+                          res.data.status === 'Siap Diambil/Dikirim' ||
                           res.data.status === 'Selesai';
             setIsPaid(lunas);
           } else {
+            setErrorType('not_found');
             setError('Pesanan tidak ditemukan');
           }
           setLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
-          // Fallback realistis sesuai rancangan UAS Toko Abah
-          setOrder({
-            id: 1,
-            nomor_pesanan: nomor || 'TA-20261115-001',
-            status: 'Menunggu Pembayaran',
-            status_pembayaran: 'menunggu',
-            tanggal: new Date().toISOString(),
-            nama_pemesan: 'Ibu Rahmawati',
-            no_hp: '0812-9876-5432',
-            catatan: '-',
-            metode_penerimaan: 'ambil_di_toko',
-            metode_pembayaran: 'midtrans',
-            alamat_lengkap: '',
-            wilayah: '',
-            items: [
-              { product_id: 1, nama: 'Beras Ramos Setra 5 kg', harga: 74000, jumlah: 1, subtotal: 74000 },
-              { product_id: 2, nama: 'Minyak Goreng Sawit 2 L', harga: 36000, jumlah: 1, subtotal: 36000 },
-              { product_id: 3, nama: 'Gula Pasir Tebu 1 kg', harga: 17500, jumlah: 1, subtotal: 17500 },
-            ],
-            subtotal: 127500,
-            ongkir: 0,
-            diskon: 0,
-            total: 127500,
-          });
+          setOrder(null);
+          if (err?.status === 404) {
+            setErrorType('not_found');
+            setError('Pesanan tidak ditemukan');
+          } else {
+            setErrorType('fetch_error');
+            setError(err?.message || 'Gagal memuat pesanan');
+          }
           setLoading(false);
         }
       });
@@ -92,24 +99,28 @@ export default function OrderPage() {
     return () => {
       cancelled = true;
     };
-  }, [nomor]);
+  }, [nomor, reloadCount]);
 
-  // Polling status otomatis setiap 3 detik saat pesanan belum lunas
+  // Polling status otomatis setiap 3 detik saat pesanan masih menunggu pembayaran
   useEffect(() => {
-    if (!order || isPaid || order.metode_pembayaran === 'cod') return;
+    if (!order || isPaid || order.metode_pembayaran === 'cod' || order.status === 'Dibatalkan' || order.status === 'Selesai') {
+      return undefined;
+    }
     const interval = setInterval(() => {
       orderService
         .get(nomor)
         .then((res) => {
           if (!res.data) return;
+          setOrder(res.data);
           const normalized = normalizePaymentStatus(res.data.status_pembayaran);
           const lunas = normalized === 'dibayar' ||
+                        res.data.status === 'Dibayar' ||
                         res.data.status === 'Diproses' ||
                         res.data.status === 'Siap Diambil' ||
                         res.data.status === 'Siap Dikirim' ||
+                        res.data.status === 'Siap Diambil/Dikirim' ||
                         res.data.status === 'Selesai';
           if (lunas) {
-            setOrder(res.data);
             setIsPaid(true);
           }
         })
@@ -218,6 +229,7 @@ export default function OrderPage() {
   }
 
   if (error || !order) {
+    const isNotFound = errorType === 'not_found';
     return (
       <div className="order-success-page">
         <div className="order-state-card error" role="alert">
@@ -228,11 +240,28 @@ export default function OrderPage() {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h2 className="order-state-error-title">Pesanan tidak ditemukan</h2>
-          <p className="order-state-error-sub">Nomor pesanan yang Anda tuju belum terdaftar di sistem.</p>
-          <Link to="/katalog" className="order-copy-btn" style={{ textDecoration: 'none' }}>
-            <span>Kembali ke Katalog</span>
-          </Link>
+          <h2 className="order-state-error-title">
+            {isNotFound ? 'Pesanan tidak ditemukan' : 'Gagal memuat pesanan'}
+          </h2>
+          <p className="order-state-error-sub">
+            {isNotFound
+              ? 'Nomor pesanan yang Anda tuju belum terdaftar di sistem.'
+              : error}
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {!isNotFound && (
+              <button
+                type="button"
+                className="order-copy-btn"
+                onClick={() => setReloadCount((c) => c + 1)}
+              >
+                <span>Coba Lagi</span>
+              </button>
+            )}
+            <Link to="/katalog" className="order-copy-btn" style={{ textDecoration: 'none' }}>
+              <span>Kembali ke Katalog</span>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -300,19 +329,10 @@ export default function OrderPage() {
                   </button>
                 </div>
 
-                {/* Status Badge */}
-                {isPaid ? (
-                  <span className="order-badge-paid">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    <span>Dibayar</span>
-                  </span>
-                ) : (
-                  <span className="order-badge-pending">
-                    <span>Menunggu Pembayaran</span>
-                  </span>
-                )}
+                {/* Status Pesanan */}
+                <span className={getOrderStatusBadgeClass(resolveDisplayOrderStatus(order))}>
+                  <span>{resolveDisplayOrderStatus(order)}</span>
+                </span>
               </div>
             </div>
 
@@ -331,11 +351,17 @@ export default function OrderPage() {
               <dl className="order-dl">
                 <div className="order-dl-row">
                   <dt className="order-dl-dt">Nama</dt>
-                  <dd className="order-dl-dd">{order.nama_pemesan || 'Ibu Rahmawati'}</dd>
+                  <dd className="order-dl-dd">{order.nama_pemesan || '-'}</dd>
                 </div>
                 <div className="order-dl-row">
                   <dt className="order-dl-dt">Nomor HP</dt>
-                  <dd className="order-dl-dd">{order.no_hp || '0812-9876-5432'}</dd>
+                  <dd className="order-dl-dd">{order.no_hp || '-'}</dd>
+                </div>
+                <div className="order-dl-row">
+                  <dt className="order-dl-dt">Status Pembayaran</dt>
+                  <dd className="order-dl-dd">
+                    {isPaid ? 'Dibayar' : order.status === 'Dibatalkan' ? 'Dibatalkan' : 'Menunggu Pembayaran'}
+                  </dd>
                 </div>
                 <div className="order-dl-row">
                   <dt className="order-dl-dt">Catatan</dt>
@@ -461,7 +487,11 @@ export default function OrderPage() {
               <div className="order-actions-stack">
                 {/* Pay Button / Status */}
                 <div>
-                  {isPaid ? (
+                  {order.status === 'Dibatalkan' ? (
+                    <div className="order-badge-batal" style={{ padding: '12px 16px', borderRadius: '8px', justifyContent: 'center', width: '100%' }}>
+                      <span>Pesanan Dibatalkan</span>
+                    </div>
+                  ) : isPaid ? (
                     <div className="order-btn-paid-done">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />

@@ -9,41 +9,6 @@ import './StockPage.css';
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
 
-function formatRupiah(num) {
-  if (num == null || isNaN(num)) return 'Rp 0';
-  return 'Rp ' + Math.round(Number(num)).toLocaleString('id-ID');
-}
-
-function formatCurrentDateTime() {
-  const now = new Date();
-  return (
-    now.toLocaleDateString('id-ID', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }) + ' WIB'
-  );
-}
-
-function formatSku(product) {
-  if (product.kode_produk) return product.kode_produk;
-  if (product.sku) return product.sku;
-  const nameUpper = (product.nama || '').toUpperCase();
-  if (nameUpper.includes('BERAS')) return 'BER-ROJO-5K';
-  if (nameUpper.includes('MINYAK')) return 'MYK-BIM-1L';
-  if (nameUpper.includes('GULA')) return 'GUL-GMP-1KG';
-  if (nameUpper.includes('TELUR')) return 'TLR-NEG-1KG';
-  if (nameUpper.includes('MIE')) return 'MIE-GOR-85G';
-  if (nameUpper.includes('KOPI')) return 'KOP-KAP-25G';
-  if (nameUpper.includes('SABUN')) return 'SBN-LIF-110G';
-  if (nameUpper.includes('TEH')) return 'TEH-SAR-50G';
-  const prefix = (product.kategori || 'PRD').substring(0, 3).toUpperCase();
-  return `${prefix}-${product.id}`;
-}
-
 export default function StockPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -64,7 +29,6 @@ export default function StockPage() {
   const [newStock, setNewStock] = useState('');
   const [fieldError, setFieldError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [methodTab, setMethodTab] = useState('opname'); // 'opname' | 'restock'
 
   useEffect(() => {
     let cancelled = false;
@@ -109,7 +73,6 @@ export default function StockPage() {
     setEditing(product);
     setNewStock(String(product.stok));
     setFieldError('');
-    setMethodTab('opname');
   }
 
   function closeModal() {
@@ -213,45 +176,13 @@ export default function StockPage() {
         </div>
       </header>
 
-      {/* 2. Judul Halaman dan Aksi Utama */}
+      {/* 2. Judul Halaman */}
       <div className="stock-page-header">
         <div className="stock-page-header-left">
           <h1>Daftar Stok</h1>
           <p>
             Pantau ketersediaan fisik barang dagangan, deteksi dini stok menipis, dan lakukan pembaruan stok kasir.
           </p>
-        </div>
-
-        <div className="stock-header-actions">
-          <button
-            type="button"
-            className="btn-print-report"
-            onClick={() => window.print()}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="6 9 6 2 18 2 18 9" />
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-              <rect x="6" y="14" width="12" height="8" />
-            </svg>
-            <span>Cetak Laporan</span>
-          </button>
-
-          {isAdmin && (
-            <button
-              type="button"
-              className="btn-restock-entry"
-              onClick={() => {
-                const firstCrit = rows.find((r) => r.status_stok === 'Stok Kritis') || rows[0];
-                if (firstCrit) openModal(firstCrit);
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              <span>+ Tambah Restock / Masuk Barang</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -325,56 +256,7 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* 4. Tiga Kartu Ringkasan Metrik */}
-      <div className="stock-metrics-grid">
-        {/* Card 1: Total SKU Dipantau */}
-        <div className="metric-card-box">
-          <div className="metric-card-top">
-            <span className="metric-card-label">Total SKU Dipantau</span>
-            <span className="metric-card-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="4" width="20" height="16" rx="2" />
-                <path d="M2 10h20" />
-              </svg>
-            </span>
-          </div>
-          <div className="metric-card-number">{totalSKU} Produk</div>
-          <div className="metric-card-footer">
-            <span style={{ color: '#15803d' }}>✓</span> Seluruh rak toko & gudang aktif
-          </div>
-        </div>
-
-        {/* Card 2: Stok Kritis */}
-        <div className="metric-card-box critical-state">
-          <div className="metric-card-top">
-            <span className="metric-card-label">Stok Kritis</span>
-            <span className="metric-card-icon">!</span>
-          </div>
-          <div className="metric-card-number">{criticalCount} Perlu Restock Segera</div>
-          <div className="metric-card-footer">
-            <span>⏱</span> Di bawah batas minimum harian kasir
-          </div>
-        </div>
-
-        {/* Card 3: Stok Aman */}
-        <div className="metric-card-box safe-state">
-          <div className="metric-card-top">
-            <span className="metric-card-label">Stok Aman</span>
-            <span className="metric-card-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </span>
-          </div>
-          <div className="metric-card-number">{safeCount} Produk Tersedia</div>
-          <div className="metric-card-footer">
-            <span style={{ color: '#15803d' }}>📈</span>{' '}
-            {totalSKU > 0 ? `${Math.round((safeCount / totalSKU) * 100)}%` : '100%'} ketersediaan stok terjaga
-          </div>
-        </div>
-      </div>
-
-      {/* 5. Toolbar Filter & Pencarian */}
+      {/* 4. Toolbar Filter & Pencarian */}
       <div className="stock-filter-toolbar">
         <div className="search-input-group">
           <span className="search-input-icon">
@@ -483,9 +365,7 @@ export default function StockPage() {
                             <ProductIcon nama={p.nama} kategori={p.kategori} />
                             <div className="product-cell-info">
                               <span className="product-cell-name">{p.nama}</span>
-                              <span className="product-cell-sku">
-                                SKU: {formatSku(p)}
-                              </span>
+                              <span className="product-cell-sku">{p.kategori || 'Sembako'}</span>
                             </div>
                           </div>
                         </td>
@@ -540,17 +420,6 @@ export default function StockPage() {
           <span>
             Menampilkan {displayRows.length} dari {totalSKU} produk
           </span>
-          <div className="pagination-pages-group">
-            <button type="button" className="pagination-btn" disabled>
-              ‹ Sebelumnya
-            </button>
-            <button type="button" className="pagination-btn is-active">
-              1
-            </button>
-            <button type="button" className="pagination-btn" disabled>
-              Berikutnya ›
-            </button>
-          </div>
         </div>
       </div>
 
@@ -626,30 +495,6 @@ export default function StockPage() {
                   <span className={`current-stock-num${editing.status_stok === 'Stok Kritis' ? ' is-critical' : ''}`}>
                     {editing.stok} unit
                   </span>
-                </div>
-              </div>
-
-              {/* Segmented Control Metode Pembaruan */}
-              <div className="modal-method-section">
-                <div className="method-label-title">Metode Pembaruan</div>
-                <div className="method-tabs-wrap">
-                  <button
-                    type="button"
-                    className={`method-tab-item${methodTab === 'opname' ? ' is-selected' : ''}`}
-                    onClick={() => setMethodTab('opname')}
-                  >
-                    <span>✔</span> Hitung Ulang Fisik (Opname)
-                  </button>
-                  <button
-                    type="button"
-                    className={`method-tab-item${methodTab === 'restock' ? ' is-selected' : ''}`}
-                    onClick={() => setMethodTab('restock')}
-                  >
-                    <span>+</span> Tambah Stok Masuk (Restock)
-                  </button>
-                </div>
-                <div className="method-help-desc">
-                  Angka yang dimasukkan akan menggantikan stok lama secara langsung.
                 </div>
               </div>
 
@@ -734,140 +579,6 @@ export default function StockPage() {
           </div>
         </div>
       )}
-
-      {/* Dokumen Khusus Cetak Laporan Data Barang (Sesuai Desain Referensi plan/cetak-laporan-data-barang.png) */}
-      <div className="stock-print-document" aria-hidden="true">
-        {/* Kop Surat Resmi Toko Abah */}
-        <div className="print-kop-surat">
-          <div className="print-kop-title">TOKO ABAH SEMBAKO</div>
-          <div className="print-kop-subtitle">
-            Penyedia Sembako &amp; Kebutuhan Pokok Keluarga Murah Berkualitas
-          </div>
-          <div className="print-kop-address">
-            Jl. Raya Telang No. 15, Kec. Kamal, Kab. Bangkalan, Madura, Jawa Timur 69162
-          </div>
-          <div className="print-kop-contact">
-            No. Telp / WhatsApp: <strong>085708350575</strong> | Email: tokoabah.sembako@gmail.com
-          </div>
-          <div className="print-kop-divider" />
-        </div>
-
-        {/* Judul & Meta Informasi Laporan */}
-        <div className="print-doc-header">
-          <h2 className="print-doc-title">LAPORAN DATA BARANG</h2>
-          <div className="print-doc-meta-grid">
-            <div>
-              <span>Tanggal Cetak: </span>
-              <strong>{formatCurrentDateTime()}</strong>
-            </div>
-            <div>
-              <span>Petugas / Kasir: </span>
-              <strong>{user?.nama || 'Petugas Toko Abah'}</strong>
-            </div>
-            <div>
-              <span>Kategori: </span>
-              <strong>{selectedCategory ? selectedCategory : 'Semua Kategori'}</strong>
-            </div>
-            <div>
-              <span>Kondisi Stok: </span>
-              <strong>{onlyCritical ? 'Khusus Stok Kritis' : 'Semua Status Stok'}</strong>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabel Data Barang */}
-        <table className="print-data-table">
-          <thead>
-            <tr>
-              <th style={{ width: '35px', textAlign: 'center' }}>NO</th>
-              <th style={{ width: '120px' }}>KODE / SKU</th>
-              <th>NAMA BARANG</th>
-              <th style={{ width: '100px', textAlign: 'center' }}>JENIS</th>
-              <th style={{ width: '70px', textAlign: 'center' }}>SATUAN</th>
-              <th style={{ width: '100px', textAlign: 'right' }}>HARGA MODAL</th>
-              <th style={{ width: '100px', textAlign: 'right' }}>HARGA JUAL</th>
-              <th style={{ width: '65px', textAlign: 'center' }}>JUMLAH</th>
-              <th style={{ width: '90px', textAlign: 'center' }}>STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayRows.length === 0 ? (
-              <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '16px' }}>
-                  Tidak ada data barang yang tersedia.
-                </td>
-              </tr>
-            ) : (
-              displayRows.map((p, idx) => {
-                const modalEst = p.modal ?? p.harga_beli ?? Math.round((p.harga || 0) * 0.85);
-                return (
-                  <tr key={p.id || idx}>
-                    <td style={{ textAlign: 'center' }}>{idx + 1}</td>
-                    <td>{formatSku(p)}</td>
-                    <td style={{ fontWeight: 600 }}>{p.nama}</td>
-                    <td style={{ textAlign: 'center' }}>{p.kategori || 'Sembako'}</td>
-                    <td style={{ textAlign: 'center' }}>{p.satuan || 'Pcs'}</td>
-                    <td style={{ textAlign: 'right' }}>{formatRupiah(modalEst)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatRupiah(p.harga)}</td>
-                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{p.stok}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className={`print-badge-status ${p.status_stok === 'Stok Kritis' ? 'kritis' : p.status_stok === 'Stok Menipis' ? 'menipis' : 'aman'}`}>
-                        {p.status_stok || (p.stok <= (p.stok_minimum || 5) ? 'Stok Kritis' : 'Stok Aman')}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-          <tfoot>
-            <tr className="print-table-total-row">
-              <td colSpan="5" style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                TOTAL KESELURUHAN:
-              </td>
-              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                {formatRupiah(
-                  displayRows.reduce((s, p) => {
-                    const m = p.modal ?? p.harga_beli ?? Math.round((p.harga || 0) * 0.85);
-                    return s + (Number(p.stok) || 0) * m;
-                  }, 0)
-                )}
-              </td>
-              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                {formatRupiah(
-                  displayRows.reduce((s, p) => s + (Number(p.stok) || 0) * (Number(p.harga) || 0), 0)
-                )}
-              </td>
-              <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                {displayRows.reduce((s, p) => s + (Number(p.stok) || 0), 0)}
-              </td>
-              <td style={{ textAlign: 'center', fontSize: '10px' }}>
-                {displayRows.length} Jenis Produk
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-
-        {/* Keterangan & Blok Tanda Tangan */}
-        <div className="print-footer-section">
-          <div className="print-footer-notes">
-            <p><strong>Catatan:</strong></p>
-            <ul>
-              <li>Data stok ini dicetak resmi dari Sistem Manajemen Toko Abah Sembako.</li>
-              <li>Periksa fisik barang secara berkala sesuai data stok di atas.</li>
-            </ul>
-          </div>
-          <div className="print-signature-box">
-            <p className="print-sig-date">
-              Bangkalan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-            <p className="print-sig-role">Penanggung Jawab Gudang / Toko,</p>
-            <div className="print-sig-space" />
-            <p className="print-sig-name">( {user?.nama || 'Petugas Toko Abah'} )</p>
-            <p className="print-sig-title">NIP / Jabatan: Petugas Inventaris</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

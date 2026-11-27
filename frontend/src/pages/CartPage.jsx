@@ -23,65 +23,6 @@ function getProductThumbnail(nama = '') {
   return null;
 }
 
-const RECOMMENDED_PRODUCTS = [
-  {
-    id: 1,
-    nama: 'Beras Ramos Super 5 kg',
-    kategori: 'Beras & Gandum',
-    desc: 'Pulen murni tanpa pemutih sintetis, aroma wangi alami untuk konsumsi harian keluarga.',
-    badge: 'Paling Laris',
-    badgeType: 'laris',
-    stockText: 'Stok: 42 Sak',
-    hargaCoret: 74000,
-    harga: 69500,
-    saveText: 'Hemat Rp 4.500',
-    image: berasImg,
-    stok: 42,
-  },
-  {
-    id: 2,
-    nama: 'Minyak Goreng Refill 2 Liter',
-    kategori: 'Minyak & Lemak',
-    desc: 'Penyaringan ganda bermutu tinggi, hasil gorengan lebih renyah dan tidak cepat hitam.',
-    badge: 'Promo Pekan Ini',
-    badgeType: 'promo',
-    stockText: 'Stok: 85 Pouch',
-    hargaCoret: 37000,
-    harga: 33900,
-    saveText: '-8%',
-    image: minyakImg,
-    stok: 85,
-  },
-  {
-    id: 3,
-    nama: 'Gula Pasir Kristal Putih 1 kg',
-    kategori: 'Gula & Pemanis',
-    desc: 'Dari tebu pilihan alami, butiran kristal bersih tanpa ampas, manis pas untuk teh dan kopi.',
-    badge: 'Kebutuhan Harian',
-    badgeType: 'harian',
-    stockText: 'Stok: 60 Pack',
-    hargaCoret: 18000,
-    harga: 16500,
-    saveText: 'Kemasan 1 kg',
-    image: gulaImg,
-    stok: 60,
-  },
-  {
-    id: 4,
-    nama: 'Telur Ayam Negeri Segar 1 kg',
-    kategori: 'Hasil Ternak',
-    desc: 'Cangkang tebal bersih, kuning telur utuh kental, pasokan baru datang setiap pagi.',
-    badge: 'Segar Tiap Pagi',
-    badgeType: 'segar',
-    stockText: 'Stok: 30 Tray',
-    hargaCoret: 29500,
-    harga: 27000,
-    saveText: 'Grosir Hemat',
-    image: telurImg,
-    stok: 30,
-  },
-];
-
 function CartQuantityInput({ item, setJumlah, isError }) {
   const [val, setVal] = useState(String(item.jumlah));
 
@@ -131,38 +72,14 @@ export default function CartPage() {
     hasIssue,
     syncError,
     retrySync,
-    addItem,
     setJumlah,
     removeItem,
     clear,
   } = useCart();
   const { checking, error, recheck } = useCartCheck();
 
-  const [toastMsg, setToastMsg] = useState('');
-  const [addingId, setAddingId] = useState(null);
-  const [savedId, setSavedId] = useState(null);
-
-  function handleQuickAdd(prod) {
-    setAddingId(prod.id);
-    setToastMsg(`${prod.nama} berhasil dimasukkan ke keranjang!`);
-    setTimeout(() => {
-      setAddingId(null);
-      setSavedId(prod.id);
-      setTimeout(() => {
-        addItem({
-          id: prod.id,
-          nama: prod.nama,
-          harga: prod.harga,
-          stok: prod.stok,
-        });
-        setSavedId(null);
-        setToastMsg('');
-      }, 700);
-    }, 400);
-  }
-
   // =========================================================================
-  // 1. TAMPILAN KERANJANG KOSONG (Persis Desain Stitch)
+  // 1. TAMPILAN KERANJANG KOSONG
   // =========================================================================
   if (items.length === 0) {
     return (
@@ -311,120 +228,6 @@ export default function CartPage() {
             </div>
           </div>
         </section>
-
-        {/* Recommendation Section: Produk Sembako Paling Banyak Dicari */}
-        <section className="ko-recom-section">
-          <div className="ko-recom-header">
-            <div>
-              <div className="ko-recom-tag">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                  <polyline points="17 6 23 6 23 12" />
-                </svg>
-                <span>Pilihan Ibu Rumah Tangga &amp; Warung</span>
-              </div>
-              <h2 className="ko-recom-title">Produk Sembako Paling Banyak Dicari</h2>
-              <p className="ko-recom-subtitle">
-                Paling sering dibeli kembali setiap pekan. Tambahkan langsung ke keranjang dengan satu klik.
-              </p>
-            </div>
-
-            <Link to="/katalog" className="ko-recom-link">
-              <span>Katalog Lengkap</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </Link>
-          </div>
-
-          {/* Product Grid: 4 Items */}
-          <div className="ko-recom-grid">
-            {RECOMMENDED_PRODUCTS.map((prod) => {
-              const isAdding = addingId === prod.id;
-              const isSaved = savedId === prod.id;
-
-              return (
-                <article key={prod.id} className="ko-recom-card">
-                  <div className="ko-recom-thumb-box">
-                    <img src={prod.image} alt={prod.nama} className="ko-recom-img" />
-                    <span className={`ko-recom-badge-top ${prod.badgeType}`}>
-                      {prod.badge}
-                    </span>
-                    <span className="ko-recom-badge-stock">
-                      {prod.stockText}
-                    </span>
-                  </div>
-
-                  <div className="ko-recom-card-body">
-                    <span className="ko-recom-cat">{prod.kategori}</span>
-                    <h3 className="ko-recom-card-title">{prod.nama}</h3>
-                    <p className="ko-recom-desc">{prod.desc}</p>
-
-                    <div className="ko-recom-pricing">
-                      <div>
-                        <span className="ko-recom-strike">{formatRupiah(prod.hargaCoret)}</span>
-                        <div className="ko-recom-price">{formatRupiah(prod.harga)}</div>
-                      </div>
-                      <span className="ko-recom-save-pill">{prod.saveText}</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      className={`ko-recom-btn${isSaved ? ' saved' : ''}`}
-                      disabled={isAdding || isSaved}
-                      onClick={() => handleQuickAdd(prod)}
-                    >
-                      {isAdding ? (
-                        <>
-                          <svg className="ko-spin-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                            <line x1="12" y1="2" x2="12" y2="6" />
-                            <line x1="12" y1="18" x2="12" y2="22" />
-                            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
-                            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
-                            <line x1="2" y1="12" x2="6" y2="12" />
-                            <line x1="18" y1="12" x2="22" y2="12" />
-                            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
-                            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
-                          </svg>
-                          <span>Menambahkan...</span>
-                        </>
-                      ) : isSaved ? (
-                        <>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d631b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                          <span className="text-green-bold">Tersimpan</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                            <line x1="3" y1="6" x2="21" y2="6" />
-                            <line x1="12" y1="11" x2="12" y2="17" />
-                            <line x1="9" y1="14" x2="15" y2="14" />
-                          </svg>
-                          <span>+ Keranjang</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Toast Notifikasi Feedback */}
-        {toastMsg && (
-          <div className="ko-toast" role="status">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a3f69c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            <span>{toastMsg}</span>
-          </div>
-        )}
       </div>
     );
   }

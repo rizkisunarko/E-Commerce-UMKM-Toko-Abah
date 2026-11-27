@@ -114,7 +114,6 @@ export default function KasirPage() {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [cashReceived, setCashReceived] = useState('');
   const [qrisConfirmed, setQrisConfirmed] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
@@ -161,9 +160,7 @@ export default function KasirPage() {
         showToast('Metode E-Wallet & QRIS dipilih');
       } else if (e.key === 'F9') {
         e.preventDefault();
-        if (receipt) {
-          handlePrintReceipt();
-        } else if (!submitting && cart.length > 0) {
+        if (!receipt && !submitting && cart.length > 0) {
           handleSubmit();
         }
       } else if (e.code === 'Space' && receipt) {
@@ -258,81 +255,12 @@ export default function KasirPage() {
     setCart((prev) => prev.filter((it) => it.product.id !== id));
   }
 
-  function handlePrintReceipt() {
-    if (!receipt) return;
-    window.print();
-  }
-
-  function handleSendWhatsAppReceipt() {
-    if (!receipt) return;
-
-    const noNota = `#TRX-1024-0${receipt.id < 10 ? `0${receipt.id}` : receipt.id}`;
-    const tanggalStr = `${new Date(receipt.tanggal || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}, ${new Date(receipt.tanggal || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
-    const kasirNama = user?.nama || 'Abah Rohim';
-    const metodeStr = receipt.metode_bayar === 'qris' ? 'QRIS / E-Wallet' : 'Tunai / Cash';
-
-    let itemsList = '';
-    if (receipt.items && receipt.items.length > 0) {
-      itemsList = receipt.items
-        .map(
-          (it) =>
-            `• *${it.nama}*\n  ${it.jumlah}x @${formatRupiah(it.harga)} = *${formatRupiah(it.subtotal)}*`
-        )
-        .join('\n');
-    } else {
-      itemsList = `• Total Belanja = *${formatRupiah(receipt.total)}*`;
-    }
-
-    const pesan =
-      `🧾 *STRUK BELANJA RESMI - TOKO ABAH SEMBAKO*\n` +
-      `_Penyedia Kebutuhan Pokok & Sembako Murah Berkualitas_\n` +
-      `📍 Jl. Raya Telang No. 15 Kamal, Bangkalan, Madura\n` +
-      `📞 No. WhatsApp Toko: 085708350575\n` +
-      `====================================\n` +
-      `*No. Nota :* ${noNota}\n` +
-      `*Tanggal  :* ${tanggalStr}\n` +
-      `*Kasir    :* ${kasirNama}\n` +
-      `*Metode   :* ${metodeStr}\n` +
-      `====================================\n` +
-      `*RINCIAN BARANG:*\n` +
-      `${itemsList}\n` +
-      `====================================\n` +
-      `*TOTAL PEMBAYARAN : ${formatRupiah(receipt.total)}*\n` +
-      `*STATUS           : LUNAS*\n` +
-      `====================================\n` +
-      `Terima kasih banyak telah berbelanja di *Toko Abah Sembako*! Semoga rezeki berkah dan ditunggu belanja berikutnya. 🙏✨`;
-
-    const inputPhone = window.prompt(
-      'Masukkan nomor WhatsApp pelanggan (contoh: 085708350575) atau kosongkan untuk memilih kontak manual di WhatsApp:',
-      ''
-    );
-
-    if (inputPhone === null) return;
-
-    let waUrl = '';
-    const cleanPhone = inputPhone.replace(/[^0-9]/g, '');
-    if (cleanPhone) {
-      const normalizedPhone = cleanPhone.startsWith('0')
-        ? '62' + cleanPhone.slice(1)
-        : cleanPhone.startsWith('62')
-        ? cleanPhone
-        : '62' + cleanPhone;
-      waUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(pesan)}`;
-    } else {
-      waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(pesan)}`;
-    }
-
-    window.open(waUrl, '_blank');
-    showToast('Membuka WhatsApp untuk mengirimkan struk digital...');
-  }
-
   function handleResetCart() {
     if (cart.length === 0) return;
     if (window.confirm('Kosongkan semua item di keranjang kasir?')) {
       setCart([]);
       setMetode('');
       setMetodeError('');
-      setCashReceived('');
       setQrisConfirmed(false);
       setPaymentError('');
       setServerErrors({});
@@ -361,18 +289,12 @@ export default function KasirPage() {
     }
     if (cart.length === 0 || hasItemError) return;
 
-    setCashReceived('');
     setQrisConfirmed(false);
     setPaymentOpen(true);
   }
 
   async function confirmPayment() {
     setPaymentError('');
-    const received = metode === 'tunai' ? Number(cashReceived) : total;
-    if (metode === 'tunai' && (!Number.isSafeInteger(received) || received < total)) {
-      setPaymentError('Uang diterima harus berupa angka bulat dan minimal sebesar total tagihan');
-      return;
-    }
     if (metode === 'qris' && !qrisConfirmed) {
       setPaymentError('Konfirmasi pembayaran QRIS setelah pembayaran diterima');
       return;
@@ -386,14 +308,13 @@ export default function KasirPage() {
     try {
       const res = await transactionService.create({
         metode_bayar: metode,
-        ...(metode === 'tunai' ? { jumlah_diterima: received } : {}),
+        ...(metode === 'tunai' ? { jumlah_diterima: Math.round(total) } : {}),
         items: cart.map((it) => ({ product_id: it.product.id, jumlah: Number(it.jumlah) })),
       });
       setReceipt(res.data);
       setCart([]);
       setMetodeError('');
       setPaymentOpen(false);
-      setCashReceived('');
       setQrisConfirmed(false);
       setReload((x) => x + 1);
     } catch (err) {
@@ -415,7 +336,6 @@ export default function KasirPage() {
     setServerErrors({});
     setMetode('');
     setMetodeError('');
-    setCashReceived('');
     setQrisConfirmed(false);
     setPaymentOpen(false);
     setPaymentError('');
@@ -493,7 +413,7 @@ export default function KasirPage() {
           <div className="kasir-header-actions">
             {receipt ? (
               <div className="kasir-shortcut-header-pill">
-                <span>⌨ Shortcut: [F2] Cari • [Space] Transaksi Baru • [F9] Cetak</span>
+                <span>⌨ Pintasan: [F2] Cari • [Space] Transaksi Baru</span>
               </div>
             ) : (
               <>
@@ -690,7 +610,7 @@ export default function KasirPage() {
               <div className="kasir-help-left">
                 <span className="kasir-info-circle-icon">ℹ</span>
                 <span className="kasir-help-text">
-                  Tekan <b>F2</b> untuk cari cepat atau hubungkan barcode scanner USB.
+                  Tekan <b>F2</b> untuk mencari produk dengan cepat.
                 </span>
               </div>
               <span className="kasir-pos-version-tag">
@@ -769,19 +689,6 @@ export default function KasirPage() {
                     </div>
                   </div>
 
-                  <div className="receipt-cash-calc-box">
-                    <div className="cash-calc-line">
-                      <span className="calc-lbl">Uang Diterima:</span>
-                      <span className="calc-val-dark">{formatRupiah(receipt.jumlah_diterima ?? receipt.total)}</span>
-                    </div>
-                    <div className="cash-calc-line kembalian">
-                      <span className="calc-lbl">Kembalian Konsumen:</span>
-                      <span className="calc-val-kembalian">
-                        {formatRupiah(receipt.kembalian ?? 0)}
-                      </span>
-                    </div>
-                  </div>
-
                   <div className="receipt-actions-group">
                     <button
                       type="button"
@@ -795,32 +702,6 @@ export default function KasirPage() {
                       </svg>
                       <span>Transaksi Baru [Space]</span>
                     </button>
-
-                    <div className="receipt-secondary-actions">
-                      <button
-                        type="button"
-                        className="btn-receipt-secondary"
-                        onClick={handlePrintReceipt}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="6 9 6 2 18 2 18 9" />
-                          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                          <rect x="6" y="14" width="12" height="8" />
-                        </svg>
-                        <span>Cetak Struk [F9]</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn-receipt-secondary"
-                        onClick={handleSendWhatsAppReceipt}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                        </svg>
-                        <span>Kirim WhatsApp</span>
-                      </button>
-                    </div>
 
                     <div className="receipt-ready-status-footer">
                       <span className="dot-ready">●</span>
@@ -1052,10 +933,6 @@ export default function KasirPage() {
                         <span className="summary-lbl">Subtotal ({totalItemsCount} barang)</span>
                         <span className="summary-val">{formatRupiah(total)}</span>
                       </div>
-                      <div className="kasir-summary-line">
-                        <span className="summary-lbl">Diskon Toko</span>
-                        <span className="summary-val">Rp 0</span>
-                      </div>
                     </div>
 
                     {/* Total Tagihan Banner */}
@@ -1097,7 +974,7 @@ export default function KasirPage() {
                                 <span className="payment-error-opt-name">Cash / Tunai</span>
                                 <span className="kbd-shortcut-badge">F7</span>
                               </div>
-                              <span className="payment-error-opt-desc">Complete payment using cash / Uang fisik</span>
+                              <span className="payment-error-opt-desc">Bayar tunai di kasir</span>
                             </div>
                           </div>
 
@@ -1127,7 +1004,7 @@ export default function KasirPage() {
                       /* MODE NORMAL PILIHAN METODE BAYAR (PERSIS GAMBAR 1) */
                       <div className="kasir-payment-option-section">
                         <div className="payment-option-header-row">
-                          <span className="payment-option-title">Select Payment Option *</span>
+                          <span className="payment-option-title">Pilih Metode Bayar *</span>
                           <span className="payment-option-count">
                             {metode ? '1 Metode Dipilih' : 'Pilih Metode'}
                           </span>
@@ -1142,8 +1019,8 @@ export default function KasirPage() {
                             <span className={`custom-radio-circle${metode === 'tunai' ? ' checked' : ''}`} />
                           </div>
                           <div className="payment-radio-text">
-                            <span className="payment-radio-name">Cash / Tunai</span>
-                            <span className="payment-radio-desc">Complete payment using cash / Uang fisik</span>
+                            <span className="payment-radio-name">Tunai</span>
+                            <span className="payment-radio-desc">Bayar tunai di kasir</span>
                           </div>
                         </div>
 
@@ -1314,68 +1191,9 @@ export default function KasirPage() {
             </div>
 
             {metode === 'tunai' ? (
-              <>
-                <label className="kasir-payment-field-label" htmlFor="cash-received">
-                  Uang Diterima dari Pelanggan
-                </label>
-                <div className="kasir-payment-input-wrap">
-                  <span className="kasir-payment-input-prefix">Rp</span>
-                  <input
-                    id="cash-received"
-                    className="kasir-payment-cash-input"
-                    type="text"
-                    inputMode="numeric"
-                    autoFocus
-                    value={cashReceived ? Number(cashReceived).toLocaleString('id-ID') : ''}
-                    onChange={(event) => {
-                      const raw = event.target.value.replace(/\D/g, '');
-                      setCashReceived(raw ? String(Number(raw)) : '');
-                      setPaymentError('');
-                    }}
-                    placeholder="0"
-                    aria-invalid={Boolean(paymentError)}
-                  />
-                </div>
-
-                {/* Tombol Cepat Nominal Uang Pas / Pecahan */}
-                <div className="kasir-cash-presets">
-                  <button
-                    type="button"
-                    className="kasir-preset-btn"
-                    onClick={() => {
-                      setCashReceived(String(total));
-                      setPaymentError('');
-                    }}
-                  >
-                    Uang Pas ({formatRupiah(total)})
-                  </button>
-                  {[20000, 50000, 100000, 200000]
-                    .filter((amt) => amt >= total || total > 100000)
-                    .slice(0, 3)
-                    .map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        className="kasir-preset-btn"
-                        onClick={() => {
-                          setCashReceived(String(amt));
-                          setPaymentError('');
-                        }}
-                      >
-                        Rp {amt.toLocaleString('id-ID')}
-                      </button>
-                    ))}
-                </div>
-
-                <div className="kasir-payment-change">
-                  <span>Kembalian</span>
-                  <strong>
-                    {Number.isSafeInteger(Number(cashReceived)) && Number(cashReceived) >= total
-                      ? formatRupiah(Number(cashReceived) - total)
-                      : formatRupiah(0)}
-                  </strong>
-                </div>
-              </>
+              <div className="kasir-qris-confirmation">
+                <p>Pastikan pembayaran tunai sebesar <strong>{formatRupiah(total)}</strong> telah diterima oleh kasir.</p>
+              </div>
             ) : (
               <div className="kasir-qris-confirmation">
                 <p>Minta pelanggan membayar menggunakan QRIS resmi toko. QR tidak dibuat oleh aplikasi ini.</p>
@@ -1417,107 +1235,6 @@ export default function KasirPage() {
               </button>
             </div>
           </section>
-        </div>
-      )}
-
-      {/* Dokumen Cetak Struk Kasir Thermal (Sesuai Desain Referensi plan/struk.png) */}
-      {receipt && (
-        <div className="kasir-thermal-print-document" aria-hidden="true">
-          <div className="receipt-thermal-paper">
-            <div className="thermal-header">
-              <div className="thermal-store-name">TOKO ABAH SEMBAKO</div>
-              <div className="thermal-store-desc">Kebutuhan Pokok &amp; Sembako Murah</div>
-              <div className="thermal-store-address">Jl. Raya Telang No. 15 Kamal, Bangkalan</div>
-              <div className="thermal-store-phone">Telp/WA: 085708350575</div>
-              <div className="thermal-double-line">================================</div>
-            </div>
-
-            <div className="thermal-meta">
-              <div className="thermal-row">
-                <span>No. Trx :</span>
-                <span>#TRX-1024-0{receipt.id < 10 ? `0${receipt.id}` : receipt.id}</span>
-              </div>
-              <div className="thermal-row">
-                <span>Tanggal :</span>
-                <span>
-                  {new Date(receipt.tanggal || Date.now()).toLocaleDateString('id-ID')}{' '}
-                  {new Date(receipt.tanggal || Date.now()).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
-              <div className="thermal-row">
-                <span>Kasir   :</span>
-                <span>{user?.nama || 'Abah Rohim'}</span>
-              </div>
-              <div className="thermal-row">
-                <span>Metode  :</span>
-                <span>{receipt.metode_bayar === 'qris' ? 'QRIS INSTAN' : 'TUNAI / CASH'}</span>
-              </div>
-              <div className="thermal-dash-line">--------------------------------</div>
-            </div>
-
-            <div className="thermal-items-list">
-              {receipt.items && receipt.items.length > 0 ? (
-                receipt.items.map((it, idx) => (
-                  <div key={idx} className="thermal-item-entry">
-                    <div className="thermal-item-title">{it.nama}</div>
-                    <div className="thermal-item-calc">
-                      <span>{it.jumlah} x {formatRupiah(it.harga)}</span>
-                      <span>{formatRupiah(it.subtotal)}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="thermal-item-entry">
-                  <div className="thermal-item-title">Total Pembelian Produk Sembako</div>
-                  <div className="thermal-item-calc">
-                    <span>1 x {formatRupiah(receipt.total)}</span>
-                    <span>{formatRupiah(receipt.total)}</span>
-                  </div>
-                </div>
-              )}
-              <div className="thermal-dash-line">--------------------------------</div>
-            </div>
-
-            <div className="thermal-totals">
-              <div className="thermal-row">
-                <span>Total Item :</span>
-                <span>{receipt.items?.reduce((s, it) => s + (it.jumlah || 1), 0) || 1} Pcs</span>
-              </div>
-              <div className="thermal-row font-bold">
-                <span>SUBTOTAL   :</span>
-                <span>{formatRupiah(receipt.total)}</span>
-              </div>
-              <div className="thermal-row">
-                <span>Ongkir     :</span>
-                <span>Rp 0</span>
-              </div>
-              <div className="thermal-dash-line">--------------------------------</div>
-              <div className="thermal-row font-bold large">
-                <span>TOTAL      :</span>
-                <span>{formatRupiah(receipt.total)}</span>
-              </div>
-              <div className="thermal-row">
-                <span>BAYAR ({receipt.metode_bayar === 'qris' ? 'QRIS' : 'TUNAI'}) :</span>
-                <span>{formatRupiah(receipt.jumlah_diterima ?? receipt.total)}</span>
-              </div>
-              <div className="thermal-row font-bold">
-                <span>KEMBALI    :</span>
-                <span>{formatRupiah(receipt.kembalian ?? 0)}</span>
-              </div>
-              <div className="thermal-double-line">================================</div>
-            </div>
-
-            <div className="thermal-footer">
-              <div className="thermal-footer-title">TERIMA KASIH TELAH BERBELANJA</div>
-              <div className="thermal-footer-sub">DI TOKO ABAH SEMBAKO</div>
-              <div className="thermal-footer-note">Barang yang sudah dibeli tidak dapat</div>
-              <div className="thermal-footer-note">ditukar atau dikembalikan</div>
-              <div className="thermal-double-line">================================</div>
-            </div>
-          </div>
         </div>
       )}
     </div>

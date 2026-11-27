@@ -31,6 +31,13 @@ const formatWibDateTime = (iso) => {
   return `${datePart}, ${timePart} WIB`;
 };
 
+function formatOrderStatusLabel(order) {
+  if (order.status === 'Siap Diambil/Dikirim') {
+    return order.metode_penerimaan === 'kurir' ? 'Siap Dikirim' : 'Siap Diambil';
+  }
+  return order.status;
+}
+
 function getStatusBadgeClass(status) {
   const s = (status || '').toLowerCase();
   if (s.includes('menunggu')) return 'ord-badge-menunggu';
@@ -439,7 +446,7 @@ export default function AdminOrdersPage() {
                     </td>
                     <td>
                       <span className={`ord-badge ${getStatusBadgeClass(order.status)}`}>
-                        {order.status}
+                        {formatOrderStatusLabel(order)}
                       </span>
                     </td>
                     <td className="ord-td-actions">{renderActions(order)}</td>

@@ -97,142 +97,6 @@ function getProductSocialProof(product = {}) {
   };
 }
 
-// Helper Pilihan Varian Kemasan di Tempat (Step 4)
-function getProductVariants(product = {}) {
-  const text = ((product.nama || '') + ' ' + (product.kategori || '')).toLowerCase();
-
-  if (text.includes('beras')) {
-    return [
-      { id: '2.5kg', label: '2.5 kg', mult: 0.52, strikeMult: 0.58, unitText: 'Setara Rp 15.000 / kg' },
-      { id: '5kg', label: '5 kg', mult: 1.0, strikeMult: 1.076, unitText: 'Setara Rp 14.500 / kg • Beli 3+ lebih hemat', isDefault: true },
-      { id: '10kg', label: '10 kg', mult: 1.958, strikeMult: 2.15, unitText: 'Setara Rp 14.200 / kg • Hemat grosir' },
-    ];
-  }
-
-  if (text.includes('minyak')) {
-    return [
-      { id: '1L', label: '1 Liter', mult: 0.54, strikeMult: 0.62, unitText: 'Setara Rp 19.500 / L' },
-      { id: '2L', label: '2 Liter', mult: 1.0, strikeMult: 1.125, unitText: 'Setara Rp 18.000 / L • Pouch Higienis', isDefault: true },
-      { id: '5L', label: '5 L (Jerigen)', mult: 2.45, strikeMult: 2.75, unitText: 'Setara Rp 17.600 / L • Beli banyak lebih untung' },
-    ];
-  }
-
-  if (text.includes('gula')) {
-    return [
-      { id: '500g', label: '500 gr', mult: 0.55, strikeMult: 0.65, unitText: 'Setara Rp 17.000 / kg' },
-      { id: '1kg', label: '1 kg', mult: 1.0, strikeMult: 1.12, unitText: 'Setara Rp 16.500 / kg • Murni Alami', isDefault: true },
-      { id: '2kg', label: '2 kg', mult: 1.94, strikeMult: 2.18, unitText: 'Setara Rp 16.000 / kg • Beli 2+ lebih hemat' },
-    ];
-  }
-
-  if (text.includes('telur')) {
-    return [
-      { id: '10btr', label: '10 Butir', mult: 0.38, strikeMult: 0.45, unitText: 'Setara Rp 1.950 / butir' },
-      { id: '1tray', label: '1 Tray (~1.8 kg)', mult: 1.0, strikeMult: 1.12, unitText: 'Setara Rp 1.850 / butir • Grade A Panen Baru', isDefault: true },
-      { id: '2tray', label: '2 Tray', mult: 1.95, strikeMult: 2.18, unitText: 'Setara Rp 1.800 / butir • Grosir Warung' },
-    ];
-  }
-
-  if (text.includes('mie')) {
-    return [
-      { id: '1bks', label: '1 Bks', mult: 0.22, strikeMult: 0.28, unitText: 'Satuan eceran' },
-      { id: '5bks', label: '5 Bks', mult: 1.0, strikeMult: 1.15, unitText: 'Setara Rp 3.100 / bks • Paket Keluarga', isDefault: true },
-      { id: '1dus', label: '1 Dus (40)', mult: 7.6, strikeMult: 8.8, unitText: 'Setara Rp 2.950 / bks • Dus Segel Pabrik' },
-    ];
-  }
-
-  if (text.includes('kopi')) {
-    return [
-      { id: '5sct', label: '5 Sachet', mult: 0.55, strikeMult: 0.65, unitText: 'Kemasan coba' },
-      { id: '1renceng', label: '1 Renceng (10)', mult: 1.0, strikeMult: 1.15, unitText: 'Setara Rp 1.400 / sachet • Mantap', isDefault: true },
-      { id: '3renceng', label: '3 Renceng', mult: 2.85, strikeMult: 3.3, unitText: 'Setara Rp 1.330 / sachet • Lebih Murah' },
-    ];
-  }
-
-  return [
-    { id: 'reguler', label: '1 Satuan', mult: 1.0, strikeMult: 1.12, unitText: 'Harga eceran resmi', isDefault: true },
-    { id: 'paket3', label: 'Beli 3+ (Grosir)', mult: 2.85, strikeMult: 3.25, unitText: 'Paket hemat sembako Toko Abah' },
-  ];
-}
-
-// Perhitungan Harga Varian, Harga Coret & Nominal Hemat Rupiah (Step 3 & 4)
-function calculateVariantPricing(basePrice, variant, productName = '') {
-  const name = (productName || '').toLowerCase();
-  const numBase = Number(basePrice) || 72500;
-
-  // Kalibrasi Khusus Beras (sesuai contoh prompt: Beras 5 kg Rp 72.500, coret Rp 78.000, Hemat Rp 5.500; 10 kg Rp 142.000, Hemat Rp 14.000)
-  if (name.includes('beras')) {
-    if (variant?.id === '2.5kg') {
-      return {
-        currentPrice: 38500,
-        strikePrice: 42000,
-        savings: 3500,
-        unitText: 'Setara Rp 15.400 / kg',
-      };
-    }
-    if (variant?.id === '10kg') {
-      return {
-        currentPrice: 142000,
-        strikePrice: 156000,
-        savings: 14000,
-        unitText: 'Setara Rp 14.200 / kg • Beli 10 kg lebih hemat',
-      };
-    }
-    // Default 5 kg
-    const current = numBase;
-    const strike = current + 5500;
-    return {
-      currentPrice: current,
-      strikePrice: strike,
-      savings: 5500,
-      unitText: 'Setara Rp 14.500 / kg • Beli 3+ lebih hemat',
-    };
-  }
-
-  // Khusus Minyak Goreng
-  if (name.includes('minyak')) {
-    if (variant?.id === '1L') {
-      const current = Math.round((numBase * 0.54) / 500) * 500;
-      return {
-        currentPrice: current,
-        strikePrice: current + 3500,
-        savings: 3500,
-        unitText: 'Setara Rp 19.500 / L',
-      };
-    }
-    if (variant?.id === '5L') {
-      const current = Math.round((numBase * 2.45) / 500) * 500;
-      return {
-        currentPrice: current,
-        strikePrice: current + 12000,
-        savings: 12000,
-        unitText: 'Setara Rp 17.600 / L • Jerigen hemat',
-      };
-    }
-    const current = numBase;
-    return {
-      currentPrice: current,
-      strikePrice: current + 4500,
-      savings: 4500,
-      unitText: 'Setara Rp 18.000 / L • Pouch 2 L higienis',
-    };
-  }
-
-  // Sembako Umum
-  const mult = variant?.mult || 1.0;
-  const current = Math.round((numBase * mult) / 500) * 500;
-  const strikeMult = variant?.strikeMult || 1.12;
-  const strike = Math.round((numBase * strikeMult) / 500) * 500;
-  const savings = Math.max(0, strike - current);
-
-  return {
-    currentPrice: current,
-    strikePrice: strike > current ? strike : null,
-    savings: savings >= 1000 ? savings : null,
-    unitText: variant?.unitText || 'Timbangan pas terjamin Toko Abah',
-  };
-}
-
 // Hover Detail Kemasan Belakang & Informasi Nutrisi / Sertifikasi (Step 2)
 function getProductNutritionAndCert(product = {}) {
   const text = ((product.nama || '') + ' ' + (product.kategori || '')).toLowerCase();
@@ -581,8 +445,7 @@ export default function CatalogPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalQty, setModalQty] = useState(1);
 
-  // States Khusus Makeover Katalog Produk
-  const [selectedVariants, setSelectedVariants] = useState({});
+  // States Khusus Katalog Produk
   const [addedFeedback, setAddedFeedback] = useState({});
   const [toastUndo, setToastUndo] = useState(null);
   const [wishlist, setWishlist] = useState(() => {
@@ -657,14 +520,6 @@ export default function CatalogPage() {
     return () => clearTimeout(timer);
   }, [toastUndo]);
 
-  function handleSelectVariant(e, productId, variantId) {
-    e.stopPropagation();
-    setSelectedVariants((prev) => ({
-      ...prev,
-      [productId]: variantId,
-    }));
-  }
-
   function toggleWishlist(e, productId) {
     e.stopPropagation();
     setWishlist((prev) => {
@@ -677,7 +532,7 @@ export default function CatalogPage() {
     });
   }
 
-  function handleAddWithVariant(e, product, variant, pricing) {
+  function handleAddToCart(e, product, quantity = 1) {
     if (e) e.stopPropagation();
     if (product.stok <= 0) return;
 
@@ -688,12 +543,12 @@ export default function CatalogPage() {
     const itemToAdd = {
       ...product,
       id: product.id,
-      nama: variant?.label ? `${product.nama} (${variant.label})` : product.nama,
-      harga: pricing.currentPrice,
+      nama: product.nama,
+      harga: Number(product.harga),
       stok: product.stok,
     };
 
-    const res = addItem(itemToAdd, 1);
+    const res = addItem(itemToAdd, quantity);
 
     if (res === 'ok') {
       // 1. Animasi miniatur melayang ke header cart
@@ -1010,11 +865,6 @@ export default function CatalogPage() {
               const soldOut = p.stok <= 0;
               const productImg = getProductImage(p);
               const social = getProductSocialProof(p);
-              const variants = getProductVariants(p);
-              const defaultVariant = variants.find((v) => v.isDefault) || variants[0];
-              const activeVariantId = selectedVariants[p.id] || defaultVariant.id;
-              const activeVariant = variants.find((v) => v.id === activeVariantId) || defaultVariant;
-              const pricing = calculateVariantPricing(p.harga, activeVariant, p.nama);
               const nutrition = getProductNutritionAndCert(p);
               const isWishlisted = wishlist.includes(p.id);
               const isJustAdded = !!addedFeedback[p.id];
@@ -1109,8 +959,8 @@ export default function CatalogPage() {
                         <button
                           type="button"
                           className={`katalog-quick-hover-btn${isJustAdded ? ' success' : ''}`}
-                          onClick={(e) => handleAddWithVariant(e, p, activeVariant, pricing)}
-                          aria-label={`Tambah ${p.nama} (${activeVariant.label})`}
+                          onClick={(e) => handleAddToCart(e, p, 1)}
+                          aria-label={`Tambah ${p.nama}`}
                         >
                           {isJustAdded ? (
                             <>
@@ -1126,7 +976,7 @@ export default function CatalogPage() {
                                 <circle cx="20" cy="21" r="1" />
                                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                               </svg>
-                              <span>+ Cepat ({activeVariant.label})</span>
+                              <span>+ Keranjang</span>
                             </>
                           )}
                         </button>
@@ -1153,71 +1003,28 @@ export default function CatalogPage() {
                         <span className="katalog-sold-proof">{social.soldBadge}</span>
                       </div>
 
-                      {/* Pilih Varian Kemasan di Tempat berupa Pill Buttons (Step 4) */}
-                      <div className="katalog-variant-pills-section" onClick={(e) => e.stopPropagation()}>
-                        <span className="katalog-variant-label">Pilih Ukuran:</span>
-                        <div className="katalog-variant-pills" role="radiogroup" aria-label="Pilih varian kemasan">
-                          {variants.map((v) => {
-                            const isSelected = v.id === activeVariant.id;
-                            return (
-                              <button
-                                key={v.id}
-                                type="button"
-                                className={`katalog-variant-pill${isSelected ? ' active' : ''}`}
-                                onClick={(e) => handleSelectVariant(e, p.id, v.id)}
-                                role="radio"
-                                aria-checked={isSelected}
-                                aria-label={`Varian kemasan ${v.label}`}
-                              >
-                                {v.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Price Framing & Visual Hierarchy (Step 1 & Step 3) */}
+                      {/* Harga Asli dari Server */}
                       <div className="katalog-price-section">
                         <div className="katalog-price-main-row">
-                          {/* Harga Utama Terbesar & Paling Tebal */}
                           <span className="katalog-card-price">
-                            {formatRupiah(pricing.currentPrice)}
+                            {formatRupiah(p.harga)}
                           </span>
-
-                          {/* Harga Coret */}
-                          {pricing.strikePrice && (
-                            <span className="katalog-price-strikethrough">
-                              {formatRupiah(pricing.strikePrice)}
-                            </span>
-                          )}
-
-                          {/* Badge Hemat Nominal Rupiah */}
-                          {pricing.savings && (
-                            <span className="katalog-savings-badge">
-                              Hemat {formatRupiah(pricing.savings)}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Keterangan Harga Satuan per kg/liter / Grosir */}
-                        <div className="katalog-unit-price-note">
-                          <span>{pricing.unitText}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Tombol CTA Tambah ke Keranjang dengan Warna Zamrud Hangat #1B5E20 (Step 1 & Step 5) */}
+                    {/* Tombol CTA Tambah ke Keranjang */}
                     <button
                       type="button"
                       className={`katalog-btn-card${soldOut ? ' disabled' : ''}${isJustAdded ? ' success' : ''}`}
-                      onClick={(e) => handleAddWithVariant(e, p, activeVariant, pricing)}
+                      onClick={(e) => handleAddToCart(e, p, 1)}
                       disabled={soldOut}
                       aria-label={
                         isJustAdded
                           ? `${p.nama} ditambahkan`
                           : soldOut
                           ? 'Stok habis'
-                          : `Tambah ${p.nama} (${activeVariant.label}) ke keranjang`
+                          : `Tambah ${p.nama} ke keranjang`
                       }
                     >
                       {soldOut ? (
@@ -1368,7 +1175,6 @@ export default function CatalogPage() {
               {/* Kolom Kanan: Detail, Deskripsi & Interaksi Tambah */}
               <div className="katalog-modal-info-col">
                 <div className="katalog-modal-header-meta">
-                  <span className="katalog-modal-sku">SKU: TKB-{String(selectedProduct.id).padStart(3, '0')}</span>
                   <span className={`katalog-modal-stock-badge ${selectedProduct.stok > 0 ? 'available' : 'sold-out'}`}>
                     <span className="katalog-badge-dot" aria-hidden="true" />
                     {selectedProduct.stok > 0 ? `Tersedia: ${selectedProduct.stok} unit` : 'Stok Habis'}
@@ -1482,8 +1288,7 @@ export default function CatalogPage() {
                       className="katalog-modal-add-cart-btn"
                       disabled={selectedProduct.stok <= 0}
                       onClick={(e) => {
-                        const pricing = { currentPrice: selectedProduct.harga };
-                        handleAddWithVariant(e, selectedProduct, null, pricing);
+                        handleAddToCart(e, selectedProduct, modalQty);
                         setSelectedProduct(null);
                       }}
                     >

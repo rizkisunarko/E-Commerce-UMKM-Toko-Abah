@@ -64,12 +64,6 @@ function PublicHeader() {
             <Link to="/katalog" className="katalog-nav-link active">
               Katalog
             </Link>
-            <a href="#katalog-grid" className="katalog-nav-link">
-              Promo Spesial
-            </a>
-            <a href="#katalog-grid" className="katalog-nav-link">
-              Status Pesanan
-            </a>
           </nav>
 
           {/* Tombol Aksi Kanan */}

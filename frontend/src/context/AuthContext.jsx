@@ -1,12 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { authService } from '../services/authService';
-import { getToken, setToken } from '../services/api';
+import { getToken, setToken, setUnauthorizedHandler } from '../services/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setUser(null);
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   // Pulihkan sesi dari token yang tersimpan
   useEffect(() => {
