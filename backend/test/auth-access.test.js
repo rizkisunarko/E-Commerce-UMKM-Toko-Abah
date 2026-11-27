@@ -163,39 +163,14 @@ test('login menghasilkan sesi, menolak kredensial salah dan pegawai nonaktif', a
   assert.equal((await login(baseUrl, 'nonaktif', 'inactive-pass')).response.status, 401);
 });
 
-test('perubahan status online harus memakai endpoint pesanan', async (t) => {
+test('endpoint PATCH /transactions/:id/status sudah dihapus dan mengembalikan 404', async (t) => {
   const baseUrl = await createFixture(t);
-  const { body } = await login(baseUrl, 'pegawai', 'employee-pass');
+  const employee = await login(baseUrl, 'pegawai', 'employee-pass');
+  const admin = await login(baseUrl, 'admin', 'admin-pass');
 
-  for (const status of ['diproses', 'siap_diambil', 'siap_dikirim']) {
-    const response = await updateStatus(baseUrl, body.token, 10, status);
-    assert.equal(response.status, 409);
-    assert.equal((await response.json()).message,
-      'Status pesanan online harus diubah melalui endpoint pesanan');
-  }
-
-  const denied = await updateStatus(baseUrl, body.token, 10, 'batal');
-  assert.equal(denied.status, 403);
-  assert.deepEqual(await denied.json(), { message: 'Hanya admin yang dapat membatalkan pesanan' });
-
-  const stillUncancelled = await fetch(`${baseUrl}/transactions/10/status`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${body.token}`,
-    },
-    body: JSON.stringify({ status: 'selesai' }),
-  });
-  assert.equal(stillUncancelled.status, 403);
-});
-
-test('endpoint transaksi tidak dapat mengubah status online dan request tanpa token ditolak', async (t) => {
-  const baseUrl = await createFixture(t);
-  const { body } = await login(baseUrl, 'admin', 'admin-pass');
-
-  const cancelled = await updateStatus(baseUrl, body.token, 10, 'batal');
-  assert.equal(cancelled.status, 409);
-  assert.equal((await updateStatus(baseUrl, null, 10, 'diproses')).status, 401);
+  assert.equal((await updateStatus(baseUrl, employee.body.token, 10, 'diproses')).status, 404);
+  assert.equal((await updateStatus(baseUrl, admin.body.token, 10, 'batal')).status, 404);
+  assert.equal((await updateStatus(baseUrl, null, 10, 'diproses')).status, 404);
 });
 
 test('pegawai dapat mengurangi stok tetapi tidak dapat menambahnya', async (t) => {
