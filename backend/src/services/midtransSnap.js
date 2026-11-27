@@ -1,6 +1,15 @@
 const { createHash, timingSafeEqual } = require('node:crypto');
 
-const SNAP_URL = 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+const SANDBOX_SNAP_URL = 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+const PRODUCTION_SNAP_URL = 'https://app.midtrans.com/snap/v1/transactions';
+
+function getSnapUrl(serverKey) {
+  const isProd = process.env.MIDTRANS_IS_PRODUCTION === 'true' ||
+    (typeof serverKey === 'string' &&
+     serverKey.startsWith('Mid-server-') &&
+     !serverKey.toLowerCase().includes('sandbox'));
+  return isProd ? PRODUCTION_SNAP_URL : SANDBOX_SNAP_URL;
+}
 
 class MidtransError extends Error {
   constructor(message, statusCode = 502) {
@@ -46,7 +55,7 @@ function createMidtransSnapClient({
     const timeout = setTimeout(() => controller.abort(), 15000);
     let response;
     try {
-      response = await fetchImpl(SNAP_URL, {
+      response = await fetchImpl(getSnapUrl(keys.server), {
         method: 'POST',
         headers: {
           Accept: 'application/json',

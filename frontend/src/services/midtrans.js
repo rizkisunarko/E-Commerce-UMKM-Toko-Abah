@@ -4,9 +4,14 @@ export function loadMidtransSnap(clientKey) {
   if (window.snap) return Promise.resolve(window.snap);
   if (snapScriptPromise) return snapScriptPromise;
 
+  const isProd = import.meta.env?.VITE_MIDTRANS_IS_PRODUCTION === 'true' ||
+    (typeof clientKey === 'string' && !clientKey.startsWith('SB-'));
+
   snapScriptPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.src = isProd
+      ? 'https://app.midtrans.com/snap/snap.js'
+      : 'https://app.sandbox.midtrans.com/snap/snap.js';
     script.setAttribute('data-client-key', clientKey);
     script.onload = () => {
       if (window.snap) resolve(window.snap);
