@@ -1,13 +1,21 @@
 const bcrypt = require('bcryptjs');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const { createAuthenticate } = require('../middleware/auth');
 
 function createAuthRoutes(db, jwtSecret) {
   const router = express.Router();
   const authenticate = createAuthenticate(db, jwtSecret);
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.' },
+  });
 
-  router.post('/login', async (req, res, next) => {
+  router.post('/login', loginLimiter, async (req, res, next) => {
     const username = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
     const password = typeof req.body?.password === 'string' ? req.body.password : '';
 

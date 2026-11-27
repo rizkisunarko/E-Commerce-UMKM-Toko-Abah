@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { randomBytes } = require('node:crypto');
 const { createAuthenticate, authorizeRoles } = require('../middleware/auth');
 const parseGram = require('../utils/weight');
@@ -188,6 +189,23 @@ function formatOrder(row, items = []) {
     ongkir,
     total,
   };
+}
+
+function maskPhone(phone) {
+  const value = String(phone || '').trim();
+  if (!value) return '';
+  if (value.length <= 4) return '*'.repeat(value.length);
+  const tail = value.slice(-3);
+  const head = value.length > 7 ? value.slice(0, 4) : '';
+  return `${head}${'*'.repeat(Math.max(3, value.length - head.length - tail.length))}${tail}`;
+}
+
+function maskAddress(address, wilayah) {
+  if (wilayah && String(wilayah).trim()) return String(wilayah).trim();
+  const value = String(address || '').trim();
+  if (!value) return '';
+  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
+  return parts.length > 1 ? parts.slice(-2).join(', ') : `${value.slice(0, 6)}***`;
 }
 
 function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment) {
@@ -684,7 +702,7 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
       if (!Number.isSafeInteger(subtotalCents) || subtotalCents > MAX_MONEY_CENTS) {
         throw new Error('Total pesanan di luar batas yang didukung');
       }
-      const discountCents = subtotalCents >= 10000000 ? 600000 : 0;
+      const discountCents = 0;
       const shippingCents = values.metode === COURIER_METHOD
         ? Number(shippingRate.cost) * 100
         : 0;
@@ -986,7 +1004,15 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
     }
   });
 
-  router.get('/:nomor', async (req, res, next) => {
+  const publicOrderLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Terlalu banyak permintaan. Silakan coba lagi sebentar.' },
+  });
+
+  router.get('/:nomor', publicOrderLimiter, async (req, res, next) => {
     try {
       const [orders] = await db.query(
         `SELECT t.id_transaksi AS id, t.kode_transaksi AS nomor_pesanan,
@@ -1028,7 +1054,12 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
          ORDER BY dt.id_detail_transaksi`,
         [order.id],
       );
-      return res.json({ data: formatOrder(order, items) });
+      const formatted = formatOrder(order, items);
+      formatted.no_hp = maskPhone(formatted.no_hp);
+      if (formatted.alamat_lengkap) {
+        formatted.alamat_lengkap = maskAddress(formatted.alamat_lengkap, formatted.wilayah);
+      }
+      return res.json({ data: formatted });
     } catch (error) {
       return next(error);
     }

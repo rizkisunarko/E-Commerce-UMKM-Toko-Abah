@@ -1,3 +1,6 @@
+-- CATATAN KEAMANAN:
+-- Akun contoh (admin / admin_contoh) pada dump SQL ini hanya untuk pengembangan lokal.
+-- Ganti kata sandi admin menggunakan `npm run db:reset-admin-password` sebelum digunakan di luar lokal.
 -- phpMyAdmin SQL Dump
 -- version 5.2.0
 -- https://www.phpmyadmin.net/

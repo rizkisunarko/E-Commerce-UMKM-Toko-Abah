@@ -74,6 +74,7 @@ async function createFixture(t) {
           rows = rows.filter((product) => product.kategori === category);
         }
         if (sql.includes('COUNT(*) AS total')) return [[{ total: rows.length }], []];
+        if (!sql.includes('LIMIT ? OFFSET ?')) return [rows, []];
         const limit = params.at(-2);
         const offset = params.at(-1);
         return [rows.slice(offset, offset + limit), []];
@@ -321,4 +322,35 @@ test('katalog publik dapat dibaca tanpa login dan tidak membocorkan harga beli',
 
   const archivedResponse = await fetch(`${baseUrl}/catalog?include_archived=true`);
   assert.equal(archivedResponse.status, 403);
+});
+
+test('pegawai tidak melihat harga_beli pada produk dan stok, admin tetap melihat', async (t) => {
+  const baseUrl = await createFixture(t);
+  const { body: admin } = await login(baseUrl, 'admin', 'admin-pass');
+  const { body: pegawai } = await login(baseUrl, 'pegawai', 'employee-pass');
+
+  const adminProducts = await fetch(`${baseUrl}/products`, {
+    headers: { Authorization: `Bearer ${admin.token}` },
+  });
+  assert.equal(adminProducts.status, 200);
+  assert.equal((await adminProducts.json()).data[0].harga_beli, '50000.00');
+
+  for (const path of ['/products', '/stock']) {
+    const empRes = await fetch(`${baseUrl}${path}`, {
+      headers: { Authorization: `Bearer ${pegawai.token}` },
+    });
+    assert.equal(empRes.status, 200);
+    const body = await empRes.json();
+    assert.equal('harga_beli' in body.data[0], false);
+  }
+});
+
+test('login salah lebih dari 10 kali dibatasi dengan status 429', async (t) => {
+  const baseUrl = await createFixture(t);
+  for (let i = 0; i < 10; i += 1) {
+    const res = await login(baseUrl, 'pegawai', 'wrong-pass');
+    assert.equal(res.response.status, 401);
+  }
+  const blocked = await login(baseUrl, 'pegawai', 'wrong-pass');
+  assert.equal(blocked.response.status, 429);
 });
