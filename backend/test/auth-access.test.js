@@ -74,6 +74,7 @@ async function createFixture(t) {
           rows = rows.filter((product) => product.kategori === category);
         }
         if (sql.includes('COUNT(*) AS total')) return [[{ total: rows.length }], []];
+        if (!sql.includes('LIMIT ? OFFSET ?')) return [rows, []];
         const limit = params.at(-2);
         const offset = params.at(-1);
         return [rows.slice(offset, offset + limit), []];
@@ -162,39 +163,14 @@ test('login menghasilkan sesi, menolak kredensial salah dan pegawai nonaktif', a
   assert.equal((await login(baseUrl, 'nonaktif', 'inactive-pass')).response.status, 401);
 });
 
-test('perubahan status online harus memakai endpoint pesanan', async (t) => {
+test('endpoint PATCH /transactions/:id/status sudah dihapus dan mengembalikan 404', async (t) => {
   const baseUrl = await createFixture(t);
-  const { body } = await login(baseUrl, 'pegawai', 'employee-pass');
+  const employee = await login(baseUrl, 'pegawai', 'employee-pass');
+  const admin = await login(baseUrl, 'admin', 'admin-pass');
 
-  for (const status of ['diproses', 'siap_diambil', 'siap_dikirim']) {
-    const response = await updateStatus(baseUrl, body.token, 10, status);
-    assert.equal(response.status, 409);
-    assert.equal((await response.json()).message,
-      'Status pesanan online harus diubah melalui endpoint pesanan');
-  }
-
-  const denied = await updateStatus(baseUrl, body.token, 10, 'batal');
-  assert.equal(denied.status, 403);
-  assert.deepEqual(await denied.json(), { message: 'Hanya admin yang dapat membatalkan pesanan' });
-
-  const stillUncancelled = await fetch(`${baseUrl}/transactions/10/status`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${body.token}`,
-    },
-    body: JSON.stringify({ status: 'selesai' }),
-  });
-  assert.equal(stillUncancelled.status, 403);
-});
-
-test('endpoint transaksi tidak dapat mengubah status online dan request tanpa token ditolak', async (t) => {
-  const baseUrl = await createFixture(t);
-  const { body } = await login(baseUrl, 'admin', 'admin-pass');
-
-  const cancelled = await updateStatus(baseUrl, body.token, 10, 'batal');
-  assert.equal(cancelled.status, 409);
-  assert.equal((await updateStatus(baseUrl, null, 10, 'diproses')).status, 401);
+  assert.equal((await updateStatus(baseUrl, employee.body.token, 10, 'diproses')).status, 404);
+  assert.equal((await updateStatus(baseUrl, admin.body.token, 10, 'batal')).status, 404);
+  assert.equal((await updateStatus(baseUrl, null, 10, 'diproses')).status, 404);
 });
 
 test('pegawai dapat mengurangi stok tetapi tidak dapat menambahnya', async (t) => {
@@ -321,4 +297,35 @@ test('katalog publik dapat dibaca tanpa login dan tidak membocorkan harga beli',
 
   const archivedResponse = await fetch(`${baseUrl}/catalog?include_archived=true`);
   assert.equal(archivedResponse.status, 403);
+});
+
+test('pegawai tidak melihat harga_beli pada produk dan stok, admin tetap melihat', async (t) => {
+  const baseUrl = await createFixture(t);
+  const { body: admin } = await login(baseUrl, 'admin', 'admin-pass');
+  const { body: pegawai } = await login(baseUrl, 'pegawai', 'employee-pass');
+
+  const adminProducts = await fetch(`${baseUrl}/products`, {
+    headers: { Authorization: `Bearer ${admin.token}` },
+  });
+  assert.equal(adminProducts.status, 200);
+  assert.equal((await adminProducts.json()).data[0].harga_beli, '50000.00');
+
+  for (const path of ['/products', '/stock']) {
+    const empRes = await fetch(`${baseUrl}${path}`, {
+      headers: { Authorization: `Bearer ${pegawai.token}` },
+    });
+    assert.equal(empRes.status, 200);
+    const body = await empRes.json();
+    assert.equal('harga_beli' in body.data[0], false);
+  }
+});
+
+test('login salah lebih dari 10 kali dibatasi dengan status 429', async (t) => {
+  const baseUrl = await createFixture(t);
+  for (let i = 0; i < 10; i += 1) {
+    const res = await login(baseUrl, 'pegawai', 'wrong-pass');
+    assert.equal(res.response.status, 401);
+  }
+  const blocked = await login(baseUrl, 'pegawai', 'wrong-pass');
+  assert.equal(blocked.response.status, 429);
 });

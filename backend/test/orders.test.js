@@ -149,7 +149,16 @@ async function createFixture(t, products = [{
         status_pembayaran: payment.status_pembayaran,
         jumlah_bayar: payment.jumlah_bayar,
         status_transaksi: transaction.status_transaksi,
+        kode_transaksi: transaction.kode_transaksi,
+        stock_reserved: transaction.stock_reserved,
       }] : [], []];
+    }
+    if (sql.includes('FROM riwayat_stok')) {
+      const term = String(params[0] || '').replace(/%/g, '');
+      const matches = state.stockHistory.filter(
+        (item) => item.jenis_perubahan === 'keluar' && String(item.keterangan || '').includes(term),
+      );
+      return [matches.map((item, idx) => ({ id_riwayat: idx + 1, ...item })), []];
     }
     if (sql.includes("UPDATE transaksi SET status_transaksi = ?") &&
         sql.includes('stock_reserved = 0')) {
@@ -194,10 +203,13 @@ async function createFixture(t, products = [{
       }
       return [{ affectedRows: 1 }, []];
     }
-    if (sql.includes("UPDATE transaksi SET status_transaksi = 'diproses'")) {
-      const transaction = state.transactions.find((item) => item.id_transaksi === params[0]);
+    if (sql.includes("UPDATE transaksi SET status_transaksi = 'dibayar'")) {
+      const stockReserved = params.length === 2 ? params[0] : 1;
+      const transactionId = params.length === 2 ? params[1] : params[0];
+      const transaction = state.transactions.find((item) => item.id_transaksi === transactionId);
       if (transaction && transaction.status_transaksi === 'menunggu') {
-        transaction.status_transaksi = 'diproses';
+        transaction.status_transaksi = 'dibayar';
+        transaction.stock_reserved = stockReserved;
       }
       return [{ affectedRows: transaction ? 1 : 0 }, []];
     }
@@ -403,9 +415,9 @@ test('checkout tamu mereservasi stok dan memakai harga server', async (t) => {
   assert.equal(data.metode_penerimaan, 'ambil_di_toko');
   assert.equal(data.metode_pembayaran, 'midtrans');
   assert.equal(data.subtotal, 136000);
-  assert.equal(data.diskon, 6000);
+  assert.equal(data.diskon, 0);
   assert.equal(data.ongkir, 0);
-  assert.equal(data.total, 130000);
+  assert.equal(data.total, 136000);
   assert.equal(data.items[0].jumlah, 2);
   assert.equal(state.transactions[0].jenis_transaksi, 'online');
   assert.equal(state.transactions[0].metode_penerimaan, 'pickup');
@@ -588,8 +600,8 @@ test('pesanan kurir memakai tarif server dan menyimpan tujuan serta layanan', as
   assert.equal(response.status, 201);
   const { data } = await response.json();
   assert.equal(data.ongkir, 17000);
-  assert.equal(data.diskon, 6000);
-  assert.equal(data.total, 147000);
+  assert.equal(data.diskon, 0);
+  assert.equal(data.total, 153000);
   assert.equal(state.transactions[0].metode_penerimaan, 'kurir');
   assert.equal(data.alamat_lengkap, 'Jl. Raya Telang No. 10');
   assert.equal(data.layanan_kurir, 'JNE REG');
@@ -608,7 +620,8 @@ test('pesanan kurir memakai tarif server dan menyimpan tujuan serta layanan', as
   assert.equal(detail.metode_penerimaan, 'kurir');
   assert.equal(detail.metode_pembayaran, 'midtrans');
   assert.equal(detail.wilayah, 'Kamal, Bangkalan, Jawa Timur');
-  assert.equal(detail.alamat_lengkap, 'Jl. Raya Telang No. 10');
+  assert.equal(detail.alamat_lengkap, 'Kamal, Bangkalan, Jawa Timur');
+  assert.equal(detail.no_hp, '0812*****890');
   assert.equal(detail.items[0].nama, 'Beras 5 kg');
 });
 
@@ -624,7 +637,7 @@ test('pembayaran Snap memakai total pesanan server dan menyimpan token agar dapa
   const firstPayment = (await firstResponse.json()).data;
   assert.match(firstPayment.snap_token, /^snap-TA-/);
   assert.equal(firstPayment.client_key, 'client-test');
-  assert.equal(paymentCalls[0].transaction_details.gross_amount, 130000);
+  assert.equal(paymentCalls[0].transaction_details.gross_amount, 136000);
   assert.equal(
     paymentCalls[0].callbacks.finish,
     `http://localhost:5173/pesanan/${order.nomor_pesanan}`,
@@ -640,32 +653,47 @@ test('pembayaran Snap memakai total pesanan server dan menyimpan token agar dapa
   assert.equal(paymentCalls.length, 1);
 });
 
-test('notifikasi Snap terverifikasi menandai pembayaran lunas dan pesanan diproses', async (t) => {
+test('notifikasi Snap terverifikasi menandai pembayaran lunas, status Dibayar, dan idempoten', async (t) => {
   const { baseUrl, state, paymentCalls } = await createFixture(t);
   const createdOrder = await createOrder(baseUrl, pickupOrder);
   const order = (await createdOrder.json()).data;
+  assert.equal(state.products[0].jumlah_stok, 3); // 5 - 2 direservasi saat checkout
+
   await fetch(`${baseUrl}/orders/${order.nomor_pesanan}/pembayaran`, { method: 'POST' });
   const reference = paymentCalls[0].transaction_details.order_id;
+  const payload = {
+    order_id: reference,
+    status_code: '200',
+    gross_amount: '136000.00',
+    signature_key: 'valid',
+    transaction_status: 'settlement',
+  };
 
   const response = await fetch(`${baseUrl}/payments/midtrans/notification`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      order_id: reference,
-      status_code: '200',
-      gross_amount: '130000.00',
-      signature_key: 'valid',
-      transaction_status: 'settlement',
-    }),
+    body: JSON.stringify(payload),
   });
 
   assert.equal(response.status, 200);
   assert.equal(state.payments[0].status_pembayaran, 'berhasil');
-  assert.equal(state.transactions[0].status_transaksi, 'diproses');
+  assert.equal(state.transactions[0].status_transaksi, 'dibayar');
+  assert.equal(state.products[0].jumlah_stok, 3); // tidak berkurang dua kali
+
+  // Kirim notifikasi ganda: harus tetap 200 dan tidak mengubah stok/status
+  const duplicateResponse = await fetch(`${baseUrl}/payments/midtrans/notification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  assert.equal(duplicateResponse.status, 200);
+  assert.equal(state.products[0].jumlah_stok, 3);
 
   const orderResponse = await fetch(`${baseUrl}/orders/${order.nomor_pesanan}`);
   assert.equal(orderResponse.status, 200);
-  assert.equal((await orderResponse.json()).data.status_pembayaran, 'berhasil');
+  const orderData = (await orderResponse.json()).data;
+  assert.equal(orderData.status_pembayaran, 'berhasil');
+  assert.equal(orderData.status, 'Dibayar');
 });
 
 test('notifikasi Midtrans ditolak jika tanda tangan tidak valid atau nominal berbeda', async (t) => {
@@ -676,7 +704,7 @@ test('notifikasi Midtrans ditolak jika tanda tangan tidak valid atau nominal ber
   const notification = {
     order_id: paymentCalls[0].transaction_details.order_id,
     status_code: '200',
-    gross_amount: '130000.00',
+    gross_amount: '136000.00',
     transaction_status: 'settlement',
   };
 
@@ -708,7 +736,7 @@ test('notifikasi capture dengan fraud deny menandai pembayaran gagal', async (t)
     body: JSON.stringify({
       order_id: paymentCalls[0].transaction_details.order_id,
       status_code: '200',
-      gross_amount: '130000.00',
+      gross_amount: '136000.00',
       signature_key: 'valid',
       transaction_status: 'capture',
       fraud_status: 'deny',
