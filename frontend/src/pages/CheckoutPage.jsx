@@ -261,9 +261,11 @@ export default function CheckoutPage() {
                 <span className="ko-state-error-title">
                   {firstIssueItem ? `Stok tidak mencukupi untuk ${firstIssueItem.nama}` : 'Terjadi Kesalahan pada Checkout'}
                 </span>
-                <span className="ko-state-error-badge">
-                  {firstIssueItem || (formError && formError.toLowerCase().includes('stok')) ? 'Stok Habis' : 'Gagal'}
-                </span>
+                {firstIssueItem || (formError && formError.toLowerCase().includes('stok')) ? (
+                  <span className="ko-state-error-badge">Stok Habis</span>
+                ) : (
+                  <span className="ko-state-error-badge" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>Gagal</span>
+                )}
               </div>
               <p className="ko-state-error-desc">
                 {formError || 'Sisa stok barang di toko berubah. Harap periksa dan perbarui keranjang belanja Anda.'}

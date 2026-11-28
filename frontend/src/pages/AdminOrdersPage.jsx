@@ -327,14 +327,17 @@ export default function AdminOrdersPage() {
     ) {
       // Hanya Admin yang boleh menyelesaikan pesanan
       if (isAdmin) {
+        const isCourier = order.metode_penerimaan === 'kurir';
+        const finishLabel = isCourier ? 'Barang Sampai (Selesai)' : 'Diambil (Selesai)';
         nextBtn = (
           <button
             type="button"
             disabled={isBusy}
             className="ord-btn ord-btn-success"
             onClick={() => handleStatusTransition(order, 'Selesai')}
+            title="Tandai bahwa barang telah sampai dan diterima oleh pemesan"
           >
-            {isBusy ? 'Menyimpan...' : 'Selesai'}
+            {isBusy ? 'Menyimpan...' : finishLabel}
           </button>
         );
       }

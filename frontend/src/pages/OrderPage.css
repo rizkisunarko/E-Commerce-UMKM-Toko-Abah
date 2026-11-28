@@ -850,3 +850,253 @@
   background: #166534;
 }
 
+/* ==========================================================================
+   Order Delivery & Tracking Progress Stepper
+   ========================================================================== */
+.order-tracker-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.order-tracker-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.order-tracker-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-tracker-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  margin: 10px 0 24px;
+}
+
+.order-track-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  width: 90px;
+}
+
+.order-track-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
+}
+
+.order-track-step.done .order-track-circle {
+  background: #2e7d32;
+  color: #ffffff;
+  border-color: #2e7d32;
+}
+
+.order-track-step.active .order-track-circle {
+  background: #1e88e5;
+  color: #ffffff;
+  border-color: #1e88e5;
+  box-shadow: 0 0 0 4px rgba(30, 136, 229, 0.18);
+}
+
+.order-track-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.order-track-step.done .order-track-label {
+  color: #2e7d32;
+}
+
+.order-track-step.active .order-track-label {
+  color: #1e88e5;
+  font-weight: 700;
+}
+
+.order-track-line {
+  flex: 1;
+  height: 3px;
+  background: #e2e8f0;
+  position: relative;
+  top: -14px;
+  z-index: 1;
+}
+
+.order-track-line.done {
+  background: #2e7d32;
+}
+
+/* Informative Status Notification Banner inside Tracker */
+.order-status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  border-left: 4px solid #94a3b8;
+}
+
+.order-status-banner.banner-success {
+  background-color: #f0fdf4;
+  border-left-color: #16a34a;
+}
+
+.order-status-banner.banner-shipping {
+  background-color: #eff6ff;
+  border-left-color: #2563eb;
+}
+
+.order-status-banner.banner-ready {
+  background-color: #f0fdfa;
+  border-left-color: #0d9488;
+}
+
+.order-status-banner.banner-processing {
+  background-color: #fffbeb;
+  border-left-color: #d97706;
+}
+
+.order-status-banner.banner-paid {
+  background-color: #f0fdf4;
+  border-left-color: #16a34a;
+}
+
+.order-status-banner.banner-pending {
+  background-color: #fffbeb;
+  border-left-color: #eab308;
+}
+
+.order-status-banner.banner-cancelled {
+  background-color: #fef2f2;
+  border-left-color: #dc2626;
+}
+
+.order-status-banner-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.order-status-banner-text {
+  flex: 1;
+}
+
+.order-status-banner-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.order-status-banner-desc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Status Badges */
+.order-badge-success {
+  background: #dcfce7;
+  color: #15803d;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 9999px;
+}
+
+.order-badge-shipping {
+  background: #dbeafe;
+  color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 9999px;
+}
+
+.order-badge-ready {
+  background: #ccfbf1;
+  color: #0f766e;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 9999px;
+}
+
+.order-badge-processing {
+  background: #fef3c7;
+  color: #b45309;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 9999px;
+}
+
+.order-badge-cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 9999px;
+}
+
+@media (max-width: 640px) {
+  .order-track-circle {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+  .order-track-label {
+    font-size: 10px;
+  }
+  .order-tracker-card {
+    padding: 16px;
+  }
+}
+

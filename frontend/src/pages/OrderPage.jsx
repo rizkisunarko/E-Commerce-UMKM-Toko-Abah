@@ -46,6 +46,91 @@ function resolveDisplayOrderStatus(order) {
   return order.status || 'Menunggu Pembayaran';
 }
 
+function getOrderStatusDetails(order, isPaid) {
+  const status = (order?.status || '').toLowerCase();
+  const isCourier = order?.metode_penerimaan === 'kurir';
+  const isCod = order?.metode_pembayaran === 'cod';
+
+  if (status === 'selesai') {
+    return {
+      step: 5,
+      title: isCourier ? 'Pesanan Selesai — Barang Sudah Sampai di Tujuan' : 'Pesanan Selesai — Barang Sudah Diambil',
+      description: isCourier
+        ? 'Barang pesanan Anda telah berhasil diantar oleh kurir dan diterima oleh pemesan. Transaksi selesai dan stok produk telah resmi berkurang/terjual.'
+        : 'Barang belanjaan telah diambil oleh pembeli di toko. Transaksi selesai dan stok produk telah resmi berkurang/terjual.',
+      badgeLabel: isCourier ? 'Barang Sudah Sampai (Selesai)' : 'Sudah Diambil (Selesai)',
+      badgeClass: 'order-badge-success',
+      bannerClass: 'banner-success',
+    };
+  }
+
+  if (status === 'siap dikirim' || status === 'siap_dikirim') {
+    return {
+      step: 4,
+      title: 'Barang Sedang Dikirim oleh Kurir',
+      description: 'Barang pesanan Anda telah selesai dikemas dan saat ini sedang dalam perjalanan pengiriman oleh kurir ke alamat tujuan Anda.',
+      badgeLabel: 'Sedang Dikirim',
+      badgeClass: 'order-badge-shipping',
+      bannerClass: 'banner-shipping',
+    };
+  }
+
+  if (status === 'siap diambil' || status === 'siap_diambil') {
+    return {
+      step: 4,
+      title: 'Barang Siap Diambil di Toko',
+      description: 'Barang belanjaan Anda sudah disiapkan dan siap diambil di counter / kasir Toko Abah.',
+      badgeLabel: 'Siap Diambil di Toko',
+      badgeClass: 'order-badge-ready',
+      bannerClass: 'banner-ready',
+    };
+  }
+
+  if (status === 'diproses') {
+    return {
+      step: 3,
+      title: 'Barang Sedang Dikemas',
+      description: 'Toko Abah sedang menyiapkan, memeriksa barang, dan mengemas pesanan belanjaan Anda.',
+      badgeLabel: 'Sedang Dikemas',
+      badgeClass: 'order-badge-processing',
+      bannerClass: 'banner-processing',
+    };
+  }
+
+  if (status === 'dibayar' || isPaid) {
+    return {
+      step: 2,
+      title: 'Pembayaran Berhasil Diterima',
+      description: 'Pembayaran telah berhasil diverifikasi oleh sistem. Toko akan segera menyiapkan dan mengemas pesanan Anda.',
+      badgeLabel: 'Dibayar',
+      badgeClass: 'order-badge-paid',
+      bannerClass: 'banner-paid',
+    };
+  }
+
+  if (status === 'batal' || status === 'dibatalkan') {
+    return {
+      step: 0,
+      title: 'Pesanan Dibatalkan',
+      description: 'Pesanan ini telah dibatalkan. Stok barang yang sebelumnya direservasi telah otomatis dikembalikan ke toko.',
+      badgeLabel: 'Dibatalkan',
+      badgeClass: 'order-badge-cancelled',
+      bannerClass: 'banner-cancelled',
+    };
+  }
+
+  return {
+    step: 1,
+    title: isCod ? 'Pesanan COD Dibuat' : 'Menunggu Pembayaran',
+    description: isCod
+      ? 'Pesanan COD berhasil dibuat. Pembayaran tunai akan dilakukan saat kurir mengantar barang.'
+      : 'Silakan selesaikan pembayaran agar pesanan dapat segera dikemas dan dikirimkan oleh toko.',
+    badgeLabel: isCod ? 'Menunggu Konfirmasi (COD)' : 'Menunggu Pembayaran',
+    badgeClass: 'order-badge-pending',
+    bannerClass: 'banner-pending',
+  };
+}
+
 export default function OrderPage() {
   const { nomor } = useParams();
   const navigate = useNavigate();
@@ -369,6 +454,9 @@ export default function OrderPage() {
   const waMessage = `Halo Toko Abah, pesanan saya nomor ${order.nomor_pesanan} sudah dibuat.`;
   const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 
+  const statusDetails = getOrderStatusDetails(order, isPaid);
+  const isCourier = order.metode_penerimaan === 'kurir';
+
   return (
     <div className="order-success-page">
       <main className="order-success-container">
@@ -389,13 +477,106 @@ export default function OrderPage() {
             )}
           </div>
           <h1 className="order-hero-title">
-            {isExpiredCancelled ? 'Pesanan Dibatalkan Otomatis' : 'Pesanan Anda sudah dibuat'}
+            {isExpiredCancelled ? 'Pesanan Dibatalkan Otomatis' : statusDetails.title}
           </h1>
           <p className="order-hero-subtitle">
             {isExpiredCancelled
               ? 'Batas waktu pembayaran 24 jam telah berakhir. Silakan lakukan checkout ulang.'
-              : 'Simpan nomor pesanan ini. Toko akan menghubungi Anda lewat nomor HP yang diisi.'}
+              : statusDetails.description}
           </p>
+        </div>
+
+        {/* Card: Lacak Pengiriman & Status Pesanan */}
+        <div className="order-tracker-card" aria-label="Status Pengiriman Pesanan">
+          <div className="order-tracker-title-row">
+            <span className="order-tracker-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="15" height="13" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+              </svg>
+              <span>Pelacakan Status &amp; Pengiriman Barang</span>
+            </span>
+            <span className={statusDetails.badgeClass}>
+              <span>{statusDetails.badgeLabel}</span>
+            </span>
+          </div>
+
+          {/* Stepper Progress Bar */}
+          <div className="order-tracker-stepper">
+            {/* Step 1: Dipesan */}
+            <div className={`order-track-step ${statusDetails.step >= 1 ? 'done' : ''} ${statusDetails.step === 1 ? 'active' : ''}`}>
+              <div className="order-track-circle">1</div>
+              <span className="order-track-label">Pesanan Dibuat</span>
+            </div>
+
+            <div className={`order-track-line ${statusDetails.step >= 2 ? 'done' : ''}`} />
+
+            {/* Step 2: Pembayaran */}
+            <div className={`order-track-step ${statusDetails.step >= 2 ? 'done' : ''} ${statusDetails.step === 2 ? 'active' : ''}`}>
+              <div className="order-track-circle">2</div>
+              <span className="order-track-label">
+                {order.metode_pembayaran === 'cod' ? 'COD (Tunai)' : 'Pembayaran'}
+              </span>
+            </div>
+
+            <div className={`order-track-line ${statusDetails.step >= 3 ? 'done' : ''}`} />
+
+            {/* Step 3: Diproses / Dikemas */}
+            <div className={`order-track-step ${statusDetails.step >= 3 ? 'done' : ''} ${statusDetails.step === 3 ? 'active' : ''}`}>
+              <div className="order-track-circle">3</div>
+              <span className="order-track-label">Dikemas</span>
+            </div>
+
+            <div className={`order-track-line ${statusDetails.step >= 4 ? 'done' : ''}`} />
+
+            {/* Step 4: Pengiriman / Siap Ambil */}
+            <div className={`order-track-step ${statusDetails.step >= 4 ? 'done' : ''} ${statusDetails.step === 4 ? 'active' : ''}`}>
+              <div className="order-track-circle">4</div>
+              <span className="order-track-label">
+                {isCourier ? 'Dalam Pengiriman' : 'Siap Diambil'}
+              </span>
+            </div>
+
+            <div className={`order-track-line ${statusDetails.step >= 5 ? 'done' : ''}`} />
+
+            {/* Step 5: Selesai / Sampai */}
+            <div className={`order-track-step ${statusDetails.step >= 5 ? 'done' : ''} ${statusDetails.step === 5 ? 'active' : ''}`}>
+              <div className="order-track-circle">5</div>
+              <span className="order-track-label">
+                {isCourier ? 'Barang Sampai' : 'Selesai'}
+              </span>
+            </div>
+          </div>
+
+          {/* Detailed Status Notification Alert Box */}
+          <div className={`order-status-banner ${statusDetails.bannerClass}`}>
+            <span className="order-status-banner-icon">
+              {statusDetails.step === 5 ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              )}
+            </span>
+            <div className="order-status-banner-text">
+              <h4 className="order-status-banner-title">
+                {isExpiredCancelled ? 'Pesanan Dibatalkan Otomatis' : statusDetails.title}
+              </h4>
+              <p className="order-status-banner-desc">
+                {isExpiredCancelled
+                  ? 'Batas waktu pembayaran 24 jam telah berakhir. Silakan lakukan checkout ulang.'
+                  : statusDetails.description}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* 2-Column Desktop / 1-Column Mobile Layout */}
@@ -430,9 +611,9 @@ export default function OrderPage() {
                   </button>
                 </div>
 
-                {/* Status Pesanan */}
-                <span className={getOrderStatusBadgeClass(resolveDisplayOrderStatus(order))}>
-                  <span>{resolveDisplayOrderStatus(order)}</span>
+                {/* Status Badge */}
+                <span className={statusDetails.badgeClass}>
+                  <span>{statusDetails.badgeLabel}</span>
                 </span>
               </div>
             </div>
