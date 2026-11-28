@@ -242,13 +242,6 @@ export default function CatalogPage() {
   // States Khusus Katalog Produk
   const [addedFeedback, setAddedFeedback] = useState({});
   const [toastUndo, setToastUndo] = useState(null);
-  const [wishlist, setWishlist] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('toko_abah_wishlist') || '[]');
-    } catch {
-      return [];
-    }
-  });
 
   // Aksesibilitas: Tutup modal saat tombol ESC ditekan
   useEffect(() => {
@@ -407,18 +400,6 @@ export default function CatalogPage() {
     }, 4500);
     return () => clearTimeout(timer);
   }, [toastUndo]);
-
-  function toggleWishlist(e, productId) {
-    e.stopPropagation();
-    setWishlist((prev) => {
-      const isFavorited = prev.includes(productId);
-      const updated = isFavorited ? prev.filter((id) => id !== productId) : [...prev, productId];
-      try {
-        localStorage.setItem('toko_abah_wishlist', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-  }
 
   function handleAddToCart(e, product, quantity = 1) {
     if (e) e.stopPropagation();
@@ -757,7 +738,6 @@ export default function CatalogPage() {
                 ? Number(p.rating_rata)
                 : null;
               const soldCount = Number(p.terjual || 0);
-              const isWishlisted = wishlist.includes(p.id);
               const isJustAdded = !!addedFeedback[p.id];
 
               return (
@@ -783,28 +763,6 @@ export default function CatalogPage() {
                   <div className="katalog-image-wrapper cream-bg">
                     {/* Badge Kategori */}
                     <span className="katalog-badge-cat">{p.kategori || 'Sembako'}</span>
-
-                    {/* Tombol Ikon Wishlist / Favorit (Step 2) */}
-                    <button
-                      type="button"
-                      className={`katalog-wishlist-btn${isWishlisted ? ' active' : ''}`}
-                      onClick={(e) => toggleWishlist(e, p.id)}
-                      aria-label={isWishlisted ? 'Hapus dari favorit' : 'Tambah ke favorit'}
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill={isWishlisted ? '#ef4444' : 'none'}
-                        stroke={isWishlisted ? '#ef4444' : '#4b5563'}
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                      </svg>
-                    </button>
 
                     {/* Gambar Produk */}
                     <img
