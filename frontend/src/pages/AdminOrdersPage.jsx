@@ -64,6 +64,10 @@ export default function AdminOrdersPage() {
   const [activeTab, setActiveTab] = useState('Semua');
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const [dariDate, setDariDate] = useState('');
+  const [sampaiDate, setSampaiDate] = useState('');
+  const [appliedDates, setAppliedDates] = useState({ dari: '', sampai: '' });
+  const [dateFilterError, setDateFilterError] = useState('');
 
   const [orders, setOrders] = useState([]);
   const [meta, setMeta] = useState({ page: 1, limit: 20, total: 0 });
@@ -78,6 +82,12 @@ export default function AdminOrdersPage() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelDialogError, setCancelDialogError] = useState('');
 
+  // Detail modal state
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailOrder, setDetailOrder] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -87,6 +97,8 @@ export default function AdminOrdersPage() {
         page,
         limit: 20,
         search: appliedSearch || undefined,
+        dari: appliedDates.dari || undefined,
+        sampai: appliedDates.sampai || undefined,
       });
       setOrders(res.data || []);
       if (res.meta) {
@@ -99,7 +111,7 @@ export default function AdminOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, page, appliedSearch]);
+  }, [activeTab, page, appliedSearch, appliedDates]);
 
   useEffect(() => {
     fetchOrders();
@@ -125,23 +137,88 @@ export default function AdminOrdersPage() {
     setServerAlert(null);
   };
 
+  const handleApplyDateFilter = () => {
+    if (dariDate && sampaiDate && dariDate > sampaiDate) {
+      setDateFilterError('Tanggal mulai tidak boleh melebihi tanggal akhir.');
+      return;
+    }
+    setDateFilterError('');
+    setAppliedDates({ dari: dariDate, sampai: sampaiDate });
+    setPage(1);
+    setServerAlert(null);
+  };
+
+  const handleResetDateFilter = () => {
+    setDariDate('');
+    setSampaiDate('');
+    setDateFilterError('');
+    setAppliedDates({ dari: '', sampai: '' });
+    setPage(1);
+    setServerAlert(null);
+  };
+
+  const handleTodayFilter = () => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+    setDariDate(today);
+    setSampaiDate(today);
+    setDateFilterError('');
+    setAppliedDates({ dari: today, sampai: today });
+    setPage(1);
+    setServerAlert(null);
+  };
+
+  const handleOpenDetail = async (order) => {
+    setDetailOpen(true);
+    setDetailOrder(order);
+    setDetailLoading(true);
+    setDetailError('');
+    try {
+      const res = await adminOrderService.getDetail(order.nomor_pesanan);
+      if (res.data) {
+        setDetailOrder(res.data);
+      }
+    } catch (err) {
+      setDetailError(err.message || 'Gagal memuat detail pesanan.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleCloseDetail = () => {
+    setDetailOpen(false);
+    setDetailError('');
+  };
+
   const handleStatusTransition = async (order, targetStatus) => {
     setUpdatingNumber(order.nomor_pesanan);
     setServerAlert(null);
+    setDetailError('');
     try {
-      await adminOrderService.updateStatus(order.nomor_pesanan, targetStatus);
+      const res = await adminOrderService.updateStatus(order.nomor_pesanan, targetStatus);
       // Sukses: perbarui data tanpa reload halaman
       await fetchOrders();
+      if (detailOpen && detailOrder?.nomor_pesanan === order.nomor_pesanan) {
+        if (res.data) {
+          setDetailOrder(res.data);
+        } else {
+          const detailRes = await adminOrderService.getDetail(order.nomor_pesanan);
+          if (detailRes.data) setDetailOrder(detailRes.data);
+        }
+      }
       setServerAlert({
         type: 'success',
         message: `Status pesanan ${order.nomor_pesanan} berhasil diubah ke ${targetStatus}.`,
       });
     } catch (err) {
       // 403 / 422: tampilkan pesan galat dari server dan muat ulang daftar
+      const msg = err.message || 'Gagal mengubah status pesanan.';
       setServerAlert({
         type: 'danger',
-        message: err.message || 'Gagal mengubah status pesanan.',
+        message: msg,
       });
+      if (detailOpen && detailOrder?.nomor_pesanan === order.nomor_pesanan) {
+        setDetailError(msg);
+      }
       await fetchOrders();
     } finally {
       setUpdatingNumber(null);
@@ -155,15 +232,24 @@ export default function AdminOrdersPage() {
 
   const handleConfirmCancel = async () => {
     if (!cancelTarget) return;
+    const cancelledOrderNumber = cancelTarget.nomor_pesanan;
     setIsCancelling(true);
     setCancelDialogError('');
     try {
-      await adminOrderService.updateStatus(cancelTarget.nomor_pesanan, 'Dibatalkan');
+      const res = await adminOrderService.updateStatus(cancelledOrderNumber, 'Dibatalkan');
       setCancelTarget(null);
       await fetchOrders();
+      if (detailOpen && detailOrder?.nomor_pesanan === cancelledOrderNumber) {
+        if (res.data) {
+          setDetailOrder(res.data);
+        } else {
+          const detailRes = await adminOrderService.getDetail(cancelledOrderNumber);
+          if (detailRes.data) setDetailOrder(detailRes.data);
+        }
+      }
       setServerAlert({
         type: 'success',
-        message: `Pesanan ${cancelTarget.nomor_pesanan} berhasil dibatalkan.`,
+        message: `Pesanan ${cancelledOrderNumber} berhasil dibatalkan.`,
       });
     } catch (err) {
       setCancelDialogError(err.message || 'Gagal membatalkan pesanan.');
@@ -175,13 +261,22 @@ export default function AdminOrdersPage() {
   };
 
   // Render tombol aksi per pesanan
-  const renderActions = (order) => {
+  const renderActions = (order, { includeDetail = true } = {}) => {
     const rawStatus = (order.status || '').toLowerCase();
     const isBusy = updatingNumber === order.nomor_pesanan;
+    const detailBtn = includeDetail ? (
+      <button
+        type="button"
+        className="ord-btn ord-btn-secondary"
+        onClick={() => handleOpenDetail(order)}
+      >
+        Detail
+      </button>
+    ) : null;
 
-    // Selesai atau Dibatalkan: tidak ada aksi
+    // Selesai atau Dibatalkan: tidak ada aksi ubah status
     if (rawStatus === 'selesai' || rawStatus.includes('batal')) {
-      return <span className="ord-text-muted">-</span>;
+      return detailBtn ? <div className="ord-actions-group">{detailBtn}</div> : <span className="ord-text-muted">-</span>;
     }
 
     let nextBtn = null;
@@ -259,12 +354,13 @@ export default function AdminOrdersPage() {
       );
     }
 
-    if (!nextBtn && !cancelBtn) {
+    if (!detailBtn && !nextBtn && !cancelBtn) {
       return <span className="ord-text-muted">-</span>;
     }
 
     return (
       <div className="ord-actions-group">
+        {detailBtn}
         {nextBtn}
         {cancelBtn}
       </div>
@@ -334,6 +430,63 @@ export default function AdminOrdersPage() {
             Cari
           </button>
         </form>
+
+        <div className="ord-date-filter-row">
+          <div className="ord-date-inputs">
+            <label className="ord-date-label">
+              <span>Dari</span>
+              <input
+                type="date"
+                className="ord-date-input"
+                value={dariDate}
+                onChange={(e) => setDariDate(e.target.value)}
+                aria-label="Filter tanggal mulai"
+              />
+            </label>
+            <span className="ord-date-sep">s/d</span>
+            <label className="ord-date-label">
+              <span>Sampai</span>
+              <input
+                type="date"
+                className="ord-date-input"
+                value={sampaiDate}
+                onChange={(e) => setSampaiDate(e.target.value)}
+                aria-label="Filter tanggal akhir"
+              />
+            </label>
+          </div>
+
+          <div className="ord-date-actions">
+            <button
+              type="button"
+              className="ord-btn ord-btn-secondary"
+              onClick={handleTodayFilter}
+            >
+              Hari Ini
+            </button>
+            <button
+              type="button"
+              className="ord-btn ord-btn-primary"
+              onClick={handleApplyDateFilter}
+            >
+              Terapkan Tanggal
+            </button>
+            {(dariDate || sampaiDate || appliedDates.dari || appliedDates.sampai) && (
+              <button
+                type="button"
+                className="ord-btn ord-btn-secondary"
+                onClick={handleResetDateFilter}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+        {dateFilterError && (
+          <p className="ord-date-error" role="alert">
+            {dateFilterError}
+          </p>
+        )}
 
         <div className="ord-tabs-container">
           <div className="ord-tabs-scroll" role="tablist">
@@ -440,9 +593,18 @@ export default function AdminOrdersPage() {
                       </span>
                     </td>
                     <td>
-                      <span className={`ord-pay-badge ${getPaymentBadgeClass(order.status_pembayaran)}`}>
-                        {order.status_pembayaran || 'Menunggu'}
-                      </span>
+                      <div className="ord-pay-cell">
+                        <span
+                          className={`ord-pay-method ${
+                            order.metode_pembayaran === 'cod' ? 'cod' : 'midtrans'
+                          }`}
+                        >
+                          {order.metode_pembayaran === 'cod' ? 'COD' : 'Midtrans (QRIS)'}
+                        </span>
+                        <span className={`ord-pay-badge ${getPaymentBadgeClass(order.status_pembayaran)}`}>
+                          {order.status_pembayaran || 'Menunggu'}
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <span className={`ord-badge ${getStatusBadgeClass(order.status)}`}>
@@ -490,9 +652,18 @@ export default function AdminOrdersPage() {
                   </div>
                   <div className="ord-card-row">
                     <span className="ord-card-label">Pembayaran:</span>
-                    <span className={`ord-pay-badge ${getPaymentBadgeClass(order.status_pembayaran)}`}>
-                      {order.status_pembayaran || 'Menunggu'}
-                    </span>
+                    <div className="ord-pay-cell inline">
+                      <span
+                        className={`ord-pay-method ${
+                          order.metode_pembayaran === 'cod' ? 'cod' : 'midtrans'
+                        }`}
+                      >
+                        {order.metode_pembayaran === 'cod' ? 'COD' : 'Midtrans (QRIS)'}
+                      </span>
+                      <span className={`ord-pay-badge ${getPaymentBadgeClass(order.status_pembayaran)}`}>
+                        {order.status_pembayaran || 'Menunggu'}
+                      </span>
+                    </div>
                   </div>
                   <div className="ord-card-row ord-card-total-row">
                     <span className="ord-card-label">Total:</span>
@@ -532,6 +703,161 @@ export default function AdminOrdersPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Modal Detail Pesanan (Admin & Pegawai) */}
+      {detailOpen && detailOrder && (
+        <div className="ord-modal-backdrop" onClick={handleCloseDetail}>
+          <div
+            className="ord-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ord-detail-title"
+          >
+            <div className="ord-modal-header">
+              <div>
+                <h2 id="ord-detail-title" className="ord-modal-title">
+                  Detail Pesanan {detailOrder.nomor_pesanan}
+                </h2>
+                <p className="ord-modal-sub">{formatWibDateTime(detailOrder.tanggal)}</p>
+              </div>
+              <button
+                type="button"
+                className="ord-alert-close"
+                onClick={handleCloseDetail}
+                aria-label="Tutup detail pesanan"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="ord-modal-body">
+              <div className="ord-detail-status-strip">
+                <div>
+                  <span className="ord-detail-lbl">Status Pesanan</span>
+                  <div>
+                    <span className={`ord-badge ${getStatusBadgeClass(detailOrder.status)}`}>
+                      {formatOrderStatusLabel(detailOrder)}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="ord-detail-lbl">Metode &amp; Pembayaran</span>
+                  <div className="ord-pay-cell inline" style={{ marginTop: 4 }}>
+                    <span
+                      className={`ord-pay-method ${
+                        detailOrder.metode_pembayaran === 'cod' ? 'cod' : 'midtrans'
+                      }`}
+                    >
+                      {detailOrder.metode_pembayaran === 'cod' ? 'COD' : 'Midtrans (QRIS)'}
+                    </span>
+                    <span className={`ord-pay-badge ${getPaymentBadgeClass(detailOrder.status_pembayaran)}`}>
+                      {detailOrder.status_pembayaran || 'Menunggu'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {(detailOrder.status || '').toLowerCase() === 'menunggu pembayaran' && (
+                <div className="ord-detail-flow-note">
+                  <span className="ord-detail-flow-warn" style={{ marginTop: 0 }}>
+                    Pesanan baru dapat diproses setelah berstatus Dibayar.
+                  </span>
+                </div>
+              )}
+
+              {detailError && (
+                <div className="ord-alert ord-alert-danger" role="alert" style={{ marginBottom: 12 }}>
+                  <span>{detailError}</span>
+                </div>
+              )}
+
+              <div className="ord-detail-info-grid">
+                <div>
+                  <span className="ord-detail-lbl">Pelanggan</span>
+                  <p className="ord-detail-val">{detailOrder.nama_pemesan || '-'}</p>
+                  {detailOrder.no_hp && <p className="ord-detail-sub">{detailOrder.no_hp}</p>}
+                </div>
+                <div>
+                  <span className="ord-detail-lbl">Penerimaan</span>
+                  <p className="ord-detail-val">
+                    {detailOrder.metode_penerimaan === 'ambil_di_toko' ? 'Ambil di Toko' : 'Kurir'}
+                  </p>
+                  {(detailOrder.wilayah || detailOrder.alamat_lengkap) && (
+                    <p className="ord-detail-sub">
+                      {detailOrder.alamat_lengkap || detailOrder.wilayah}
+                    </p>
+                  )}
+                  {detailOrder.layanan_kurir && (
+                    <p className="ord-detail-sub">Kurir: {detailOrder.layanan_kurir}</p>
+                  )}
+                </div>
+              </div>
+
+              {detailOrder.catatan && (
+                <div className="ord-detail-note">
+                  <span className="ord-detail-lbl">Catatan Pelanggan</span>
+                  <p style={{ margin: '4px 0 0', fontSize: 13 }}>{detailOrder.catatan}</p>
+                </div>
+              )}
+
+              <div className="ord-detail-items">
+                <span className="ord-detail-lbl">Daftar Produk</span>
+                {detailLoading ? (
+                  <p className="ord-text-muted" style={{ margin: '8px 0' }}>Memuat rincian produk...</p>
+                ) : Array.isArray(detailOrder.items) && detailOrder.items.length > 0 ? (
+                  <table className="ord-detail-table">
+                    <thead>
+                      <tr>
+                        <th>Produk</th>
+                        <th style={{ textAlign: 'center' }}>Qty</th>
+                        <th style={{ textAlign: 'right' }}>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detailOrder.items.map((it, idx) => (
+                        <tr key={it.product_id || idx}>
+                          <td>{it.nama}</td>
+                          <td style={{ textAlign: 'center' }}>{it.jumlah}</td>
+                          <td style={{ textAlign: 'right' }}>{formatRupiah(it.subtotal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="ord-text-muted" style={{ margin: '8px 0' }}>Rincian item tidak tersedia.</p>
+                )}
+              </div>
+
+              <div className="ord-detail-summary">
+                {detailOrder.subtotal !== undefined && (
+                  <div className="ord-detail-sum-row">
+                    <span>Subtotal</span>
+                    <span>{formatRupiah(detailOrder.subtotal)}</span>
+                  </div>
+                )}
+                {detailOrder.ongkir !== undefined && (
+                  <div className="ord-detail-sum-row">
+                    <span>Ongkos Kirim</span>
+                    <span>{formatRupiah(detailOrder.ongkir)}</span>
+                  </div>
+                )}
+                <div className="ord-detail-sum-row total">
+                  <span>Total</span>
+                  <strong>{formatRupiah(detailOrder.total)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="ord-modal-footer">
+              <button type="button" className="ord-btn ord-btn-secondary" onClick={handleCloseDetail}>
+                Tutup
+              </button>
+              {renderActions(detailOrder, { includeDetail: false })}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ConfirmDialog Pembatalan Pesanan (Hanya Admin) */}

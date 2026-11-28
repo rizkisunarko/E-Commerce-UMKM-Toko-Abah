@@ -10,6 +10,7 @@ const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const OrderPage = lazy(() => import('./pages/OrderPage'));
+const CustomerOrdersPage = lazy(() => import('./pages/CustomerOrdersPage'));
 const AdminOrdersPage = lazy(() => import('./pages/AdminOrdersPage'));
 const ProductListPage = lazy(() => import('./pages/ProductListPage'));
 const ProductCreatePage = lazy(() => import('./pages/ProductCreatePage'));
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/katalog" element={<CatalogPage />} />
         <Route path="/keranjang" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/pesanan" element={<CustomerOrdersPage />} />
         {/* PPL-08.3: ganti OrderPage dengan halaman Pesanan Berhasil */}
         <Route path="/pesanan/:nomor" element={<OrderPage />} />
       </Route>

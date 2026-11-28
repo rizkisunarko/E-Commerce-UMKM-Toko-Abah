@@ -6,6 +6,7 @@ import { catalogService } from '../services/catalogService';
 import { loadMidtransSnap } from '../services/midtrans';
 import { formatRupiah } from '../utils/format';
 import { getProductImage } from '../utils/productImage';
+import { saveOrderToHistory } from '../utils/orderHistory';
 import QrisModal from '../components/QrisModal';
 import './OrderPage.css';
 
@@ -81,6 +82,7 @@ export default function OrderPage() {
         if (!cancelled) {
           if (res.data) {
             setOrder(res.data);
+            saveOrderToHistory(res.data);
             const normalized = normalizePaymentStatus(res.data.status_pembayaran);
             const lunas = normalized === 'dibayar' ||
                           res.data.status === 'Dibayar' ||

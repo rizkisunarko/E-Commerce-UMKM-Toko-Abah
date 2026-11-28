@@ -267,6 +267,51 @@ async function createFixture(t, products = [{
         .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0];
       return [payment ? [{ ...payment }] : [], []];
     }
+    if (sql.includes('FROM transaksi t') && sql.includes('UPPER(t.kode_transaksi) = UPPER(?)')) {
+      const targetCode = String(params[0] || '').toUpperCase();
+      const phoneSet = new Set(params.slice(1).map((p) => String(p)));
+      const matches = state.transactions
+        .filter((item) => {
+          if (item.jenis_transaksi !== 'online') return false;
+          if (String(item.kode_transaksi || '').toUpperCase() === targetCode) return true;
+          const cleanPhone = String(item.no_telepon || '').replace(/[\s-]/g, '');
+          return phoneSet.has(cleanPhone);
+        })
+        .sort((a, b) => b.id_transaksi - a.id_transaksi)
+        .slice(0, 20)
+        .map((transaction) => {
+          const shipment = state.shipments.find(
+            (item) => item.id_transaksi === transaction.id_transaksi,
+          );
+          const itemSum = state.details
+            .filter((d) => d.id_transaksi === transaction.id_transaksi)
+            .reduce((sum, d) => sum + Number(d.jumlah || 0), 0);
+          return {
+            id: transaction.id_transaksi,
+            nomor_pesanan: transaction.kode_transaksi,
+            status: transaction.status_transaksi,
+            tanggal: transaction.tanggal_transaksi,
+            nama_pemesan: transaction.nama_pelanggan,
+            no_hp: transaction.no_telepon,
+            catatan: transaction.catatan,
+            metode_penerimaan: transaction.metode_penerimaan,
+            alamat_lengkap: transaction.alamat_pelanggan,
+            subtotal: transaction.subtotal_produk,
+            ongkir: transaction.ongkos_kirim,
+            total: transaction.total_bayar,
+            jumlah_item: itemSum,
+            status_pembayaran: state.payments
+              .filter((payment) => payment.id_transaksi === transaction.id_transaksi)
+              .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0]?.status_pembayaran || null,
+            metode_pembayaran: state.payments
+              .filter((payment) => payment.id_transaksi === transaction.id_transaksi)
+              .sort((a, b) => b.id_pembayaran - a.id_pembayaran)[0]?.metode_pembayaran || null,
+            wilayah: shipment?.wilayah_tujuan,
+            layanan_kurir: shipment?.layanan_kurir,
+          };
+        });
+      return [matches, []];
+    }
     if (sql.includes('FROM transaksi t') && sql.includes('WHERE t.kode_transaksi = ?')) {
       const transaction = state.transactions.find(
         (item) => item.kode_transaksi === params[0] && item.jenis_transaksi === 'online',
@@ -563,6 +608,13 @@ test('COD dapat diproses pegawai dan lunas saat admin menyelesaikan pesanan', as
 
   assert.equal(createResponse.status, 201);
   assert.equal(state.products[0].jumlah_stok, 3);
+  // K-05: Pesanan berstatus Menunggu Pembayaran tidak boleh langsung diproses sebelum berstatus Dibayar
+  const rejectRes = await updateStatus(employeeToken, 'Diproses');
+  assert.equal(rejectRes.status, 422);
+  assert.equal((await rejectRes.json()).message, 'Pesanan belum dibayar');
+
+  // Setelah berstatus Dibayar, pegawai dapat memproses hingga Siap Diambil/Dikirim dan admin dapat menyelesaikan
+  state.transactions[0].status_transaksi = 'dibayar';
   assert.equal((await updateStatus(employeeToken, 'Diproses')).status, 200);
   assert.equal((await updateStatus(employeeToken, 'Siap Diambil/Dikirim')).status, 200);
   assert.equal((await updateStatus(adminToken, 'Selesai')).status, 200);
@@ -850,4 +902,36 @@ test('membuka detail pesanan yang melewati 24 jam otomatis membatalkan pesanan d
   assert.equal(expireWebhookRes.status, 200);
   assert.equal(state.transactions[2].status_transaksi, 'batal');
   assert.equal(state.products[0].jumlah_stok, 4);
+});
+
+test('GET /api/orders/riwayat mencari pesanan berdasarkan nomor pesanan atau nomor HP tanpa login', async (t) => {
+  const { baseUrl } = await createFixture(t);
+
+  const createdRes = await createOrder(baseUrl, {
+    ...pickupOrder,
+    no_hp: '081234567890',
+    items: [{ product_id: 20, jumlah: 1 }],
+  });
+  assert.equal(createdRes.status, 201);
+  const created = (await createdRes.json()).data;
+
+  // Query terlalu pendek -> 422
+  const shortRes = await fetch(`${baseUrl}/orders/riwayat?q=123`);
+  assert.equal(shortRes.status, 422);
+
+  // Cari berdasarkan nomor pesanan
+  const byNumberRes = await fetch(`${baseUrl}/orders/riwayat?q=${encodeURIComponent(created.nomor_pesanan)}`);
+  assert.equal(byNumberRes.status, 200);
+  const byNumberData = (await byNumberRes.json()).data;
+  assert.equal(byNumberData.length, 1);
+  assert.equal(byNumberData[0].nomor_pesanan, created.nomor_pesanan);
+  assert.equal(byNumberData[0].jumlah_item, 1);
+  assert.match(byNumberData[0].no_hp, /\*/);
+
+  // Cari berdasarkan nomor HP format +628...
+  const byPhoneRes = await fetch(`${baseUrl}/orders/riwayat?q=${encodeURIComponent('+6281234567890')}`);
+  assert.equal(byPhoneRes.status, 200);
+  const byPhoneData = (await byPhoneRes.json()).data;
+  assert.equal(byPhoneData.length, 1);
+  assert.equal(byPhoneData[0].nomor_pesanan, created.nomor_pesanan);
 });

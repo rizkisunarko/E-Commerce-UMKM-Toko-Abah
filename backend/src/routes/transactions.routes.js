@@ -19,6 +19,7 @@ function nextDate(value) {
 function normalizePaymentMethod(method) {
   if (method === 'QRIS') return 'qris';
   if (method === 'payment_gateway') return 'debit';
+  if (method === 'cod') return 'cod';
   return method;
 }
 
@@ -265,7 +266,7 @@ function createTransactionsRoutes(db, jwtSecret) {
          FROM transaksi t
          JOIN (
            SELECT id_transaksi,
-                  SUM(CASE WHEN metode_pembayaran = 'tunai' THEN jumlah_bayar ELSE 0 END) AS tunai,
+                  SUM(CASE WHEN metode_pembayaran IN ('tunai', 'cod') THEN jumlah_bayar ELSE 0 END) AS tunai,
                   SUM(CASE WHEN metode_pembayaran = 'QRIS' THEN jumlah_bayar ELSE 0 END) AS qris,
                   SUM(CASE WHEN metode_pembayaran IN ('debit', 'payment_gateway')
                            THEN jumlah_bayar ELSE 0 END) AS debit,
@@ -274,7 +275,7 @@ function createTransactionsRoutes(db, jwtSecret) {
            WHERE status_pembayaran = 'berhasil'
            GROUP BY id_transaksi
          ) p ON p.id_transaksi = t.id_transaksi
-         WHERE t.jenis_transaksi = 'kasir'
+         WHERE (t.jenis_transaksi = 'kasir' OR (t.jenis_transaksi = 'online' AND t.status_transaksi = 'selesai'))
            AND t.tanggal_transaksi >= ? AND t.tanggal_transaksi < ?`,
         [`${tanggal} 00:00:00`, `${nextDate(tanggal)} 00:00:00`],
       );
@@ -309,7 +310,9 @@ function createTransactionsRoutes(db, jwtSecret) {
       return res.status(422).json({ message: 'Data tidak valid', errors });
     }
 
-    const conditions = ["t.jenis_transaksi = 'kasir'"];
+    const conditions = [
+      "(t.jenis_transaksi = 'kasir' OR (t.jenis_transaksi = 'online' AND t.status_transaksi = 'selesai'))",
+    ];
     const params = [];
     if (dari) {
       conditions.push('t.tanggal_transaksi >= ?');
@@ -322,7 +325,8 @@ function createTransactionsRoutes(db, jwtSecret) {
 
     try {
       const [rows] = await db.query(
-        `SELECT t.id_transaksi AS id, t.tanggal_transaksi AS tanggal,
+        `SELECT t.id_transaksi AS id, t.kode_transaksi, t.jenis_transaksi,
+                t.nama_pelanggan, t.tanggal_transaksi AS tanggal,
                 p.metode_bayar, t.total_bayar AS total,
                 COALESCE((
                   SELECT SUM(dt.jumlah) FROM detail_transaksi dt
@@ -342,6 +346,9 @@ function createTransactionsRoutes(db, jwtSecret) {
       return res.json({
         data: rows.map((row) => ({
           ...row,
+          kode_transaksi: row.kode_transaksi || null,
+          jenis_transaksi: row.jenis_transaksi || 'kasir',
+          nama_pelanggan: row.nama_pelanggan || null,
           metode_bayar: normalizePaymentMethod(row.metode_bayar),
           total: Number(row.total),
           jumlah_item: Number(row.jumlah_item),
@@ -360,7 +367,8 @@ function createTransactionsRoutes(db, jwtSecret) {
 
     try {
       const [transactions] = await db.query(
-        `SELECT t.id_transaksi AS id, t.tanggal_transaksi AS tanggal,
+        `SELECT t.id_transaksi AS id, t.kode_transaksi, t.jenis_transaksi,
+                t.nama_pelanggan, t.tanggal_transaksi AS tanggal,
                 p.metode_bayar, t.total_bayar AS total,
                 p.jumlah_diterima, p.kembalian
          FROM transaksi t
@@ -372,7 +380,8 @@ function createTransactionsRoutes(db, jwtSecret) {
            WHERE status_pembayaran = 'berhasil'
            GROUP BY id_transaksi
          ) p ON p.id_transaksi = t.id_transaksi
-         WHERE t.id_transaksi = ? AND t.jenis_transaksi = 'kasir'`,
+         WHERE t.id_transaksi = ?
+           AND (t.jenis_transaksi = 'kasir' OR (t.jenis_transaksi = 'online' AND t.status_transaksi = 'selesai'))`,
         [id],
       );
       if (!transactions.length) {

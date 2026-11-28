@@ -18,8 +18,23 @@ const daysAgoWib = (d) => {
 
 const formatTime = (iso) => formatTimeWib(iso).replace(/\s*WIB$/, '');
 
+function formatTransactionCode(t) {
+  if (!t) return '-';
+  if (t.jenis_transaksi === 'online' && t.kode_transaksi) {
+    return t.kode_transaksi;
+  }
+  return `#TRX-1024-0${t.id < 10 ? `0${t.id}` : t.id}`;
+}
+
+function formatMethodLabel(metode) {
+  if (metode === 'qris') return 'QRIS';
+  if (metode === 'cod') return 'COD';
+  if (metode === 'debit') return 'Midtrans / Debit';
+  return 'Tunai';
+}
+
 function MethodBadge({ metode }) {
-  if (metode === 'qris') {
+  if (metode === 'qris' || metode === 'debit') {
     return (
       <span className="riwayat-badge-qris">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -28,7 +43,7 @@ function MethodBadge({ metode }) {
           <rect x="3" y="14" width="7" height="7" rx="1" />
           <rect x="14" y="14" width="3" height="3" />
         </svg>
-        QRIS
+        {formatMethodLabel(metode)}
       </span>
     );
   }
@@ -38,7 +53,7 @@ function MethodBadge({ metode }) {
         <rect x="2" y="6" width="20" height="12" rx="2" />
         <circle cx="12" cy="12" r="2" />
       </svg>
-      Tunai
+      {formatMethodLabel(metode)}
     </span>
   );
 }
@@ -167,6 +182,37 @@ export default function RiwayatPage() {
 
   const filtered = Boolean(applied.dari || applied.sampai);
 
+  const mutasiTotals = rows.reduce(
+    (acc, t) => {
+      const amount = Number(t.total || 0);
+      const method = String(t.metode_bayar || '').toLowerCase();
+      if (method === 'qris') acc.qris += amount;
+      else if (method === 'debit' || method === 'payment_gateway') acc.debit += amount;
+      else acc.tunai += amount;
+      acc.total += amount;
+      return acc;
+    },
+    { tunai: 0, qris: 0, debit: 0, total: 0 },
+  );
+
+  const periodeLabel = applied.dari && applied.sampai
+    ? (applied.dari === applied.sampai ? formatDate(`${applied.dari}T00:00:00+07:00`) : `${formatDate(`${applied.dari}T00:00:00+07:00`)} s/d ${formatDate(`${applied.sampai}T00:00:00+07:00`)}`)
+    : applied.dari
+      ? `Mulai ${formatDate(`${applied.dari}T00:00:00+07:00`)}`
+      : applied.sampai
+        ? `Sampai ${formatDate(`${applied.sampai}T00:00:00+07:00`)}`
+        : 'Semua Tanggal (Terbaru)';
+
+  function handlePrintMutasi() {
+    const prevTitle = document.title;
+    const dateTag = applied.dari || todayWib();
+    document.title = `Mutasi-Riwayat-Transaksi-Toko-Abah-${dateTag}`;
+    window.print();
+    setTimeout(() => {
+      document.title = prevTitle;
+    }, 300);
+  }
+
   return (
     <div className="riwayat-page-container">
       {/* Toast Feedback */}
@@ -191,6 +237,21 @@ export default function RiwayatPage() {
           <h1 className="riwayat-heading">Riwayat Transaksi</h1>
           <p className="riwayat-subheading">Catatan transaksi penjualan dan rekap kasir Toko Abah</p>
         </div>
+
+        <button
+          type="button"
+          className="btn-riwayat-print-pdf"
+          onClick={handlePrintMutasi}
+          disabled={loading}
+          title="Cetak atau simpan mutasi riwayat transaksi sebagai PDF"
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 6 2 18 2 18 9" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8" />
+          </svg>
+          <span>Cetak PDF Mutasi</span>
+        </button>
       </div>
 
       {/* Filter Bar */}
@@ -531,7 +592,10 @@ export default function RiwayatPage() {
                   <tr key={t.id} className="riwayat-tr">
                     <td className="td-trx-id">
                       <div className="trx-id-wrapper">
-                        <span className="trx-id-code">#TRX-1024-0{t.id < 10 ? `0${t.id}` : t.id}</span>
+                        <span className="trx-id-code">{formatTransactionCode(t)}</span>
+                        <span className={`trx-source-pill ${t.jenis_transaksi === 'online' ? 'online' : 'kasir'}`}>
+                          {t.jenis_transaksi === 'online' ? 'Online' : 'Kasir'}
+                        </span>
                         {idx === 0 && <span className="trx-new-dot" title="Transaksi Baru" />}
                       </div>
                     </td>
@@ -592,7 +656,7 @@ export default function RiwayatPage() {
                     <h2 id="modal-detail-title" className="modal-heading">Detail Transaksi</h2>
                     {detail && (
                       <span className="modal-trx-badge">
-                        #TRX-1024-0{detail.id < 10 ? `0${detail.id}` : detail.id}
+                        {formatTransactionCode(detail)}
                       </span>
                     )}
                   </div>
@@ -693,7 +757,7 @@ export default function RiwayatPage() {
                           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                           <polyline points="22 4 12 14.01 9 11.01" />
                         </svg>
-                        Lunas via {detail.metode_bayar === 'qris' ? 'QRIS' : 'Tunai'} Toko Abah
+                        Lunas via {formatMethodLabel(detail.metode_bayar)} Toko Abah
                       </span>
                     </div>
                     <span className="grand-total-value tabular-nums">{formatRupiah(detail.total)}</span>
@@ -728,6 +792,135 @@ export default function RiwayatPage() {
           </div>
         </div>
       )}
+
+      {/* Dokumen Cetak PDF Mutasi Riwayat Transaksi */}
+      <div className="mutasi-print-document" aria-hidden="true">
+        <div className="rekap-print-header">
+          <h2 className="rekap-print-main-title">MUTASI RIWAYAT TRANSAKSI</h2>
+          <p className="rekap-print-store-name">TOKO ABAH — Grosir &amp; Sembako Segar</p>
+          <p className="rekap-print-store-address">
+            Jalan Raya Telang-Kamal • WhatsApp CS: 0857-0835-0575
+          </p>
+        </div>
+        <div className="rekap-print-divider" />
+
+        <div className="rekap-print-info-grid">
+          <div>
+            <div className="info-row">
+              <span className="info-lbl">Periode Mutasi</span>
+              <span className="info-sep">:</span>
+              <span className="info-val"><b>{periodeLabel}</b></span>
+            </div>
+            <div className="info-row">
+              <span className="info-lbl">Jumlah Transaksi</span>
+              <span className="info-sep">:</span>
+              <span className="info-val"><b>{rows.length} transaksi</b></span>
+            </div>
+          </div>
+          <div>
+            <div className="info-row">
+              <span className="info-lbl">Dicetak Oleh</span>
+              <span className="info-sep">:</span>
+              <span className="info-val">{user?.nama || user?.username || 'Admin Toko'}</span>
+            </div>
+            <div className="info-row">
+              <span className="info-lbl">Waktu Cetak</span>
+              <span className="info-sep">:</span>
+              <span className="info-val">
+                {formatDate(new Date().toISOString())}, {formatTime(new Date().toISOString())} WIB
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="rekap-section-title">Ringkasan Mutasi</div>
+        <div className="rekap-saldo-grid">
+          <div className="saldo-item">
+            <span>Total Tunai / COD</span>
+            <strong>{formatRupiah(mutasiTotals.tunai)}</strong>
+          </div>
+          <div className="saldo-item">
+            <span>Total QRIS</span>
+            <strong>{formatRupiah(mutasiTotals.qris)}</strong>
+          </div>
+          <div className="saldo-item">
+            <span>Total Midtrans / Debit</span>
+            <strong>{formatRupiah(mutasiTotals.debit)}</strong>
+          </div>
+          <div className="saldo-item highlight">
+            <span>Grand Total Mutasi</span>
+            <strong>{formatRupiah(mutasiTotals.total)}</strong>
+          </div>
+        </div>
+
+        <div className="rekap-section-title">Rincian Mutasi Transaksi</div>
+        <table className="rekap-print-table">
+          <thead>
+            <tr>
+              <th style={{ width: '36px', textAlign: 'center' }}>No</th>
+              <th>ID Transaksi</th>
+              <th>Tanggal</th>
+              <th>Waktu</th>
+              <th>Metode Bayar</th>
+              <th style={{ textAlign: 'right' }}>Nominal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '14px' }}>
+                  Tidak ada transaksi pada periode ini.
+                </td>
+              </tr>
+            ) : (
+              rows.map((t, idx) => (
+                <tr key={`print-${t.id}`}>
+                  <td style={{ textAlign: 'center' }}>{idx + 1}</td>
+                  <td>
+                    <b>{formatTransactionCode(t)}</b>{' '}
+                    <span style={{ fontSize: '8pt', color: '#475569' }}>
+                      ({t.jenis_transaksi === 'online' ? 'Online' : 'Kasir'})
+                    </span>
+                  </td>
+                  <td>{formatDate(t.tanggal)}</td>
+                  <td>{formatTime(t.tanggal)} WIB</td>
+                  <td style={{ textTransform: 'uppercase' }}>
+                    {formatMethodLabel(t.metode_bayar)}
+                  </td>
+                  <td style={{ textAlign: 'right' }}><b>{formatRupiah(t.total)}</b></td>
+                </tr>
+              ))
+            )}
+          </tbody>
+          {rows.length > 0 && (
+            <tfoot>
+              <tr className="rekap-total-row">
+                <td colSpan={5} style={{ textAlign: 'right' }}>
+                  <b>TOTAL MUTASI ({rows.length} Transaksi)</b>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <b>{formatRupiah(mutasiTotals.total)}</b>
+                </td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+
+        <div className="rekap-signatures-wrap">
+          <div className="sig-column">
+            <p className="sig-title">Dicetak Oleh,</p>
+            <div className="sig-space" />
+            <p className="sig-person-name">{user?.nama || user?.username || 'Admin Toko'}</p>
+            <p className="sig-sub">Staf / Admin Toko Abah</p>
+          </div>
+          <div className="sig-column">
+            <p className="sig-title">Mengetahui,</p>
+            <div className="sig-space" />
+            <p className="sig-person-name">Pemilik Toko Abah</p>
+            <p className="sig-sub">Dokumen Mutasi Resmi</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

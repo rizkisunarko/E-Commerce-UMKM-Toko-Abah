@@ -200,8 +200,17 @@ async function createFixture(t, initialData = {}) {
           filtered = filtered.filter((o) => ['siap_diambil', 'siap_dikirim', 'siap_diambil_dikirim'].includes(o.status_transaksi));
         }
 
+        let paramIdx = 0;
+        if (sql.includes('t.tanggal_transaksi >= ?')) {
+          const startDate = params[paramIdx++];
+          filtered = filtered.filter((o) => new Date(o.tanggal_transaksi) >= new Date(startDate));
+        }
+        if (sql.includes('t.tanggal_transaksi < ?')) {
+          const endDate = params[paramIdx++];
+          filtered = filtered.filter((o) => new Date(o.tanggal_transaksi) < new Date(endDate));
+        }
         if (sql.includes('t.kode_transaksi LIKE ? OR t.nama_pelanggan LIKE ?')) {
-          const term = String(params[0] || '').replace(/%/g, '').toLowerCase();
+          const term = String(params[paramIdx] || '').replace(/%/g, '').toLowerCase();
           filtered = filtered.filter(
             (o) => o.kode_transaksi.toLowerCase().includes(term) || o.nama_pelanggan.toLowerCase().includes(term),
           );
@@ -286,8 +295,17 @@ async function createFixture(t, initialData = {}) {
           filtered = filtered.filter((o) => ['siap_diambil', 'siap_dikirim', 'siap_diambil_dikirim'].includes(o.status_transaksi));
         }
 
+        let listParamIdx = 0;
+        if (sql.includes('t.tanggal_transaksi >= ?')) {
+          const startDate = params[listParamIdx++];
+          filtered = filtered.filter((o) => new Date(o.tanggal_transaksi) >= new Date(startDate));
+        }
+        if (sql.includes('t.tanggal_transaksi < ?')) {
+          const endDate = params[listParamIdx++];
+          filtered = filtered.filter((o) => new Date(o.tanggal_transaksi) < new Date(endDate));
+        }
         if (sql.includes('t.kode_transaksi LIKE ? OR t.nama_pelanggan LIKE ?')) {
-          const term = String(params[0] || '').replace(/%/g, '').toLowerCase();
+          const term = String(params[listParamIdx] || '').replace(/%/g, '').toLowerCase();
           filtered = filtered.filter(
             (o) => o.kode_transaksi.toLowerCase().includes(term) || o.nama_pelanggan.toLowerCase().includes(term),
           );
@@ -309,6 +327,7 @@ async function createFixture(t, initialData = {}) {
             metode_penerimaan: o.metode_penerimaan,
             status_transaksi: o.status_transaksi,
             status_pembayaran: pay?.status_pembayaran || null,
+            metode_pembayaran: pay?.metode_pembayaran || null,
           };
         });
         return [rows, []];
@@ -414,6 +433,7 @@ test('B2: GET /orders?status=Dibayar sebagai pegawai mengembalikan pesanan Dibay
   assert.equal(body.data[0].nomor_pesanan, 'TA-20261126-0001');
   assert.equal(body.data[0].status, 'Dibayar');
   assert.equal(body.data[0].status_pembayaran, 'dibayar');
+  assert.equal(body.data[0].metode_pembayaran, 'midtrans');
   assert.equal(body.meta.page, 1);
   assert.equal(body.meta.limit, 20);
   assert.equal(body.meta.total, 1);
@@ -617,4 +637,27 @@ test('GET /orders/:nomor tetap publik tanpa token', async (t) => {
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.data.nomor_pesanan, 'TA-20261126-0001');
+});
+
+test('GET /orders mendukung filter rentang tanggal dari dan sampai', async (t) => {
+  const { baseUrl, adminToken } = await createFixture(t);
+
+  const matchRes = await fetch(`${baseUrl}/orders?dari=2026-11-26&sampai=2026-11-26`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal(matchRes.status, 200);
+  const matchBody = await matchRes.json();
+  assert.equal(matchBody.data.length, 3);
+
+  const emptyRes = await fetch(`${baseUrl}/orders?dari=2026-11-27&sampai=2026-11-27`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal(emptyRes.status, 200);
+  const emptyBody = await emptyRes.json();
+  assert.equal(emptyBody.data.length, 0);
+
+  const invalidRes = await fetch(`${baseUrl}/orders?dari=2026-11-28&sampai=2026-11-26`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal(invalidRes.status, 422);
 });

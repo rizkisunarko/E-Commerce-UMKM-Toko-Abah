@@ -20,6 +20,21 @@ const PICKUP_METHOD = 'ambil_di_toko';
 const COURIER_METHOD = 'kurir';
 const PAYMENT_METHODS = ['midtrans', 'cod'];
 
+function isValidIsoDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function wibStartUtc(dateStr) {
+  return new Date(`${dateStr}T00:00:00+07:00`);
+}
+
+function wibNextDayStartUtc(dateStr) {
+  const start = new Date(`${dateStr}T00:00:00+07:00`);
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000);
+}
+
 function validatePayload(body) {
   const errors = {};
   const nama = typeof body?.nama_pemesan === 'string' ? body.nama_pemesan.trim() : '';
@@ -257,15 +272,46 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
     authorizeRoles('admin', 'pegawai'),
     async (req, res, next) => {
       try {
-        const { status, search } = req.query;
+        const { status, search, dari, sampai } = req.query;
         let page = Number.parseInt(req.query.page, 10);
         if (!Number.isInteger(page) || page < 1) page = 1;
         let limit = Number.parseInt(req.query.limit, 10);
         if (!Number.isInteger(limit) || limit < 1) limit = 20;
         if (limit > 100) limit = 100;
 
+        const dariStr = typeof dari === 'string' ? dari.trim() : '';
+        const sampaiStr = typeof sampai === 'string' ? sampai.trim() : '';
+
+        if (dariStr && !isValidIsoDate(dariStr)) {
+          return res.status(422).json({
+            message: 'Format tanggal mulai tidak valid',
+            errors: { dari: 'Gunakan format YYYY-MM-DD' },
+          });
+        }
+        if (sampaiStr && !isValidIsoDate(sampaiStr)) {
+          return res.status(422).json({
+            message: 'Format tanggal akhir tidak valid',
+            errors: { sampai: 'Gunakan format YYYY-MM-DD' },
+          });
+        }
+        if (dariStr && sampaiStr && dariStr > sampaiStr) {
+          return res.status(422).json({
+            message: 'Tanggal mulai tidak boleh melebihi tanggal akhir',
+            errors: { dari: 'Rentang tanggal tidak valid' },
+          });
+        }
+
         const conditions = ["t.jenis_transaksi = 'online'"];
         const params = [];
+
+        if (dariStr) {
+          conditions.push('t.tanggal_transaksi >= ?');
+          params.push(wibStartUtc(dariStr));
+        }
+        if (sampaiStr) {
+          conditions.push('t.tanggal_transaksi < ?');
+          params.push(wibNextDayStartUtc(sampaiStr));
+        }
 
         if (status !== undefined && status !== null && String(status).trim() !== '') {
           const raw = String(status).trim().toLowerCase();
@@ -331,10 +377,11 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
                  t.total_bayar AS total,
                  t.metode_penerimaan,
                  t.status_transaksi,
-                 pb.status_pembayaran
+                 pb.status_pembayaran,
+                 pb.metode_pembayaran
           FROM transaksi t
           LEFT JOIN (
-            SELECT p1.id_transaksi, p1.status_pembayaran
+            SELECT p1.id_transaksi, p1.status_pembayaran, p1.metode_pembayaran
             FROM pembayaran p1
             INNER JOIN (
               SELECT id_transaksi, MAX(id_pembayaran) AS max_id
@@ -354,6 +401,7 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
           tanggal: row.tanggal instanceof Date ? row.tanggal.toISOString() : new Date(row.tanggal).toISOString(),
           total: Math.round(Number(row.total)),
           metode_penerimaan: row.metode_penerimaan === 'kurir' ? 'kurir' : 'ambil_di_toko',
+          metode_pembayaran: row.metode_pembayaran === 'cod' ? 'cod' : 'midtrans',
           status_pembayaran: row.status_pembayaran === 'berhasil' ? 'dibayar' : (row.status_pembayaran || 'menunggu'),
           status: orderStatusLabel(row.status_transaksi, row.metode_penerimaan, row.status_pembayaran),
         }));
@@ -466,13 +514,12 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         }
 
         if (currentEffective === 'menunggu') {
-          if (targetAction === 'diproses' && order.metode_pembayaran !== 'cod') {
+          if (targetAction === 'diproses') {
             await connection.rollback();
             transactionStarted = false;
             return res.status(422).json({ message: 'Pesanan belum dibayar' });
           }
-          if (targetAction !== 'batal' &&
-              !(targetAction === 'diproses' && order.metode_pembayaran === 'cod')) {
+          if (targetAction !== 'batal') {
             await connection.rollback();
             transactionStarted = false;
             return res.status(422).json({ message: 'Transisi status tidak valid' });
@@ -1025,6 +1072,98 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Terlalu banyak permintaan. Silakan coba lagi sebentar.' },
+  });
+
+  // Pencarian publik riwayat pesanan berdasarkan nomor pesanan atau nomor HP (tanpa login)
+  router.get('/riwayat', publicOrderLimiter, async (req, res, next) => {
+    try {
+      const rawQuery = typeof req.query.q === 'string'
+        ? req.query.q
+        : (typeof req.query.query === 'string' ? req.query.query : '');
+      const trimmed = rawQuery.trim();
+      if (trimmed.length < 4) {
+        return res.status(422).json({
+          message: 'Masukkan nomor pesanan atau nomor HP (minimal 4 karakter).',
+          errors: { q: 'Minimal 4 karakter' },
+        });
+      }
+
+      const cleaned = trimmed.replace(/[\s-]/g, '');
+      const phoneVariants = new Set();
+      if (/^(\+62|62|0)8\d{6,12}$/.test(cleaned)) {
+        const tail = cleaned.startsWith('+62')
+          ? cleaned.slice(3)
+          : (cleaned.startsWith('62') ? cleaned.slice(2) : cleaned.slice(1));
+        phoneVariants.add(`0${tail}`);
+        phoneVariants.add(`62${tail}`);
+        phoneVariants.add(`+62${tail}`);
+      }
+
+      const whereParts = ['UPPER(t.kode_transaksi) = UPPER(?)'];
+      const queryParams = [trimmed];
+      if (phoneVariants.size > 0) {
+        const variants = [...phoneVariants];
+        const placeholders = variants.map(() => '?').join(', ');
+        whereParts.push(`REPLACE(REPLACE(t.no_telepon, ' ', ''), '-', '') IN (${placeholders})`);
+        queryParams.push(...variants);
+      }
+
+      const [orders] = await db.query(
+        `SELECT t.id_transaksi AS id, t.kode_transaksi AS nomor_pesanan,
+                t.status_transaksi AS status, t.tanggal_transaksi AS tanggal,
+                t.nama_pelanggan AS nama_pemesan, t.no_telepon AS no_hp,
+                t.catatan, t.metode_penerimaan,
+                t.alamat_pelanggan AS alamat_lengkap,
+                t.subtotal_produk AS subtotal, t.ongkos_kirim AS ongkir,
+                t.total_bayar AS total, p.wilayah_tujuan AS wilayah,
+                p.layanan_kurir,
+                (SELECT COALESCE(SUM(dt.jumlah), 0)
+                 FROM detail_transaksi dt
+                 WHERE dt.id_transaksi = t.id_transaksi) AS jumlah_item,
+                (SELECT pb.status_pembayaran
+                 FROM pembayaran pb
+                 WHERE pb.id_transaksi = t.id_transaksi
+                 ORDER BY pb.id_pembayaran DESC
+                 LIMIT 1) AS status_pembayaran,
+                (SELECT pb.metode_pembayaran
+                 FROM pembayaran pb
+                 WHERE pb.id_transaksi = t.id_transaksi
+                 ORDER BY pb.id_pembayaran DESC
+                 LIMIT 1) AS metode_pembayaran
+         FROM transaksi t
+         LEFT JOIN pengiriman p ON p.id_transaksi = t.id_transaksi
+         WHERE t.jenis_transaksi = 'online' AND (${whereParts.join(' OR ')})
+         ORDER BY t.tanggal_transaksi DESC, t.id_transaksi DESC
+         LIMIT 20`,
+        queryParams,
+      );
+
+      const formattedList = [];
+      for (const row of orders) {
+        let currentRow = row;
+        if (isOrderPaymentExpired(currentRow)) {
+          const didExpire = await expireSingleOrderIfOverdue(db, currentRow.nomor_pesanan);
+          if (didExpire) {
+            currentRow = {
+              ...currentRow,
+              status: 'batal',
+              status_pembayaran: 'gagal',
+            };
+          }
+        }
+        const formatted = formatOrder(currentRow, []);
+        formatted.jumlah_item = Number(currentRow.jumlah_item || 0);
+        formatted.no_hp = maskPhone(formatted.no_hp);
+        if (formatted.alamat_lengkap) {
+          formatted.alamat_lengkap = maskAddress(formatted.alamat_lengkap, formatted.wilayah);
+        }
+        formattedList.push(formatted);
+      }
+
+      return res.json({ data: formattedList });
+    } catch (error) {
+      return next(error);
+    }
   });
 
   router.get('/:nomor', publicOrderLimiter, async (req, res, next) => {

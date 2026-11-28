@@ -6,6 +6,7 @@ import useCartCheck from '../hooks/useCartCheck';
 import useShippingQuote from '../hooks/useShippingQuote';
 import { orderService } from '../services/orderService';
 import { formatRupiah } from '../utils/format';
+import { saveOrderToHistory } from '../utils/orderHistory';
 
 // Nomor HP Indonesia: 08..., 628..., atau +628..., 10 sampai 14 digit
 const PHONE_PATTERN = /^(\+62|62|0)8\d{8,11}$/;
@@ -144,6 +145,7 @@ export default function CheckoutPage() {
       }
 
       const res = await orderService.create(payload);
+      saveOrderToHistory(res.data);
       finished.current = true;
       clear();
       navigate(`/pesanan/${res.data.nomor_pesanan}`, { replace: true });

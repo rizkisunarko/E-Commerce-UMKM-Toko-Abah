@@ -1276,8 +1276,63 @@
    ========================================================================== */
 
 .rekap-kasir-print-document,
-.struk-kasir-print-document {
+.struk-kasir-print-document,
+.mutasi-print-document {
   display: none;
+}
+
+.riwayat-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.btn-riwayat-print-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: #0d631b;
+  color: #ffffff;
+  border: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(13, 99, 27, 0.22);
+  transition: background 0.15s ease;
+}
+
+.btn-riwayat-print-pdf:hover:not(:disabled) {
+  background: #166534;
+}
+
+.btn-riwayat-print-pdf:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.trx-source-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.trx-source-pill.online {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.trx-source-pill.kasir {
+  background: #f3f4f6;
+  color: #374151;
 }
 
 @media print {
@@ -1294,14 +1349,27 @@
 
   aside,
   nav,
+  header,
   .riwayat-top-nav,
   .riwayat-header,
+  .riwayat-page-header,
   .riwayat-filter-card,
+  .riwayat-rekap-section,
   .riwayat-kpi-grid,
   .riwayat-table-card,
   .riwayat-modal-backdrop,
   .riwayat-toast-banner {
     display: none !important;
+  }
+
+  .mutasi-print-document {
+    display: block !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 8mm 12mm !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    box-sizing: border-box !important;
   }
 
   .riwayat-page-container {
