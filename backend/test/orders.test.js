@@ -151,6 +151,8 @@ async function createFixture(t, products = [{
         status_transaksi: transaction.status_transaksi,
         kode_transaksi: transaction.kode_transaksi,
         stock_reserved: transaction.stock_reserved,
+        tanggal_transaksi: transaction.tanggal_transaksi,
+        metode_pembayaran: payment.metode_pembayaran,
       }] : [], []];
     }
     if (sql.includes('FROM riwayat_stok')) {
@@ -753,4 +755,99 @@ test('detail pesanan yang tidak dikenal mengembalikan 404', async (t) => {
   const response = await fetch(`${baseUrl}/orders/TA-not-found`);
 
   assert.equal(response.status, 404);
+});
+
+test('pesanan Midtrans kedaluwarsa setelah 24 jam otomatis dibatalkan dan mengembalikan stok', async (t) => {
+  const { baseUrl, state } = await createFixture(t);
+  const createdRes = await createOrder(baseUrl, pickupOrder);
+  assert.equal(createdRes.status, 201);
+  const created = (await createdRes.json()).data;
+  assert.ok(created.batas_pembayaran);
+  assert.equal(created.kedaluwarsa_pembayaran, false);
+  assert.equal(state.products[0].jumlah_stok, 3);
+
+  // Mundurkan waktu transaksi 25 jam yang lalu
+  state.transactions[0].tanggal_transaksi = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+
+  // Upaya bayar ditolak 409 & membatalkan pesanan + mengembalikan stok
+  const payRes = await fetch(`${baseUrl}/orders/${created.nomor_pesanan}/pembayaran`, {
+    method: 'POST',
+  });
+  assert.equal(payRes.status, 409);
+  const payErr = await payRes.json();
+  assert.equal(payErr.code, 'PAYMENT_EXPIRED');
+  assert.equal(state.transactions[0].status_transaksi, 'batal');
+  assert.equal(state.transactions[0].stock_reserved, 0);
+  assert.equal(state.payments[0].status_pembayaran, 'gagal');
+  assert.equal(state.products[0].jumlah_stok, 5);
+
+  const detailRes = await fetch(`${baseUrl}/orders/${created.nomor_pesanan}`);
+  assert.equal(detailRes.status, 200);
+  const detail = (await detailRes.json()).data;
+  assert.equal(detail.status, 'Dibatalkan');
+  assert.equal(detail.kedaluwarsa_pembayaran, true);
+});
+
+test('membuka detail pesanan yang melewati 24 jam otomatis membatalkan pesanan dan mengembalikan stok', async (t) => {
+  const { baseUrl, state, paymentCalls } = await createFixture(t);
+  const createdRes = await createOrder(baseUrl, pickupOrder);
+  const created = (await createdRes.json()).data;
+  assert.equal(state.products[0].jumlah_stok, 3);
+
+  // Mundurkan waktu transaksi 24 jam 5 menit yang lalu
+  state.transactions[0].tanggal_transaksi = new Date(Date.now() - (24 * 60 + 5) * 60 * 1000).toISOString();
+
+  const detailRes = await fetch(`${baseUrl}/orders/${created.nomor_pesanan}`);
+  assert.equal(detailRes.status, 200);
+  const detail = (await detailRes.json()).data;
+  assert.equal(detail.status, 'Dibatalkan');
+  assert.equal(detail.kedaluwarsa_pembayaran, true);
+  assert.equal(state.products[0].jumlah_stok, 5);
+  assert.equal(state.transactions[0].stock_reserved, 0);
+
+  // COD tidak ikut dibatalkan otomatis setelah 24 jam
+  const codRes = await createOrder(baseUrl, {
+    ...pickupOrder,
+    metode_penerimaan: 'kurir',
+    metode_pembayaran: 'cod',
+    alamat_lengkap: 'Jl. Raya Telang No. 10',
+    wilayah: 'Kamal, Bangkalan, Jawa Timur',
+    destination_id: '123',
+    selected_rate_id: 'jne:REG:0',
+    items: [{ product_id: 20, jumlah: 1 }],
+  });
+  assert.equal(codRes.status, 201);
+  const codOrder = (await codRes.json()).data;
+  assert.equal(codOrder.batas_pembayaran, null);
+  state.transactions[1].tanggal_transaksi = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+  const codDetailRes = await fetch(`${baseUrl}/orders/${codOrder.nomor_pesanan}`);
+  assert.equal(codDetailRes.status, 200);
+  const codDetail = (await codDetailRes.json()).data;
+  assert.equal(codDetail.status, 'Menunggu Pembayaran');
+  assert.equal(codDetail.kedaluwarsa_pembayaran, false);
+
+  // Notifikasi Midtrans 'expire' juga membatalkan pesanan dan memulihkan stok
+  const created2Res = await createOrder(baseUrl, {
+    ...pickupOrder,
+    items: [{ product_id: 20, jumlah: 1 }],
+  });
+  assert.equal(created2Res.status, 201);
+  const order2 = (await created2Res.json()).data;
+  await fetch(`${baseUrl}/orders/${order2.nomor_pesanan}/pembayaran`, { method: 'POST' });
+  const ref2 = paymentCalls.at(-1).transaction_details.order_id;
+  const expireWebhookRes = await fetch(`${baseUrl}/payments/midtrans/notification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      order_id: ref2,
+      status_code: '407',
+      gross_amount: '68000.00',
+      signature_key: 'valid',
+      transaction_status: 'expire',
+    }),
+  });
+  assert.equal(expireWebhookRes.status, 200);
+  assert.equal(state.transactions[2].status_transaksi, 'batal');
+  assert.equal(state.products[0].jumlah_stok, 4);
 });

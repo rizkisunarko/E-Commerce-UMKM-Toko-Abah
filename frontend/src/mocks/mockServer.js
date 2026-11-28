@@ -722,6 +722,10 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       status: 'Menunggu Pembayaran',
       status_pembayaran: 'menunggu',
       tanggal,
+      batas_pembayaran: body.metode_pembayaran === 'cod'
+        ? null
+        : new Date(new Date(tanggal).getTime() + 24 * 3600 * 1000).toISOString(),
+      kedaluwarsa_pembayaran: false,
       nama_pemesan: nama,
       no_hp: hp,
       catatan: String(body.catatan || '').trim(),
@@ -745,11 +749,14 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     let order = orders.find((o) => o.nomor_pesanan === nomor);
     if (!order) {
       // Fallback pesanan default untuk preview
+      const fallbackNow = now();
       order = {
         id: 1,
         nomor_pesanan: nomor,
         status: 'Menunggu Pembayaran',
-        tanggal: now(),
+        tanggal: fallbackNow,
+        batas_pembayaran: new Date(new Date(fallbackNow).getTime() + 24 * 3600 * 1000).toISOString(),
+        kedaluwarsa_pembayaran: false,
         nama_pemesan: 'Ibu Rahmawati',
         no_hp: '081298765432',
         catatan: 'Tolong bungkus minyaknya rapat ya Abah.',
@@ -768,13 +775,45 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
         total: 121500,
       };
     }
-    return reply(200, { data: order });
+    if (
+      order.status === 'Menunggu Pembayaran'
+      && order.metode_pembayaran !== 'cod'
+      && order.status_pembayaran !== 'berhasil'
+      && Date.now() >= new Date(order.tanggal).getTime() + 24 * 3600 * 1000
+    ) {
+      order.status = 'Dibatalkan';
+      order.status_pembayaran = 'gagal';
+      order.kedaluwarsa_pembayaran = true;
+    }
+    return reply(200, {
+      data: {
+        ...order,
+        batas_pembayaran: order.metode_pembayaran === 'cod'
+          ? null
+          : (order.batas_pembayaran || new Date(new Date(order.tanggal).getTime() + 24 * 3600 * 1000).toISOString()),
+        kedaluwarsa_pembayaran: Boolean(order.kedaluwarsa_pembayaran),
+      },
+    });
   }
 
   const paymentMatch = path.match(/^\/orders\/([^/]+)\/(?:pembayaran|payment)$/);
   if (method === 'POST' && paymentMatch) {
     const nomor = decodeURIComponent(paymentMatch[1]);
     const found = orders.find((o) => o.nomor_pesanan === nomor);
+    if (
+      found
+      && found.status === 'Menunggu Pembayaran'
+      && found.metode_pembayaran !== 'cod'
+      && Date.now() >= new Date(found.tanggal).getTime() + 24 * 3600 * 1000
+    ) {
+      found.status = 'Dibatalkan';
+      found.status_pembayaran = 'gagal';
+      found.kedaluwarsa_pembayaran = true;
+      return reply(409, {
+        code: 'PAYMENT_EXPIRED',
+        message: 'Batas waktu pembayaran 24 jam telah berakhir. Pesanan dibatalkan otomatis, silakan checkout ulang.',
+      });
+    }
     return reply(201, {
       data: {
         snap_token: `mock-snap-token-${nomor}`,

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 import { orderService, normalizePaymentStatus } from '../services/orderService';
 import { catalogService } from '../services/catalogService';
 import { loadMidtransSnap } from '../services/midtrans';
@@ -7,6 +8,24 @@ import { formatRupiah } from '../utils/format';
 import { getProductImage } from '../utils/productImage';
 import QrisModal from '../components/QrisModal';
 import './OrderPage.css';
+
+const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function formatCountdown(totalSeconds) {
+  const s = Math.max(0, Number(totalSeconds) || 0);
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  return [hours, minutes, seconds].map((v) => String(v).padStart(2, '0')).join(':');
+}
+
+function getDeadlineIso(order) {
+  if (!order || order.metode_pembayaran === 'cod') return null;
+  if (order.batas_pembayaran) return order.batas_pembayaran;
+  if (!order.tanggal) return null;
+  const createdMs = new Date(order.tanggal).getTime();
+  return Number.isFinite(createdMs) ? new Date(createdMs + PAYMENT_WINDOW_MS).toISOString() : null;
+}
 
 function getOrderStatusBadgeClass(status) {
   const s = (status || '').toLowerCase();
@@ -28,6 +47,8 @@ function resolveDisplayOrderStatus(order) {
 
 export default function OrderPage() {
   const { nomor } = useParams();
+  const navigate = useNavigate();
+  const { addItem } = useCart();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,6 +65,10 @@ export default function OrderPage() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviewedProductIds, setReviewedProductIds] = useState([]);
+  const [remainingSeconds, setRemainingSeconds] = useState(null);
+
+  const deadlineIso = getDeadlineIso(order);
+  const deadlineMs = deadlineIso ? new Date(deadlineIso).getTime() : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -139,7 +164,7 @@ export default function OrderPage() {
     });
   }
 
-  function refreshOrderStatus() {
+  const refreshOrderStatus = useCallback(() => {
     orderService
       .get(nomor)
       .then((res) => {
@@ -147,14 +172,44 @@ export default function OrderPage() {
         setOrder(res.data);
         const normalized = normalizePaymentStatus(res.data.status_pembayaran);
         const lunas = normalized === 'dibayar' ||
+                      res.data.status === 'Dibayar' ||
                       res.data.status === 'Diproses' ||
                       res.data.status === 'Siap Diambil' ||
                       res.data.status === 'Siap Dikirim' ||
+                      res.data.status === 'Siap Diambil/Dikirim' ||
                       res.data.status === 'Selesai';
         setIsPaid(lunas);
       })
       .catch(() => {});
-  }
+  }, [nomor]);
+
+  // Hitung mundur batas waktu pembayaran 24 jam dan otomatis segarkan saat habis
+  useEffect(() => {
+    if (
+      !order
+      || isPaid
+      || order.metode_pembayaran === 'cod'
+      || order.status !== 'Menunggu Pembayaran'
+      || !deadlineMs
+    ) {
+      setRemainingSeconds(null);
+      return undefined;
+    }
+
+    let triggeredExpire = false;
+    const tick = () => {
+      const diffSec = Math.max(0, Math.floor((deadlineMs - Date.now()) / 1000));
+      setRemainingSeconds(diffSec);
+      if (diffSec === 0 && !triggeredExpire) {
+        triggeredExpire = true;
+        refreshOrderStatus();
+      }
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [order, isPaid, deadlineMs, refreshOrderStatus]);
 
   async function handlePayWithSnap() {
     if (!order?.nomor_pesanan) return;
@@ -201,10 +256,34 @@ export default function OrderPage() {
         },
       });
     } catch (err) {
+      if (err.status === 409) {
+        refreshOrderStatus();
+      }
       setPayError(err.message || 'Gagal memproses pembayaran. Coba beberapa saat lagi.');
     } finally {
       setPayLoading(false);
     }
+  }
+
+  function handleReCheckout() {
+    if (!order?.items?.length) {
+      navigate('/katalog');
+      return;
+    }
+    for (const it of order.items) {
+      if (!it.product_id) continue;
+      addItem(
+        {
+          id: it.product_id,
+          nama: it.nama,
+          harga: Number(it.harga),
+          stok: Math.max(1, Number(it.jumlah) || 1),
+          ...(it.foto_produk ? { foto_produk: it.foto_produk } : {}),
+        },
+        Number(it.jumlah) || 1,
+      );
+    }
+    navigate('/checkout');
   }
 
   if (loading) {
@@ -266,6 +345,24 @@ export default function OrderPage() {
     minute: '2-digit',
   }) + ' WIB';
 
+  const deadlineFormatted = deadlineMs
+    ? new Date(deadlineMs).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }) + ' WIB'
+    : null;
+
+  const isExpiredCancelled =
+    order.status === 'Dibatalkan'
+    && (
+      order.kedaluwarsa_pembayaran
+      || (order.metode_pembayaran !== 'cod'
+        && (order.status_pembayaran === 'gagal' || (deadlineMs !== null && Date.now() >= deadlineMs)))
+    );
+
   const waNumber = '6285708350575';
   const waMessage = `Halo Toko Abah, pesanan saya nomor ${order.nomor_pesanan} sudah dibuat.`;
   const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
@@ -275,15 +372,27 @@ export default function OrderPage() {
       <main className="order-success-container">
         {/* Hero / Status Header */}
         <div className="order-hero">
-          <div className="order-hero-icon-circle">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="8 12 11 15 16 9" />
-            </svg>
+          <div className={`order-hero-icon-circle${isExpiredCancelled ? ' expired' : ''}`}>
+            {isExpiredCancelled ? (
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            ) : (
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="8 12 11 15 16 9" />
+              </svg>
+            )}
           </div>
-          <h1 className="order-hero-title">Pesanan Anda sudah dibuat</h1>
+          <h1 className="order-hero-title">
+            {isExpiredCancelled ? 'Pesanan Dibatalkan Otomatis' : 'Pesanan Anda sudah dibuat'}
+          </h1>
           <p className="order-hero-subtitle">
-            Simpan nomor pesanan ini. Toko akan menghubungi Anda lewat nomor HP yang diisi.
+            {isExpiredCancelled
+              ? 'Batas waktu pembayaran 24 jam telah berakhir. Silakan lakukan checkout ulang.'
+              : 'Simpan nomor pesanan ini. Toko akan menghubungi Anda lewat nomor HP yang diisi.'}
           </p>
         </div>
 
@@ -381,6 +490,12 @@ export default function OrderPage() {
                   <dt className="order-dl-dt">Waktu Pesanan</dt>
                   <dd className="order-dl-dd">{dateFormatted}</dd>
                 </div>
+                {order.metode_pembayaran !== 'cod' && deadlineFormatted && (
+                  <div className="order-dl-row">
+                    <dt className="order-dl-dt">Batas Pembayaran</dt>
+                    <dd className="order-dl-dd">{deadlineFormatted}</dd>
+                  </div>
+                )}
               </dl>
             </div>
           </div>
@@ -571,9 +686,27 @@ export default function OrderPage() {
                 {/* Pay Button / Status */}
                 <div>
                   {order.status === 'Dibatalkan' ? (
-                    <div className="order-badge-batal" style={{ padding: '12px 16px', borderRadius: '8px', justifyContent: 'center', width: '100%' }}>
-                      <span>Pesanan Dibatalkan</span>
-                    </div>
+                    isExpiredCancelled ? (
+                      <div className="order-expired-banner" role="alert">
+                        <div className="order-expired-title">
+                          Batas Waktu Pembayaran 24 Jam Berakhir
+                        </div>
+                        <p className="order-expired-desc">
+                          Pesanan belum dibayar melewati batas 24 jam sehingga dibatalkan otomatis dan stok barang sudah dikembalikan. Silakan checkout ulang.
+                        </p>
+                        <button
+                          type="button"
+                          className="order-btn-recheckout"
+                          onClick={handleReCheckout}
+                        >
+                          Checkout Ulang Sekarang
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="order-badge-batal" style={{ padding: '12px 16px', borderRadius: '8px', justifyContent: 'center', width: '100%' }}>
+                        <span>Pesanan Dibatalkan</span>
+                      </div>
+                    )
                   ) : isPaid ? (
                     <div className="order-btn-paid-done">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -592,6 +725,17 @@ export default function OrderPage() {
                     </div>
                   ) : (
                     <>
+                      {remainingSeconds !== null && (
+                        <div className="order-deadline-box" role="status">
+                          <div className="order-deadline-row">
+                            <span className="order-deadline-label">Batas Waktu Pembayaran (24 Jam)</span>
+                            <span className="order-deadline-timer">{formatCountdown(remainingSeconds)}</span>
+                          </div>
+                          <p className="order-deadline-sub">
+                            Selesaikan pembayaran sebelum <strong>{deadlineFormatted}</strong>. Jika melebihi 24 jam, pesanan otomatis dibatalkan.
+                          </p>
+                        </div>
+                      )}
                       <button
                         type="button"
                         className="order-btn-pay-active"
@@ -656,6 +800,7 @@ export default function OrderPage() {
         onClose={() => setIsQrisModalOpen(false)}
         total={order.total || 127500}
         orderId={order.nomor_pesanan || nomor || 'TA-20261115-001'}
+        deadline={deadlineIso}
         onPaymentSuccess={handlePaymentSuccess}
       />
     </div>

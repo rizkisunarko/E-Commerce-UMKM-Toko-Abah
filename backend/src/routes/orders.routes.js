@@ -4,6 +4,13 @@ const { randomBytes } = require('node:crypto');
 const { createAuthenticate, authorizeRoles } = require('../middleware/auth');
 const parseGram = require('../utils/weight');
 const { calculateTotalWeight } = parseGram;
+const {
+  getPaymentDeadlineIso,
+  isOrderPaymentExpired,
+  restoreOrderStock,
+  expireOrderInTransaction,
+  expireSingleOrderIfOverdue,
+} = require('../utils/orderExpiration');
 
 const MAX_ITEMS = 100;
 const MAX_QUANTITY = 1000;
@@ -162,13 +169,30 @@ function formatOrder(row, items = []) {
     tanggalIso = new Date().toISOString();
   }
 
+  const statusLabel = orderStatusLabel(
+    row.status ?? row.status_transaksi,
+    row.metode_penerimaan,
+    row.status_pembayaran,
+  );
+  const metodePembayaran = row.metode_pembayaran === 'cod' ? 'cod' : 'midtrans';
+  const batasPembayaran = getPaymentDeadlineIso(tanggalIso, metodePembayaran);
+  const kedaluwarsaPembayaran =
+    metodePembayaran !== 'cod'
+    && statusLabel === 'Dibatalkan'
+    && (
+      row.status_pembayaran === 'gagal'
+      || (batasPembayaran ? Date.now() >= new Date(batasPembayaran).getTime() : false)
+    );
+
   return {
     id: Number(row.id ?? row.id_transaksi),
     nomor_pesanan: row.nomor_pesanan ?? row.kode_transaksi,
-    status: orderStatusLabel(row.status ?? row.status_transaksi, row.metode_penerimaan, row.status_pembayaran),
+    status: statusLabel,
     status_pembayaran: row.status_pembayaran || null,
-    metode_pembayaran: row.metode_pembayaran === 'cod' ? 'cod' : 'midtrans',
+    metode_pembayaran: metodePembayaran,
     tanggal: tanggalIso,
+    batas_pembayaran: batasPembayaran,
+    kedaluwarsa_pembayaran: kedaluwarsaPembayaran,
     nama_pemesan: row.nama_pemesan ?? row.nama_pelanggan,
     no_hp: row.no_hp ?? row.no_telepon,
     catatan: row.catatan || '',
@@ -479,42 +503,12 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         }
 
         if (targetAction === 'batal') {
-          if (Number(order.stock_reserved) === 1) {
-            const [items] = await connection.query(
-              'SELECT id_produk, jumlah FROM detail_transaksi WHERE id_transaksi = ?',
-              [orderId],
-            );
-
-            for (const item of items) {
-              const [productRows] = await connection.query(
-                'SELECT id_produk, jumlah_stok FROM produk WHERE id_produk = ? FOR UPDATE',
-                [item.id_produk],
-              );
-              if (productRows.length) {
-                const stockBefore = Number(productRows[0].jumlah_stok);
-                const stockAfter = stockBefore + Number(item.jumlah);
-                await connection.query(
-                  `UPDATE produk
-                   SET jumlah_stok = ?, status_produk = ?, updated_at = CURRENT_TIMESTAMP
-                   WHERE id_produk = ?`,
-                  [stockAfter, stockAfter === 0 ? 'habis' : 'tersedia', item.id_produk],
-                );
-                await connection.query(
-                  `INSERT INTO riwayat_stok (
-                     id_produk, id_admin, jenis_perubahan, jumlah, stok_sebelum, stok_sesudah, keterangan
-                   ) VALUES (?, ?, 'masuk', ?, ?, ?, ?)`,
-                  [
-                    item.id_produk,
-                    req.user.role === 'admin' ? req.user.id : null,
-                    Number(item.jumlah),
-                    stockBefore,
-                    stockAfter,
-                    `Pengembalian stok pesanan dibatalkan ${order.nomor_pesanan ?? order.kode_transaksi}`,
-                  ],
-                );
-              }
-            }
-          }
+          await restoreOrderStock(connection, {
+            orderId,
+            stockReserved: order.stock_reserved,
+            adminId: req.user.role === 'admin' ? req.user.id : null,
+            keterangan: `Pengembalian stok pesanan dibatalkan ${order.nomor_pesanan ?? order.kode_transaksi}`,
+          });
         }
 
         if (targetAction === 'selesai' && order.metode_pembayaran === 'cod') {
@@ -830,6 +824,8 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
           diskon: discountCents / 100,
           ongkir: shippingCents / 100,
           total: totalCents / 100,
+          batas_pembayaran: getPaymentDeadlineIso(now, values.metodePembayaran),
+          kedaluwarsa_pembayaran: false,
         },
       });
     } catch (error) {
@@ -870,7 +866,12 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
 
       const [orders] = await connection.query(
         `SELECT id_transaksi, kode_transaksi, nama_pelanggan, no_telepon,
-                total_bayar, status_transaksi,
+                total_bayar, status_transaksi, tanggal_transaksi, stock_reserved,
+                (SELECT status_pembayaran
+                 FROM pembayaran
+                 WHERE id_transaksi = transaksi.id_transaksi
+                 ORDER BY id_pembayaran DESC
+                 LIMIT 1) AS status_pembayaran,
                 (SELECT metode_pembayaran
                  FROM pembayaran
                  WHERE id_transaksi = transaksi.id_transaksi
@@ -893,6 +894,15 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         transactionStarted = false;
         return res.status(409).json({
           message: 'Pesanan ini menggunakan COD dan tidak memerlukan pembayaran Midtrans.',
+        });
+      }
+      if (isOrderPaymentExpired(order)) {
+        await expireOrderInTransaction(connection, order);
+        await connection.commit();
+        transactionStarted = false;
+        return res.status(409).json({
+          code: 'PAYMENT_EXPIRED',
+          message: 'Batas waktu pembayaran 24 jam telah berakhir. Pesanan dibatalkan otomatis, silakan checkout ulang.',
         });
       }
       if (order.status_transaksi !== 'menunggu') {
@@ -962,6 +972,10 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         },
         callbacks: {
           finish: `${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '')}/pesanan/${encodeURIComponent(order.kode_transaksi)}`,
+        },
+        expiry: {
+          unit: 'hour',
+          duration: 24,
         },
       });
       await db.query(
@@ -1043,7 +1057,37 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
         return res.status(404).json({ message: 'Pesanan tidak ditemukan' });
       }
 
-      const order = orders[0];
+      let order = orders[0];
+      if (isOrderPaymentExpired(order)) {
+        const didExpire = await expireSingleOrderIfOverdue(db, req.params.nomor);
+        if (didExpire) {
+          const [refreshed] = await db.query(
+            `SELECT t.id_transaksi AS id, t.kode_transaksi AS nomor_pesanan,
+                    t.status_transaksi AS status, t.tanggal_transaksi AS tanggal,
+                    t.nama_pelanggan AS nama_pemesan, t.no_telepon AS no_hp,
+                    t.catatan, t.metode_penerimaan,
+                    t.alamat_pelanggan AS alamat_lengkap,
+                    t.subtotal_produk AS subtotal, t.ongkos_kirim AS ongkir,
+                    t.total_bayar AS total, p.wilayah_tujuan AS wilayah,
+                    p.layanan_kurir,
+                    (SELECT pb.status_pembayaran
+                     FROM pembayaran pb
+                     WHERE pb.id_transaksi = t.id_transaksi
+                     ORDER BY pb.id_pembayaran DESC
+                     LIMIT 1) AS status_pembayaran,
+                    (SELECT pb.metode_pembayaran
+                     FROM pembayaran pb
+                     WHERE pb.id_transaksi = t.id_transaksi
+                     ORDER BY pb.id_pembayaran DESC
+                     LIMIT 1) AS metode_pembayaran
+             FROM transaksi t
+             LEFT JOIN pengiriman p ON p.id_transaksi = t.id_transaksi
+             WHERE t.kode_transaksi = ? AND t.jenis_transaksi = 'online'`,
+            [req.params.nomor],
+          );
+          if (refreshed.length) order = refreshed[0];
+        }
+      }
       const [items] = await db.query(
         `SELECT dt.id_produk AS product_id, p.nama_produk AS nama,
                 k.nama_kategori AS kategori, p.foto_produk, dt.harga_satuan AS harga,
