@@ -7,34 +7,18 @@ import { productService } from '../services/productService';
 import { formatRupiah } from '../utils/format';
 import './ProductListPage.css';
 
-function formatSku(product) {
-  if (product.kode_produk) return product.kode_produk;
-  if (product.sku) return product.sku;
-  const nameUpper = (product.nama || '').toUpperCase();
-  if (nameUpper.includes('BERAS')) return 'BER-ROJO-5K';
-  if (nameUpper.includes('MINYAK')) return 'MYK-BIM-1L';
-  if (nameUpper.includes('GULA')) return 'GUL-GMP-1KG';
-  if (nameUpper.includes('TELUR')) return 'TLR-NEG-1KG';
-  if (nameUpper.includes('MIE')) return 'MIE-GOR-85G';
-  if (nameUpper.includes('KOPI')) return 'KOP-KAP-25G';
-  if (nameUpper.includes('SABUN')) return 'SBN-LIF-110G';
-  if (nameUpper.includes('TEH')) return 'TEH-SAR-50G';
-  const prefix = (product.kategori || 'PRD').substring(0, 3).toUpperCase();
-  return `${prefix}-${product.id}`;
-}
-
-function getUnitDisplay(product) {
-  if (product.satuan && !/\d/.test(product.satuan)) return product.satuan;
-  const nameUpper = (product.nama || '').toUpperCase();
-  if (nameUpper.includes('BERAS')) return 'sak';
-  if (nameUpper.includes('MINYAK')) return 'pouch';
-  if (nameUpper.includes('GULA')) return 'bungkus';
-  if (nameUpper.includes('TELUR')) return 'kg';
-  if (nameUpper.includes('MIE')) return 'bungkus';
-  if (nameUpper.includes('KOPI')) return 'renteng';
-  if (nameUpper.includes('SABUN')) return 'batang';
-  if (nameUpper.includes('TEH')) return 'kotak';
-  return 'unit';
+function getPaginationRange(currentPage, totalPages) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const pages = [1];
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+  if (start > 2) pages.push('...');
+  for (let i = start; i <= end; i += 1) pages.push(i);
+  if (end < totalPages - 1) pages.push('...');
+  pages.push(totalPages);
+  return pages;
 }
 
 export default function ProductListPage() {
@@ -69,22 +53,6 @@ export default function ProductListPage() {
     }, 5000);
     return () => clearTimeout(timer);
   }, [successBanner]);
-
-  // State Filter & Pengurutan Lanjutan
-  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
-  const [sortBy, setSortBy] = useState('');
-  const [stockStatusFilter, setStockStatusFilter] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-
-  const isAdvFilterActive = Boolean(sortBy || stockStatusFilter || minPrice || maxPrice);
-
-  const handleResetAdvFilters = () => {
-    setSortBy('');
-    setStockStatusFilter('');
-    setMinPrice('');
-    setMaxPrice('');
-  };
 
   // Muat opsi kategori
   useEffect(() => {
@@ -190,49 +158,12 @@ export default function ProductListPage() {
   const handleResetFilters = () => {
     setSearch('');
     setSelectedCategory('');
-    setSortBy('');
-    setStockStatusFilter('');
-    setMinPrice('');
-    setMaxPrice('');
     setCurrentPage(1);
   };
 
-  const displayRows = rows
-    .filter((p) => {
-      const isLow =
-        Number(p.stok) <= (p.batas_stok_kritis ?? 15) ||
-        Number(p.stok) < 20 ||
-        p.status_stok === 'Stok Kritis';
-
-      if (stockStatusFilter === 'safe' && isLow) return false;
-      if (stockStatusFilter === 'low' && !isLow) return false;
-
-      const price = Number(p.harga || 0);
-      if (minPrice !== '' && !isNaN(Number(minPrice)) && price < Number(minPrice)) {
-        return false;
-      }
-      if (maxPrice !== '' && !isNaN(Number(maxPrice)) && price > Number(maxPrice)) {
-        return false;
-      }
-
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'name-asc') return (a.nama || '').localeCompare(b.nama || '');
-      if (sortBy === 'name-desc') return (b.nama || '').localeCompare(a.nama || '');
-      if (sortBy === 'price-asc') return Number(a.harga || 0) - Number(b.harga || 0);
-      if (sortBy === 'price-desc') return Number(b.harga || 0) - Number(a.harga || 0);
-      if (sortBy === 'stock-asc') return Number(a.stok || 0) - Number(b.stok || 0);
-      if (sortBy === 'stock-desc') return Number(b.stok || 0) - Number(a.stok || 0);
-      return 0;
-    });
-
-  const totalSku = pagination?.total || rows.length;
-  const isDemoTotal = totalSku === 142;
-  const safeCount = isDemoTotal ? 128 : rows.filter((p) => Number(p.stok) > 20).length;
-  const lowStockCount = isDemoTotal ? 14 : rows.filter((p) => Number(p.stok) <= 20).length;
-  const priceUpdateTodayCount = isDemoTotal ? 3 : Math.min(3, Math.max(1, Math.floor(totalSku / 5)));
-  const totalPages = Math.max(1, Math.ceil(totalSku / 8));
+  const displayRows = rows;
+  const totalProducts = pagination?.total || rows.length;
+  const totalPages = pagination?.total_pages || Math.max(1, Math.ceil(totalProducts / 8));
 
   return (
     <div className="product-list-container">
@@ -345,21 +276,6 @@ export default function ProductListPage() {
         </div>
 
         <div className="header-panel-right">
-          <div className="total-sku-badge">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#15803d"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <span>Total {totalSku} SKU Aktif</span>
-          </div>
           {isAdmin && (
             <Link to="/produk/tambah" className="btn-add-product">
               <svg
@@ -402,7 +318,7 @@ export default function ProductListPage() {
           </span>
           <input
             className="product-input-search"
-            placeholder="Cari nama produk, merek, atau barcode..."
+            placeholder="Cari nama produk..."
             value={search}
             onChange={handleSearchChange}
           />
@@ -442,129 +358,7 @@ export default function ProductListPage() {
           </svg>
           <span>Reset</span>
         </button>
-
-        <button
-          type="button"
-          className={`btn-advanced-filter${showAdvancedFilter ? ' is-open' : ''}${isAdvFilterActive ? ' has-filter' : ''}`}
-          onClick={() => setShowAdvancedFilter((prev) => !prev)}
-          title="Opsi filter & pengurutan lanjutan"
-        >
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="4" y1="21" x2="4" y2="14" />
-            <line x1="4" y1="10" x2="4" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12" y2="3" />
-            <line x1="20" y1="21" x2="20" y2="16" />
-            <line x1="20" y1="12" x2="20" y2="3" />
-            <line x1="1" y1="14" x2="7" y2="14" />
-            <line x1="9" y1="8" x2="15" y2="8" />
-            <line x1="17" y1="16" x2="23" y2="16" />
-          </svg>
-          <span>Filter Lanjutan{isAdvFilterActive ? ' (Aktif)' : ''}</span>
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            style={{
-              transform: showAdvancedFilter ? 'rotate(180deg)' : 'none',
-              transition: 'transform 0.2s ease',
-            }}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
       </div>
-
-      {/* 3.1 Panel Filter & Pengurutan Lanjutan */}
-      {showAdvancedFilter && (
-        <div className="advanced-filter-panel">
-          <div className="advanced-filter-header">
-            <span className="advanced-filter-title">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-              Filter & Pengurutan Tambahan
-            </span>
-            {isAdvFilterActive && (
-              <button
-                type="button"
-                className="btn-reset-adv-filter"
-                onClick={handleResetAdvFilters}
-              >
-                Reset Filter Lanjutan
-              </button>
-            )}
-          </div>
-
-          <div className="advanced-filter-grid">
-            <div className="advanced-filter-item">
-              <label className="advanced-filter-label">Urutkan Produk</label>
-              <select
-                className="advanced-filter-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="">Standar (Bawaan)</option>
-                <option value="name-asc">Nama Produk (A - Z)</option>
-                <option value="name-desc">Nama Produk (Z - A)</option>
-                <option value="price-asc">Harga: Termurah → Termahal</option>
-                <option value="price-desc">Harga: Termahal → Termurah</option>
-                <option value="stock-desc">Stok: Terbanyak → Tersedikit</option>
-                <option value="stock-asc">Stok: Tersedikit → Terbanyak</option>
-              </select>
-            </div>
-
-            <div className="advanced-filter-item">
-              <label className="advanced-filter-label">Status Stok</label>
-              <select
-                className="advanced-filter-select"
-                value={stockStatusFilter}
-                onChange={(e) => setStockStatusFilter(e.target.value)}
-              >
-                <option value="">Semua Status Stok</option>
-                <option value="safe">Stok Aman (&gt; 20 unit)</option>
-                <option value="low">Stok Menipis / Kritis (≤ 20 unit)</option>
-              </select>
-            </div>
-
-            <div className="advanced-filter-item">
-              <label className="advanced-filter-label">Rentang Harga (Rp)</label>
-              <div className="price-range-inputs">
-                <input
-                  type="number"
-                  className="advanced-filter-input"
-                  placeholder="Min (Rp)"
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
-                  min="0"
-                />
-                <span className="price-range-sep">-</span>
-                <input
-                  type="number"
-                  className="advanced-filter-input"
-                  placeholder="Maks (Rp)"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  min="0"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {error && <div className="alert-error" role="alert">{error}</div>}
 
@@ -649,12 +443,9 @@ export default function ProductListPage() {
                     <tr key={p.id}>
                       <td>
                         <div className="product-title-cell">
-                          <ProductIcon nama={p.nama} kategori={p.kategori} />
+                          <ProductIcon nama={p.nama} kategori={p.kategori} fotoProduk={p.foto_produk} />
                           <div className="product-name-and-sku">
                             <span className="product-main-name">{p.nama}</span>
-                            <span className="product-sku-code">
-                              SKU: {formatSku(p)}
-                            </span>
                           </div>
                         </div>
                       </td>
@@ -672,7 +463,7 @@ export default function ProductListPage() {
                       <td>
                         <span className={`stock-pill-tag ${isLow ? 'low' : 'safe'}`}>
                           <span className="stock-pill-dot" aria-hidden="true" />
-                          {p.stok} {getUnitDisplay(p)}
+                          {p.stok} unit
                         </span>
                       </td>
                       {isAdmin && (
@@ -736,7 +527,7 @@ export default function ProductListPage() {
         {!loading && rows.length > 0 && (
           <div className="table-footer-pagination">
             <div>
-              Menampilkan {rows.length} dari {totalSku} produk
+              Menampilkan {rows.length} dari {totalProducts} produk
             </div>
             <div className="pagination-group">
               <button
@@ -747,29 +538,19 @@ export default function ProductListPage() {
               >
                 &larr; Sebelumnya
               </button>
-              {Array.from({ length: Math.min(3, totalPages) }, (_, i) => i + 1).map(
-                (num) => (
+              {getPaginationRange(currentPage, totalPages).map((item, idx) =>
+                item === '...' ? (
+                  <span key={`ellipsis-${idx}`} style={{ padding: '0 4px', color: '#9ca3af' }}>...</span>
+                ) : (
                   <button
-                    key={num}
+                    key={item}
                     type="button"
-                    className={`page-btn ${currentPage === num ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(num)}
+                    className={`page-btn ${currentPage === item ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(item)}
                   >
-                    {num}
+                    {item}
                   </button>
                 )
-              )}
-              {totalPages > 3 && (
-                <>
-                  <span style={{ padding: '0 4px', color: '#9ca3af' }}>...</span>
-                  <button
-                    type="button"
-                    className={`page-btn ${currentPage === totalPages ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(totalPages)}
-                  >
-                    {totalPages}
-                  </button>
-                </>
               )}
               <button
                 type="button"
@@ -782,78 +563,6 @@ export default function ProductListPage() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* 6. Tiga Kartu Ringkasan Bawah */}
-      <div className="bottom-metrics-cards-grid">
-        <div className="bottom-metric-card">
-          <div className="bottom-metric-icon safe">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-          </div>
-          <div className="bottom-metric-text">
-            <span className="bottom-metric-label">Stok Aman (&gt; 20 unit)</span>
-            <span className="bottom-metric-val">{safeCount} Produk</span>
-          </div>
-        </div>
-
-        <div className="bottom-metric-card">
-          <div className="bottom-metric-icon warning">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-          </div>
-          <div className="bottom-metric-text">
-            <span className="bottom-metric-label">Perlu Restock Segera</span>
-            <span className="bottom-metric-val">{lowStockCount} Produk</span>
-          </div>
-        </div>
-
-        <div className="bottom-metric-card">
-          <div className="bottom-metric-icon info">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-              <path d="M7 15h2" />
-              <path d="M15 15h2" />
-            </svg>
-          </div>
-          <div className="bottom-metric-text">
-            <span className="bottom-metric-label">Pembaruan Harga Hari Ini</span>
-            <span className="bottom-metric-val">{priceUpdateTodayCount} Produk</span>
-          </div>
-        </div>
       </div>
 
       {/* Dialog Konfirmasi Hapus Produk (PPL-14.2) */}

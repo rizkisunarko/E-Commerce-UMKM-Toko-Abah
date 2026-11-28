@@ -87,6 +87,9 @@ async function createFixture(t) {
       const payment = state.payments.find((item) => item.id_transaksi === transaction.id_transaksi);
       return [[{
         id: transaction.id_transaksi,
+        kode_transaksi: transaction.kode_transaksi || null,
+        jenis_transaksi: transaction.jenis_transaksi || 'kasir',
+        nama_pelanggan: transaction.nama_pelanggan || null,
         tanggal: transaction.tanggal_transaksi,
         metode_bayar: payment && payment.metode_pembayaran,
         total: transaction.total_bayar,
@@ -117,6 +120,10 @@ async function createFixture(t) {
       const start = filters[0];
       const endExclusive = filters.length > 1 ? filters[1] : null;
       const transactions = state.transactions.filter((transaction) => {
+        const isEligible =
+          (transaction.jenis_transaksi || 'kasir') === 'kasir' ||
+          (transaction.jenis_transaksi === 'online' && transaction.status_transaksi === 'selesai');
+        if (!isEligible) return false;
         const date = transaction.tanggal_transaksi.toISOString().slice(0, 10);
         return (!start || date >= start) && (!endExclusive || date < endExclusive);
       }).sort((a, b) => (
@@ -128,6 +135,9 @@ async function createFixture(t) {
         const items = state.details.filter((item) => item.id_transaksi === transaction.id_transaksi);
         return {
           id: transaction.id_transaksi,
+          kode_transaksi: transaction.kode_transaksi || null,
+          jenis_transaksi: transaction.jenis_transaksi || 'kasir',
+          nama_pelanggan: transaction.nama_pelanggan || null,
           tanggal: transaction.tanggal_transaksi,
           metode_bayar: payment && payment.metode_pembayaran,
           total: transaction.total_bayar,
@@ -408,4 +418,46 @@ test('riwayat admin memfilter tanggal, memberi detail, dan merekap tiap metode b
   assert.equal(removedStatusRoute.status, 404);
 
   assert.equal(state.transactions.length, 3);
+});
+
+test('riwayat admin menampilkan pesanan online yang selesai dengan kode_transaksi dan mengabaikan yang belum selesai', async (t) => {
+  const { baseUrl, tokenFor, state } = await createFixture(t);
+  const adminToken = tokenFor({ id: 1, nama: 'Admin Toko', role: 'admin' });
+  const headers = { Authorization: `Bearer ${adminToken}` };
+
+  state.transactions.push(
+    {
+      id_transaksi: 101,
+      kode_transaksi: 'TA-20261128-0001',
+      jenis_transaksi: 'online',
+      status_transaksi: 'selesai',
+      nama_pelanggan: 'Budi',
+      tanggal_transaksi: new Date(),
+      total_bayar: '85000.00',
+    },
+    {
+      id_transaksi: 102,
+      kode_transaksi: 'TA-20261128-0002',
+      jenis_transaksi: 'online',
+      status_transaksi: 'menunggu',
+      nama_pelanggan: 'Siti',
+      tanggal_transaksi: new Date(),
+      total_bayar: '50000.00',
+    },
+  );
+  state.payments.push({
+    id_transaksi: 101,
+    metode_pembayaran: 'cod',
+    jumlah_bayar: '85000.00',
+    jumlah_diterima: '85000.00',
+    kembalian: '0.00',
+  });
+
+  const res = await fetch(`${baseUrl}/transactions`, { headers });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.length, 1);
+  assert.equal(body.data[0].kode_transaksi, 'TA-20261128-0001');
+  assert.equal(body.data[0].jenis_transaksi, 'online');
+  assert.equal(body.data[0].metode_bayar, 'cod');
 });

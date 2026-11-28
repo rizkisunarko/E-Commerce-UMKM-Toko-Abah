@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, uploadProductPhoto } from './api';
 
 function toQuery(params = {}) {
   const q = new URLSearchParams();
@@ -15,5 +15,6 @@ export const productService = {
   get: (id) => api.get(`/products/${id}`),
   create: (data) => api.post('/products', data),
   update: (id, data) => api.put(`/products/${id}`, data),
+  uploadPhoto: (file) => uploadProductPhoto(file),
   remove: (id) => api.del(`/products/${id}`),
 };

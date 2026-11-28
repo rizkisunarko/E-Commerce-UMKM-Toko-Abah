@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react';
 import { formatRupiah } from '../utils/format';
 
-export default function QrisModal({ isOpen, onClose, total = 121500, orderId = 'TA-20261112-001', onPaymentSuccess }) {
-  const [timeLeft, setTimeLeft] = useState(14 * 60 + 59);
+function computeSecondsLeft(deadline) {
+  if (!deadline) return 24 * 60 * 60;
+  const targetMs = new Date(deadline).getTime();
+  if (!Number.isFinite(targetMs)) return 24 * 60 * 60;
+  return Math.max(0, Math.floor((targetMs - Date.now()) / 1000));
+}
+
+export default function QrisModal({ isOpen, onClose, total = 121500, orderId = 'TA-20261112-001', deadline = null, onPaymentSuccess }) {
+  const [timeLeft, setTimeLeft] = useState(() => computeSecondsLeft(deadline));
   const [status, setStatus] = useState('idle'); // 'idle' | 'checking' | 'success'
   const [toastMsg, setToastMsg] = useState('');
 
-  // Countdown timer 15 menit
+  // Countdown timer batas pembayaran 24 jam
   useEffect(() => {
     if (!isOpen) return;
+    setTimeLeft(computeSecondsLeft(deadline));
     const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft(computeSecondsLeft(deadline));
     }, 1000);
     return () => clearInterval(interval);
-  }, [isOpen]);
+  }, [isOpen, deadline]);
 
   // Reset status saat modal dibuka
   useEffect(() => {
@@ -25,9 +33,10 @@ export default function QrisModal({ isOpen, onClose, total = 121500, orderId = '
 
   if (!isOpen) return null;
 
-  const minutes = Math.floor(timeLeft / 60);
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
   const seconds = timeLeft % 60;
-  const timeFormatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const timeFormatted = [hours, minutes, seconds].map((v) => String(v).padStart(2, '0')).join(':');
 
   function handleCheckPayment() {
     setStatus('checking');

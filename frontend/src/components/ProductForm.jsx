@@ -1,27 +1,19 @@
-import { useState } from 'react';
-import berasImg from '../assets/Beras.jpg';
-import minyakImg from '../assets/Minyak-Goreng.jpg';
-import gulaImg from '../assets/Gula-Pasir.jpg';
-import telurImg from '../assets/Telur Ayam.jpg';
-import mieImg from '../assets/Mie-Instan.jpg';
-import kopiImg from '../assets/Kopi-Sachet.jpg';
+import { useEffect, useRef, useState } from 'react';
 import { formatRupiah } from '../utils/format';
+import {
+  berasImg,
+  getFallbackProductImage,
+  resolveProductPhotoUrl,
+} from '../utils/productImage';
 import './ProductForm.css';
 
-function getRackProductImage(nama = '', kategori = '') {
-  const text = `${nama || ''} ${kategori || ''}`.toLowerCase();
-  if (text.includes('beras') || text.includes('gandum') || text.includes('tepung') || text.includes('beras & pokok')) return berasImg;
-  if (text.includes('minyak') || text.includes('goreng') || text.includes('mentega') || text.includes('margarin')) return minyakImg;
-  if (text.includes('gula') || text.includes('manis') || text.includes('pemanis')) return gulaImg;
-  if (text.includes('telur') || text.includes('lauk') || text.includes('protein')) return telurImg;
-  if (text.includes('mie') || text.includes('indomie') || text.includes('instan') || text.includes('sedap')) return mieImg;
-  if (text.includes('kopi') || text.includes('teh')) return kopiImg;
-  return berasImg;
-}
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 const EMPTY = {
   nama: '',
   kategori: '',
+  deskripsi: '',
   harga: '',
   berat: '',
   stok: '',
@@ -79,6 +71,10 @@ function validate(values, showStock) {
     }
   }
 
+  if (values.deskripsi && values.deskripsi.trim().length > 1000) {
+    e.deskripsi = 'Deskripsi maksimal 1000 karakter';
+  }
+
   return e;
 }
 
@@ -103,12 +99,25 @@ export default function ProductForm({
   const [values, setValues] = useState({ ...EMPTY, ...initialValues });
   const [clientErrors, setClientErrors] = useState({});
   const [showTips, setShowTips] = useState(true);
-  const [skuCode, setSkuCode] = useState(isEdit ? '8991002104509' : '899276100123');
   const [activeChips, setActiveChips] = useState(['Produk Terlaris']);
-  const [testErrorMode, setTestErrorMode] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(
+    initialValues?.foto_produk ? resolveProductPhotoUrl(initialValues.foto_produk) : '',
+  );
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const objectUrlRef = useRef('');
+  const fileInputRef = useRef(null);
+
+  useEffect(() => () => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+  }, []);
 
   // Gabungkan error: error lokal/klien menimpa error dari server jika kolom diubah
   const shown = { ...errors, ...clientErrors };
+  if (photoError && !shown.foto_produk) {
+    shown.foto_produk = photoError;
+  }
   const errorCount = Object.keys(shown).filter((k) => Boolean(shown[k])).length;
   const hasErrors = errorCount > 0 || Boolean(formError);
 
@@ -136,11 +145,6 @@ export default function ProductForm({
     });
   };
 
-  const handleRandomizeSKU = () => {
-    const randomSuffix = Math.floor(100000000 + Math.random() * 900000000);
-    setSkuCode(`899${randomSuffix}`);
-  };
-
   const toggleChip = (chipLabel) => {
     setActiveChips((prev) =>
       prev.includes(chipLabel) ? prev.filter((c) => c !== chipLabel) : [...prev, chipLabel]
@@ -148,59 +152,72 @@ export default function ProductForm({
   };
 
   const handleReset = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = '';
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setValues({ ...EMPTY, ...initialValues });
     setClientErrors({});
-    setTestErrorMode(false);
+    setPhotoFile(null);
+    setPhotoPreview(initialValues?.foto_produk ? resolveProductPhotoUrl(initialValues.foto_produk) : '');
+    setPhotoRemoved(false);
+    setPhotoError('');
   };
 
-  // Toggle mode uji validasi error vs mode normal untuk keperluan review desain Stitch
-  const handleToggleTestMode = () => {
-    if (!testErrorMode) {
-      setTestErrorMode(true);
-      setValues({
-        nama: '',
-        kategori: '',
-        harga: 'abc',
-        berat: '-200',
-        stok: showStock ? '0' : values.stok,
-        batas_stok_kritis: '5',
-      });
-      const testErrs = {
-        nama: REQUIRED,
-        kategori: REQUIRED,
-        harga: INVALID_NUMBER,
-        berat: INVALID_NUMBER,
-      };
-      if (showStock) {
-        testErrs.stok = REQUIRED;
-      }
-      setClientErrors(testErrs);
-    } else {
-      setTestErrorMode(false);
-      handleReset();
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      setPhotoError('Format foto harus JPG, PNG, atau WebP.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
     }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setPhotoError('Ukuran foto maksimal 2 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+    const nextUrl = URL.createObjectURL(file);
+    objectUrlRef.current = nextUrl;
+    setPhotoFile(file);
+    setPhotoPreview(nextUrl);
+    setPhotoRemoved(false);
+    setPhotoError('');
+    setClientErrors((prev) => {
+      const copy = { ...prev };
+      delete copy.foto_produk;
+      return copy;
+    });
   };
 
-  // Tombol "Isi Data Contoh yang Benar" dari panel koreksi cepat di sisi kanan
-  const handleFillValidSample = () => {
-    setTestErrorMode(false);
-    setValues({
-      nama: isEdit ? 'Beras Ramos Wangi 5 kg' : 'Beras Ramos Premium 5 Kg',
-      kategori: categories[0] || 'Beras & Pokok',
-      harga: isEdit ? '72000' : '65000',
-      berat: '5000',
-      stok: isEdit ? (currentStock !== undefined ? String(currentStock) : '42') : '50',
-      batas_stok_kritis: '10',
-    });
-    setClientErrors({});
+  const handleRemovePhoto = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = '';
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setPhotoFile(null);
+    setPhotoPreview('');
+    setPhotoRemoved(true);
+    setPhotoError('');
   };
 
   function handleSubmit(e) {
     e.preventDefault();
     const found = validate(values, showStock);
     setClientErrors(found);
-    if (Object.keys(found).length > 0) return;
-    onSubmit(values);
+    if (Object.keys(found).length > 0 || photoError) return;
+    onSubmit({
+      ...values,
+      photoFile,
+      photoRemoved,
+    });
   }
 
   const effectiveStock = currentStock !== undefined ? currentStock : (values.stok !== '' && !isNaN(Number(values.stok)) ? Number(values.stok) : 42);
@@ -260,13 +277,10 @@ export default function ProductForm({
 
         <div className="breadcrumb-right">
           {isEdit ? (
-            <>
-              <span className="badge-sku-code"># SKU: BER-ROJO-5K</span>
-              <span className="badge-active-sale">
-                <span style={{ fontSize: '7px' }}>●</span> Aktif Dijual
-              </span>
-            </>
-          ) : hasErrors || testErrorMode ? (
+            <span className="badge-active-sale">
+              <span style={{ fontSize: '7px' }}>●</span> Aktif Dijual
+            </span>
+          ) : hasErrors ? (
             <div className="badge-status-catalog error-state">
               <span>●</span> State: Validasi Gagal (Form Error)
             </div>
@@ -275,21 +289,6 @@ export default function ProductForm({
               <span style={{ color: '#16a34a' }}>●</span> Katalog Aktif Toko
             </div>
           )}
-
-          <button
-            type="button"
-            className={`btn-toggle-mode${testErrorMode ? ' normal-mode' : ''}`}
-            onClick={handleToggleTestMode}
-            title="Klik untuk beralih mode tampilan sesuai screenshot desain"
-          >
-            {testErrorMode ? (
-              'Alihkan ke Normal'
-            ) : (
-              <>
-                <span>⚙</span> Uji Mode Validasi Error
-              </>
-            )}
-          </button>
         </div>
       </div>
 
@@ -298,9 +297,9 @@ export default function ProductForm({
         <div className="page-title-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h1>{pageTitle || (isEdit ? `Ubah Produk: ${values.nama || 'Produk'}` : 'Tambah Produk Baru')}</h1>
-            {(hasErrors || testErrorMode) && (
+            {hasErrors && (
               <span className="badge-error-counter">
-                {Math.max(errorCount, 3)} GALAT DITEMUKAN
+                {errorCount} GALAT DITEMUKAN
               </span>
             )}
           </div>
@@ -324,7 +323,7 @@ export default function ProductForm({
       </div>
 
       {/* 4. Alert Banner (Tips atau Error) */}
-      {hasErrors || testErrorMode ? (
+      {hasErrors ? (
         <div className="alert-error-banner" role="alert">
           <div className="error-banner-icon">!</div>
           <div>
@@ -435,84 +434,129 @@ export default function ProductForm({
               ) : null}
             </div>
 
-            {/* Dua Kolom: Kategori & Barcode/SKU */}
-            <div className="form-grid-columns" style={{ marginTop: '16px' }}>
-              <div className="form-group-item">
-                <div className="form-label-row">
-                  <label htmlFor="kategori" className="form-field-label">
-                    Kategori Sembako <span className="required-asterisk">*</span>
-                  </label>
-                </div>
-                <div className="input-with-addons">
-                  <select
-                    id="kategori"
-                    className={`form-select-input${shown.kategori ? ' is-error' : ''}`}
-                    value={values.kategori}
-                    onChange={change('kategori')}
-                    aria-invalid={Boolean(shown.kategori)}
-                  >
-                    <option value="">Pilih Kategori...</option>
-                    {categories.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                  {shown.kategori && (
-                    <span className="input-error-icon" style={{ right: '28px' }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="8" x2="12" y2="12" />
-                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                      </svg>
-                    </span>
-                  )}
-                </div>
-                {shown.kategori && (
-                  <span className="field-error-message">ⓘ {shown.kategori}</span>
-                )}
+            {/* Kolom: Kategori */}
+            <div className="form-group-item" style={{ marginTop: '16px' }}>
+              <div className="form-label-row">
+                <label htmlFor="kategori" className="form-field-label">
+                  Kategori Sembako <span className="required-asterisk">*</span>
+                </label>
               </div>
-
-              {/* Barcode / Kode SKU (Static helper sesuai batasan B1) */}
-              <div className="form-group-item">
-                <div className="form-label-row">
-                  <label htmlFor="barcode_sku" className="form-field-label">
-                    Kode Barcode / SKU
-                  </label>
-                  {!isEdit ? (
-                    <button type="button" className="label-action-btn" onClick={handleRandomizeSKU}>
-                      ↻ Acak SKU
-                    </button>
-                  ) : (
-                    <span className="label-extra-info">Opsional</span>
-                  )}
-                </div>
-                <div className="input-with-addons">
-                  <input
-                    id="barcode_sku"
-                    type="text"
-                    className="form-text-input"
-                    placeholder="Contoh: 8991002104509"
-                    value={skuCode}
-                    onChange={(e) => setSkuCode(e.target.value)}
-                  />
-                  <span className="input-icon-prefix" style={{ left: 'auto', right: '12px' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="3" y1="5" x2="3" y2="19" />
-                      <line x1="7" y1="5" x2="7" y2="19" />
-                      <line x1="10" y1="5" x2="10" y2="19" />
-                      <line x1="14" y1="5" x2="14" y2="19" />
-                      <line x1="17" y1="5" x2="17" y2="19" />
-                      <line x1="21" y1="5" x2="21" y2="19" />
+              <div className="input-with-addons">
+                <select
+                  id="kategori"
+                  className={`form-select-input${shown.kategori ? ' is-error' : ''}`}
+                  value={values.kategori}
+                  onChange={change('kategori')}
+                  aria-invalid={Boolean(shown.kategori)}
+                >
+                  <option value="">Pilih Kategori...</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                {shown.kategori && (
+                  <span className="input-error-icon" style={{ right: '28px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
                     </svg>
                   </span>
-                </div>
-                {!isEdit && (
-                  <span className="field-helper-message">
-                    Opsional. Gunakan scanner barcode kasir atau biarkan kosong.
-                  </span>
                 )}
               </div>
+              {shown.kategori && (
+                <span className="field-error-message">ⓘ {shown.kategori}</span>
+              )}
+            </div>
+
+            {/* Kolom: Deskripsi Produk (Opsional) */}
+            <div className="form-group-item" style={{ marginTop: '16px' }}>
+              <div className="form-label-row">
+                <label htmlFor="deskripsi" className="form-field-label">
+                  Deskripsi Produk
+                </label>
+                <span className="label-extra-info">
+                  Opsional • {(values.deskripsi || '').length}/1000 karakter
+                </span>
+              </div>
+              <textarea
+                id="deskripsi"
+                rows={3}
+                maxLength={1000}
+                className={`form-textarea-input${shown.deskripsi ? ' is-error' : ''}`}
+                placeholder="Contoh: Tepung terigu serbaguna kemasan 1 kg, cocok untuk aneka kue, roti, dan gorengan."
+                value={values.deskripsi || ''}
+                onChange={change('deskripsi')}
+                aria-invalid={Boolean(shown.deskripsi)}
+              />
+              {shown.deskripsi ? (
+                <span className="field-error-message">ⓘ {shown.deskripsi}</span>
+              ) : (
+                <span className="field-helper-message">
+                  Ditampilkan di halaman detail katalog pelanggan agar pembeli mengetahui rincian produk.
+                </span>
+              )}
+            </div>
+
+            {/* Kolom: Foto Produk (Opsional) */}
+            <div className="form-group-item" style={{ marginTop: '16px' }}>
+              <div className="form-label-row">
+                <label htmlFor="foto_produk" className="form-field-label">
+                  Foto Produk
+                </label>
+                <span className="label-extra-info">Opsional • JPG, PNG, WebP (Maks. 2 MB)</span>
+              </div>
+
+              <div className={`photo-upload-box${shown.foto_produk ? ' is-error' : ''}`}>
+                <div className="photo-upload-preview-wrap">
+                  <img
+                    src={photoPreview || getFallbackProductImage(values.nama, values.kategori, berasImg)}
+                    alt={values.nama || 'Pratinjau foto produk'}
+                    className="photo-upload-thumb"
+                  />
+                  <span className={`photo-source-badge${photoPreview ? ' custom' : ''}`}>
+                    {photoPreview ? 'Foto Khusus' : 'Default Kategori'}
+                  </span>
+                </div>
+
+                <div className="photo-upload-controls">
+                  <div className="photo-upload-buttons">
+                    <label htmlFor="foto_produk" className="btn-upload-photo">
+                      {photoPreview ? 'Ganti Foto' : 'Pilih Foto Produk'}
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      id="foto_produk"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handlePhotoChange}
+                      className="photo-file-input-hidden"
+                    />
+                    {photoPreview && (
+                      <button
+                        type="button"
+                        className="btn-remove-photo"
+                        onClick={handleRemovePhoto}
+                      >
+                        Hapus Foto
+                      </button>
+                    )}
+                  </div>
+                  <p className="field-helper-message" style={{ margin: 0 }}>
+                    {photoFile
+                      ? `File dipilih: ${photoFile.name}`
+                      : photoPreview
+                        ? 'Foto khusus produk sedang aktif di katalog dan kasir.'
+                        : 'Jika tidak diunggah, tampilan otomatis memakai foto default sesuai kategori produk.'}
+                  </p>
+                </div>
+              </div>
+
+              {shown.foto_produk && (
+                <span className="field-error-message">ⓘ {shown.foto_produk}</span>
+              )}
             </div>
           </div>
 
@@ -898,17 +942,15 @@ export default function ProductForm({
 
             <div className="rack-image-container">
               <img
-                src={getRackProductImage(values.nama, values.kategori)}
+                src={photoPreview || getFallbackProductImage(values.nama, values.kategori, berasImg)}
                 alt={values.nama || 'Pratinjau Rak Sembako'}
                 className="rack-preview-image"
               />
               <div className="rack-image-badges">
-                {isEdit ? (
+                {isEdit && (
                   <span className="badge-rack-available" style={{ background: '#dcfce7', color: '#15803d' }}>
                     Tersedia di Rak
                   </span>
-                ) : (
-                  <span className="rack-sku-badge">SKU: {skuCode ? 'AUTO-GEN' : 'NONE'}</span>
                 )}
                 <span className="rack-weight-badge">
                   Berat: {values.berat ? Number(values.berat).toLocaleString('id-ID') : '0'} gr
@@ -919,18 +961,12 @@ export default function ProductForm({
             <div className="rack-body-content">
               <div className="rack-category-label">
                 {values.kategori
-                  ? `${values.kategori} • ${isEdit ? 'Karung Plastik 5kg' : 'Katalog'}`
+                  ? `${values.kategori} • ${isEdit ? 'Toko Abah' : 'Katalog'}`
                   : 'KATEGORI BELUM DIPILIH'}
               </div>
               <h4 className="rack-product-name">
                 {values.nama.trim() || 'Nama Produk Baru'}
               </h4>
-
-              {isEdit && (
-                <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '10px' }}>
-                  Barcode: {skuCode}
-                </div>
-              )}
 
               <div className="rack-stats-grid">
                 <div className="rack-stat-block">
@@ -947,33 +983,7 @@ export default function ProductForm({
                 </div>
               </div>
 
-              {isEdit ? (
-                <>
-                  <div className="shelf-capacity-section">
-                    <div className="capacity-label-row">
-                      <span>Kapasitas Rak (Maks 50 sak)</span>
-                      <span style={{ fontWeight: 700, color: '#15803d' }}>84% Penuh</span>
-                    </div>
-                    <div className="capacity-progress-track">
-                      <div className="capacity-progress-fill" style={{ width: '84%' }} />
-                    </div>
-                  </div>
-
-                  <div className="print-label-bar">
-                    <div className="print-label-title">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="6 9 6 2 18 2 18 9" />
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                        <rect x="6" y="14" width="12" height="8" />
-                      </svg>
-                      <span>Cetak Label Rak / Harga</span>
-                    </div>
-                    <button type="button" className="btn-print-f9">
-                      Cetak (F9)
-                    </button>
-                  </div>
-                </>
-              ) : (
+              {!isEdit && (
                 <div className="rack-pos-notice">
                   <div className="pos-notice-header">
                     <span className="pos-notice-icon">
@@ -985,7 +995,7 @@ export default function ProductForm({
                     <span>Siap masuk ke Mesin Kasir Toko</span>
                   </div>
                   <p className="pos-notice-text">
-                    Segera setelah disimpan, nama produk ini langsung dapat dicari oleh kasir shift pagi & malam.
+                    Segera setelah disimpan, nama produk ini langsung dapat dicari oleh kasir shift pagi &amp; malam.
                   </p>
                 </div>
               )}
@@ -993,7 +1003,7 @@ export default function ProductForm({
           </div>
 
           {/* Jika dalam state error: Tampilkan "Daftar Koreksi Cepat" */}
-          {hasErrors || testErrorMode ? (
+          {hasErrors ? (
             <div className="quick-corrections-card">
               <div className="corrections-header">
                 <h4 className="corrections-title">Daftar Koreksi Cepat</h4>
@@ -1073,14 +1083,6 @@ export default function ProductForm({
                   </div>
                 </div>
               </div>
-
-              <button
-                type="button"
-                className="btn-fill-valid-data"
-                onClick={handleFillValidSample}
-              >
-                <span>🪄</span> Isi Data Contoh yang Benar
-              </button>
             </div>
           ) : isEdit ? (
             /* Jika dalam state normal mode Ubah: Tampilkan "Riwayat Pembelian Grosir" */

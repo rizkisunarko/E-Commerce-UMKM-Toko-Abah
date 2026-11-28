@@ -300,6 +300,8 @@ const orders = [
   },
 ];
 const guestCarts = new Map();
+const productReviews = new Map();
+let nextReviewId = 1;
 
 const REQUIRED = 'Kolom ini wajib diisi';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
@@ -369,15 +371,97 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     if (query.kategori) rows = rows.filter((p) => p.kategori === query.kategori);
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 12;
-    const data = rows.slice((page - 1) * limit, page * limit).map((p) => ({
-      id: p.id,
-      nama: p.nama,
-      kategori: p.kategori,
-      harga: p.harga,
-      stok: p.stok,
-      tersedia: p.stok > 0,
-    }));
+    const data = rows.slice((page - 1) * limit, page * limit).map((p) => {
+      const revs = productReviews.get(p.id) || [];
+      const jumlahUlasan = revs.length;
+      const ratingRata = jumlahUlasan
+        ? Math.round((revs.reduce((s, r) => s + r.rating, 0) / jumlahUlasan) * 10) / 10
+        : null;
+      return {
+        id: p.id,
+        nama: p.nama,
+        kategori: p.kategori,
+        deskripsi: p.deskripsi || null,
+        harga: p.harga,
+        berat: p.berat,
+        foto_produk: p.foto_produk || null,
+        stok: p.stok,
+        tersedia: p.stok > 0,
+        terjual: p.terjual || 0,
+        rating_rata: ratingRata,
+        jumlah_ulasan: jumlahUlasan,
+      };
+    });
     return reply(200, { data, pagination: { page, limit, total: rows.length } });
+  }
+  const catalogReviewsMatch = path.match(/^\/catalog\/(\d+)\/reviews$/);
+  if (catalogReviewsMatch) {
+    const productId = Number(catalogReviewsMatch[1]);
+    const product = products.find((p) => p.id === productId && !p.archived_at);
+    if (!product) return reply(404, { message: 'Produk tidak ditemukan' });
+    const list = productReviews.get(productId) || [];
+    if (method === 'GET') {
+      const jumlahUlasan = list.length;
+      const ratingRata = jumlahUlasan
+        ? Math.round((list.reduce((s, r) => s + r.rating, 0) / jumlahUlasan) * 10) / 10
+        : null;
+      return reply(200, {
+        data: list,
+        ringkasan: { jumlah_ulasan: jumlahUlasan, rating_rata: ratingRata },
+      });
+    }
+    if (method === 'POST') {
+      const nama = typeof body?.nama_pengulas === 'string' ? body.nama_pengulas.trim() : '';
+      const komentar = typeof body?.komentar === 'string' ? body.komentar.trim() : '';
+      const rating = Number(body?.rating);
+      const nomorPesanan = typeof body?.nomor_pesanan === 'string' ? body.nomor_pesanan.trim() : '';
+      const errors = {};
+      if (!nama) errors.nama_pengulas = REQUIRED;
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5) errors.rating = 'Rating harus antara 1 sampai 5';
+      if (!komentar || komentar.length < 3) errors.komentar = 'Ulasan minimal 3 karakter';
+      if (Object.keys(errors).length) return reply(422, { message: 'Data ulasan tidak valid', errors });
+
+      let terverifikasi = false;
+      if (nomorPesanan) {
+        const order = orders.find(
+          (o) =>
+            o.nomor_pesanan === nomorPesanan
+            && o.status === 'Selesai'
+            && o.items.some((it) => it.product_id === productId),
+        );
+        if (!order) {
+          return reply(422, {
+            message: 'Data ulasan tidak valid',
+            errors: { nomor_pesanan: 'Nomor pesanan tidak ditemukan, belum selesai, atau tidak memuat produk ini' },
+          });
+        }
+        if (list.some((r) => r.nomor_pesanan === nomorPesanan)) {
+          return reply(422, {
+            message: 'Produk pada pesanan ini sudah pernah diulas',
+            errors: { nomor_pesanan: 'Produk pada pesanan ini sudah pernah diulas' },
+          });
+        }
+        terverifikasi = true;
+      }
+
+      const entry = {
+        id: nextReviewId++,
+        nama_pengulas: nama,
+        rating,
+        komentar,
+        terverifikasi,
+        nomor_pesanan: nomorPesanan || undefined,
+        created_at: now(),
+      };
+      const updated = [entry, ...list];
+      productReviews.set(productId, updated);
+      const jumlahUlasan = updated.length;
+      const ratingRata = Math.round((updated.reduce((s, r) => s + r.rating, 0) / jumlahUlasan) * 10) / 10;
+      return reply(201, {
+        data: entry,
+        ringkasan: { jumlah_ulasan: jumlahUlasan, rating_rata: ratingRata },
+      });
+    }
   }
   if (method === 'GET' && path === '/catalog/categories') return reply(200, { data: CATEGORIES });
   if (method === 'GET' && path === '/categories') return reply(200, { data: CATEGORIES });
@@ -638,6 +722,10 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       status: 'Menunggu Pembayaran',
       status_pembayaran: 'menunggu',
       tanggal,
+      batas_pembayaran: body.metode_pembayaran === 'cod'
+        ? null
+        : new Date(new Date(tanggal).getTime() + 24 * 3600 * 1000).toISOString(),
+      kedaluwarsa_pembayaran: false,
       nama_pemesan: nama,
       no_hp: hp,
       catatan: String(body.catatan || '').trim(),
@@ -661,11 +749,14 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     let order = orders.find((o) => o.nomor_pesanan === nomor);
     if (!order) {
       // Fallback pesanan default untuk preview
+      const fallbackNow = now();
       order = {
         id: 1,
         nomor_pesanan: nomor,
         status: 'Menunggu Pembayaran',
-        tanggal: now(),
+        tanggal: fallbackNow,
+        batas_pembayaran: new Date(new Date(fallbackNow).getTime() + 24 * 3600 * 1000).toISOString(),
+        kedaluwarsa_pembayaran: false,
         nama_pemesan: 'Ibu Rahmawati',
         no_hp: '081298765432',
         catatan: 'Tolong bungkus minyaknya rapat ya Abah.',
@@ -684,13 +775,45 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
         total: 121500,
       };
     }
-    return reply(200, { data: order });
+    if (
+      order.status === 'Menunggu Pembayaran'
+      && order.metode_pembayaran !== 'cod'
+      && order.status_pembayaran !== 'berhasil'
+      && Date.now() >= new Date(order.tanggal).getTime() + 24 * 3600 * 1000
+    ) {
+      order.status = 'Dibatalkan';
+      order.status_pembayaran = 'gagal';
+      order.kedaluwarsa_pembayaran = true;
+    }
+    return reply(200, {
+      data: {
+        ...order,
+        batas_pembayaran: order.metode_pembayaran === 'cod'
+          ? null
+          : (order.batas_pembayaran || new Date(new Date(order.tanggal).getTime() + 24 * 3600 * 1000).toISOString()),
+        kedaluwarsa_pembayaran: Boolean(order.kedaluwarsa_pembayaran),
+      },
+    });
   }
 
   const paymentMatch = path.match(/^\/orders\/([^/]+)\/(?:pembayaran|payment)$/);
   if (method === 'POST' && paymentMatch) {
     const nomor = decodeURIComponent(paymentMatch[1]);
     const found = orders.find((o) => o.nomor_pesanan === nomor);
+    if (
+      found
+      && found.status === 'Menunggu Pembayaran'
+      && found.metode_pembayaran !== 'cod'
+      && Date.now() >= new Date(found.tanggal).getTime() + 24 * 3600 * 1000
+    ) {
+      found.status = 'Dibatalkan';
+      found.status_pembayaran = 'gagal';
+      found.kedaluwarsa_pembayaran = true;
+      return reply(409, {
+        code: 'PAYMENT_EXPIRED',
+        message: 'Batas waktu pembayaran 24 jam telah berakhir. Pesanan dibatalkan otomatis, silakan checkout ulang.',
+      });
+    }
     return reply(201, {
       data: {
         snap_token: `mock-snap-token-${nomor}`,
@@ -981,6 +1104,11 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     });
   }
 
+  if (method === 'POST' && path === '/products/photo') {
+    if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
+    return reply(201, { data: { url: body?.url || '' } });
+  }
+
   if (method === 'POST' && path === '/products') {
     if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
     const errors = validateProduct(body, 'create');
@@ -989,9 +1117,11 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       id: nextId++,
       nama: String(body.nama).trim(),
       kategori: body.kategori,
+      deskripsi: body.deskripsi ? String(body.deskripsi).trim() : null,
       harga: Number(body.harga),
       berat: Number(body.berat),
       stok: Number(body.stok),
+      foto_produk: body.foto_produk || null,
       batas_stok_kritis: isBlank(body.batas_stok_kritis) ? 5 : Number(body.batas_stok_kritis),
       created_at: now(),
       updated_at: now(),
@@ -1017,8 +1147,12 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       Object.assign(product, {
         nama: String(body.nama).trim(),
         kategori: body.kategori,
+        ...(body.deskripsi !== undefined
+          ? { deskripsi: body.deskripsi ? String(body.deskripsi).trim() : null }
+          : {}),
         harga: Number(body.harga),
         berat: Number(body.berat),
+        ...(body.foto_produk !== undefined ? { foto_produk: body.foto_produk || null } : {}),
         batas_stok_kritis: isBlank(body.batas_stok_kritis) ? product.batas_stok_kritis : Number(body.batas_stok_kritis),
         updated_at: now(),
       });

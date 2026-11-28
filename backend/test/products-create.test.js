@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict');
 const { once } = require('node:events');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 const bcrypt = require('bcryptjs');
 const createApp = require('../src/app');
@@ -69,6 +72,8 @@ async function createFixture(t) {
   const transactionDetails = [];
   const purchaseDetails = [];
   const cartItems = [];
+  const transactions = [];
+  const reviews = [];
   const db = {
     async query(sql, params) {
       if (sql.includes('UNION ALL')) {
@@ -89,10 +94,50 @@ async function createFixture(t) {
         const product = products.find((item) => item.id === params[0]);
         return [product ? [{ jumlah_stok: product.stok }] : [], []];
       }
+      if (sql.includes('SELECT id_produk FROM produk WHERE id_produk = ? AND archived_at IS NULL')) {
+        const product = products.find((item) => item.id === params[0] && !item.archived_at);
+        return [product ? [{ id_produk: product.id }] : [], []];
+      }
       if (sql.includes('SELECT id_produk FROM produk WHERE id_produk = ?')) {
         return products.some((item) => item.id === params[0])
           ? [[{ id_produk: params[0] }], []]
           : [[], []];
+      }
+      if (sql.includes('FROM transaksi t') && sql.includes('t.kode_transaksi = ?')) {
+        const trx = transactions.find((t) =>
+          t.kode_transaksi === params[0]
+          && t.status_transaksi === 'selesai'
+          && transactionDetails.some((dt) => dt.id_transaksi === t.id_transaksi && dt.id_produk === params[1]));
+        return [trx ? [{ id_transaksi: trx.id_transaksi }] : [], []];
+      }
+      if (sql.includes('INSERT INTO ulasan_produk')) {
+        if (params[1] !== null && reviews.some((r) => r.id_transaksi === params[1] && r.id_produk === params[0])) {
+          const err = new Error('Duplicate entry');
+          err.code = 'ER_DUP_ENTRY';
+          throw err;
+        }
+        const entry = {
+          id: reviews.length + 1,
+          id_produk: params[0],
+          id_transaksi: params[1],
+          nama_pengulas: params[2],
+          rating: params[3],
+          komentar: params[4],
+          terverifikasi: params[5],
+          created_at: '2026-11-28T12:00:00.000Z',
+        };
+        reviews.unshift(entry);
+        return [{ insertId: entry.id }, []];
+      }
+      if (sql.includes('FROM ulasan_produk') && sql.includes('ROUND(AVG(rating), 1)')) {
+        const matched = reviews.filter((r) => r.id_produk === params[0]);
+        const count = matched.length;
+        const avg = count ? Math.round((matched.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10 : null;
+        return [[{ jumlah_ulasan: count, rating_rata: avg }], []];
+      }
+      if (sql.includes('FROM ulasan_produk')) {
+        const matched = reviews.filter((r) => r.id_produk === params[0]);
+        return [matched, []];
       }
       if (sql.includes('AS has_sales') && sql.includes('FOR UPDATE')) {
         const product = products.find((item) => item.id === params[0]);
@@ -129,26 +174,30 @@ async function createFixture(t) {
         const newProduct = {
           id: Math.max(...products.map((product) => product.id)) + 1,
           nama: params[2],
-          harga: params[4],
-          harga_beli: params[3],
-          satuan: params[5],
-          stok: params[7],
-          batas_stok_kritis: params[8],
+          deskripsi: params[3] ?? null,
+          harga: params[5],
+          harga_beli: params[4],
+          satuan: params[6],
+          foto_produk: params[7] ?? null,
+          stok: params[9],
+          batas_stok_kritis: params[10],
           kategori: 'Minuman',
         };
         products.push(newProduct);
         return [{ insertId: newProduct.id }, []];
       }
       if (sql.trimStart().startsWith('UPDATE produk')) {
-        const product = products.find((item) => item.id === params[9]);
+        const product = products.find((item) => item.id === params[13]);
         if (product) {
           Object.assign(product, {
             nama: params[1],
             harga: params[2],
             harga_beli: params[3] ?? product.harga_beli,
             satuan: params[4],
-            batas_stok_kritis: params[5] ?? product.batas_stok_kritis,
-            stok: params[6] ?? product.stok,
+            deskripsi: params[5] === 1 ? params[6] : product.deskripsi,
+            foto_produk: params[7] === 1 ? params[8] : product.foto_produk,
+            batas_stok_kritis: params[9] ?? product.batas_stok_kritis,
+            stok: params[10] ?? product.stok,
           });
         }
         return [{ affectedRows: product ? 1 : 0 }, []];
@@ -211,17 +260,24 @@ async function createFixture(t) {
     release() {},
   });
 
-  const server = createApp({ db, jwtSecret: JWT_SECRET }).listen(0);
+  const uploadDir = await fs.mkdtemp(path.join(os.tmpdir(), 'toko-abah-upload-'));
+  const server = createApp({ db, jwtSecret: JWT_SECRET, uploadDir }).listen(0);
   await once(server, 'listening');
-  t.after(() => new Promise((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  }));
+  t.after(async () => {
+    await new Promise((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    await fs.rm(uploadDir, { recursive: true, force: true });
+  });
   return {
     baseUrl: `http://127.0.0.1:${server.address().port}/api`,
+    serverOrigin: `http://127.0.0.1:${server.address().port}`,
     stockHistory,
     transactionDetails,
     purchaseDetails,
     cartItems,
+    transactions,
+    reviews,
     products,
   };
 }
@@ -581,4 +637,234 @@ test('DELETE /api/products/:id: hapus produk tanpa riwayat, arsipkan produk yang
     headers,
   });
   assert.equal(missingResponse.status, 404);
+});
+
+test('POST /api/products/photo dan foto_produk: upload, validasi, dan penyimpanan', async (t) => {
+  const invalidUrl = validateProduct({
+    nama: 'Kopi ABC',
+    kategori: 'Minuman',
+    harga: 2000,
+    berat: 25,
+    stok: 10,
+    foto_produk: 'javascript:alert(1)',
+  });
+  assert.ok(invalidUrl.errors.foto_produk);
+
+  const { baseUrl, serverOrigin } = await createFixture(t);
+  const loginPegawai = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'pegawai', password: 'employee-pass' }),
+  });
+  const pegawaiToken = (await loginPegawai.json()).token;
+
+  const loginAdmin = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'admin-pass' }),
+  });
+  const adminToken = (await loginAdmin.json()).token;
+
+  const validPng = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  ]);
+
+  const noTokenRes = await fetch(`${baseUrl}/products/photo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'image/png' },
+    body: validPng,
+  });
+  assert.equal(noTokenRes.status, 401);
+
+  const pegawaiRes = await fetch(`${baseUrl}/products/photo`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'image/png',
+      Authorization: `Bearer ${pegawaiToken}`,
+    },
+    body: validPng,
+  });
+  assert.equal(pegawaiRes.status, 403);
+
+  const spoofedRes = await fetch(`${baseUrl}/products/photo`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'image/png',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: Buffer.from('<script>alert(1)</script>'),
+  });
+  assert.equal(spoofedRes.status, 422);
+
+  const uploadRes = await fetch(`${baseUrl}/products/photo`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'image/png',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: validPng,
+  });
+  assert.equal(uploadRes.status, 201);
+  const uploadedUrl = (await uploadRes.json()).data.url;
+  assert.match(uploadedUrl, /^\/uploads\/products\/prd-.*\.png$/);
+
+  const staticRes = await fetch(`${serverOrigin}${uploadedUrl}`);
+  assert.equal(staticRes.status, 200);
+  assert.equal(staticRes.headers.get('cross-origin-resource-policy'), 'cross-origin');
+
+  const createRes = await fetch(`${baseUrl}/products`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({
+      nama: 'Kopi ABC Susu',
+      kategori: 'Minuman',
+      harga: 2000,
+      berat: 30,
+      stok: 20,
+      foto_produk: uploadedUrl,
+    }),
+  });
+  assert.equal(createRes.status, 201);
+  const created = (await createRes.json()).data;
+  assert.equal(created.foto_produk, uploadedUrl);
+
+  const preserveRes = await fetch(`${baseUrl}/products/${created.id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({
+      nama: 'Kopi ABC Susu 30g',
+      kategori: 'Minuman',
+      harga: 2500,
+      berat: 30,
+    }),
+  });
+  assert.equal(preserveRes.status, 200);
+  assert.equal((await preserveRes.json()).data.foto_produk, uploadedUrl);
+
+  const clearRes = await fetch(`${baseUrl}/products/${created.id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({
+      nama: 'Kopi ABC Susu 30g',
+      kategori: 'Minuman',
+      harga: 2500,
+      berat: 30,
+      foto_produk: null,
+    }),
+  });
+  assert.equal(clearRes.status, 200);
+  assert.equal((await clearRes.json()).data.foto_produk, null);
+});
+
+test('deskripsi produk dan ulasan pelanggan (/api/catalog/:id/reviews)', async (t) => {
+  const longDesc = validateProduct({
+    nama: 'Tepung Segitiga',
+    kategori: 'Minuman',
+    harga: 12000,
+    berat: 1000,
+    stok: 10,
+    deskripsi: 'a'.repeat(1001),
+  });
+  assert.ok(longDesc.errors.deskripsi);
+
+  const { baseUrl, transactions, transactionDetails } = await createFixture(t);
+  const loginAdmin = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'admin-pass' }),
+  });
+  const adminToken = (await loginAdmin.json()).token;
+
+  const createRes = await fetch(`${baseUrl}/products`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({
+      nama: 'Tepung Terigu 1 kg',
+      kategori: 'Minuman',
+      harga: 14000,
+      berat: 1000,
+      stok: 15,
+      deskripsi: 'Tepung serbaguna kemasan 1 kg.',
+    }),
+  });
+  assert.equal(createRes.status, 201);
+  const created = (await createRes.json()).data;
+  assert.equal(created.deskripsi, 'Tepung serbaguna kemasan 1 kg.');
+
+  const emptyReviewsRes = await fetch(`${baseUrl}/catalog/${created.id}/reviews`);
+  assert.equal(emptyReviewsRes.status, 200);
+  const emptyReviews = await emptyReviewsRes.json();
+  assert.deepEqual(emptyReviews.data, []);
+  assert.equal(emptyReviews.ringkasan.jumlah_ulasan, 0);
+  assert.equal(emptyReviews.ringkasan.rating_rata, null);
+
+  const invalidReviewRes = await fetch(`${baseUrl}/catalog/${created.id}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nama_pengulas: '', rating: 6, komentar: 'ok' }),
+  });
+  assert.equal(invalidReviewRes.status, 422);
+
+  const guestReviewRes = await fetch(`${baseUrl}/catalog/${created.id}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nama_pengulas: 'Ibu Sari',
+      rating: 4,
+      komentar: 'Kemasan rapi dan pengiriman cepat.',
+    }),
+  });
+  assert.equal(guestReviewRes.status, 201);
+  const guestReview = await guestReviewRes.json();
+  assert.equal(guestReview.data.terverifikasi, false);
+  assert.equal(guestReview.ringkasan.jumlah_ulasan, 1);
+  assert.equal(guestReview.ringkasan.rating_rata, 4);
+
+  transactions.push({
+    id_transaksi: 501,
+    kode_transaksi: 'TA-20261128-0501',
+    status_transaksi: 'selesai',
+  });
+  transactionDetails.push({ id_transaksi: 501, id_produk: created.id });
+
+  const verifiedReviewRes = await fetch(`${baseUrl}/catalog/${created.id}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nama_pengulas: 'Pak Budi',
+      rating: 5,
+      komentar: 'Tepung halus dan berkualitas.',
+      nomor_pesanan: 'TA-20261128-0501',
+    }),
+  });
+  assert.equal(verifiedReviewRes.status, 201);
+  const verifiedReview = await verifiedReviewRes.json();
+  assert.equal(verifiedReview.data.terverifikasi, true);
+  assert.equal(verifiedReview.ringkasan.jumlah_ulasan, 2);
+  assert.equal(verifiedReview.ringkasan.rating_rata, 4.5);
+
+  const dupVerifiedRes = await fetch(`${baseUrl}/catalog/${created.id}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nama_pengulas: 'Pak Budi',
+      rating: 5,
+      komentar: 'Ulasan ganda.',
+      nomor_pesanan: 'TA-20261128-0501',
+    }),
+  });
+  assert.equal(dupVerifiedRes.status, 422);
 });

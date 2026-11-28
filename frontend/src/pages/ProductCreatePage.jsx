@@ -36,6 +36,7 @@ export default function ProductCreatePage() {
       harga: Number(values.harga),
       berat: Number(values.berat),
       stok: Number(values.stok),
+      deskripsi: values.deskripsi?.trim() || null,
     };
 
     if (values.batas_stok_kritis !== '' && values.batas_stok_kritis !== null && values.batas_stok_kritis !== undefined) {
@@ -43,6 +44,13 @@ export default function ProductCreatePage() {
     }
 
     try {
+      if (values.photoFile) {
+        const uploaded = await productService.uploadPhoto(values.photoFile);
+        if (uploaded?.data?.url) {
+          payload.foto_produk = uploaded.data.url;
+        }
+      }
+
       const res = await productService.create(payload);
       const namaProduk = res?.data?.nama || payload.nama;
       navigate('/produk', {

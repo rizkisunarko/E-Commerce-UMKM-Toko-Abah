@@ -13,6 +13,19 @@ const INVALID_NUMBER = 'Masukkan angka yang valid';
 
 const isBlank = (v) => v === undefined || v === null || String(v).trim() === '';
 
+function isValidProductPhoto(value) {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 255) return false;
+  if (/^\/uploads\/products\/[a-zA-Z0-9._-]+$/.test(trimmed)) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 // Mengembalikan { errors, values }. errors kosong berarti data valid.
 function validateProduct(body = {}, mode = 'create') {
   const errors = {};
@@ -53,6 +66,31 @@ function validateProduct(body = {}, mode = 'create') {
     errors.harga_beli = INVALID_NUMBER;
   }
 
+  let fotoProduk;
+  if (body.foto_produk !== undefined) {
+    if (body.foto_produk === null || String(body.foto_produk).trim() === '') {
+      fotoProduk = null;
+    } else if (!isValidProductPhoto(body.foto_produk)) {
+      errors.foto_produk = 'URL atau path foto produk tidak valid';
+    } else {
+      fotoProduk = String(body.foto_produk).trim();
+    }
+  }
+
+  let deskripsi;
+  if (body.deskripsi !== undefined) {
+    if (body.deskripsi === null || String(body.deskripsi).trim() === '') {
+      deskripsi = null;
+    } else {
+      const trimmedDesc = String(body.deskripsi).trim();
+      if (trimmedDesc.length > 1000) {
+        errors.deskripsi = 'Deskripsi maksimal 1000 karakter';
+      } else {
+        deskripsi = trimmedDesc;
+      }
+    }
+  }
+
   return {
     errors,
     values: {
@@ -64,6 +102,8 @@ function validateProduct(body = {}, mode = 'create') {
       stok: mode === 'create' || (mode === 'update' && !isBlank(body.stok)) ? stok : undefined,
       batas_stok_kritis: batas,
       satuan: body.satuan ? String(body.satuan).trim() : `${berat} g`,
+      foto_produk: fotoProduk,
+      deskripsi,
     },
   };
 }

@@ -14,5 +14,7 @@ export const catalogService = {
   // params: { search, kategori, page, limit }
   list: (params) => api.get(`/catalog${toQuery(params)}`),
   categories: () => api.get('/catalog/categories'),
+  reviews: (productId) => api.get(`/catalog/${productId}/reviews`),
+  addReview: (productId, payload) => api.post(`/catalog/${productId}/reviews`, payload),
 };
 

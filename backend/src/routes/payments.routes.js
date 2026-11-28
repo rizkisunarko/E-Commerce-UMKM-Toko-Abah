@@ -1,4 +1,8 @@
 const express = require('express');
+const {
+  isOrderPaymentExpired,
+  expireOrderInTransaction,
+} = require('../utils/orderExpiration');
 
 function amountInCents(value) {
   if (typeof value !== 'string' || !/^\d+(?:\.\d{1,2})?$/.test(value)) return null;
@@ -59,8 +63,9 @@ function createPaymentsRoutes(db, paymentClient) {
       transactionStarted = true;
 
       const [rows] = await connection.query(
-        `SELECT p.id_pembayaran, p.id_transaksi, p.status_pembayaran,
-                p.jumlah_bayar, t.status_transaksi, t.kode_transaksi, t.stock_reserved
+        `SELECT p.id_pembayaran, p.id_transaksi, p.status_pembayaran, p.metode_pembayaran,
+                p.jumlah_bayar, t.status_transaksi, t.kode_transaksi, t.stock_reserved,
+                t.tanggal_transaksi
          FROM pembayaran p
          JOIN transaksi t ON t.id_transaksi = p.id_transaksi
          WHERE p.kode_referensi = ? AND t.jenis_transaksi = 'online'
@@ -157,11 +162,15 @@ function createPaymentsRoutes(db, paymentClient) {
             [stockReservedNow ? 1 : 0, payment.id_transaksi],
           );
         } else if (status === 'gagal') {
-          await connection.query(
-            `UPDATE pembayaran SET status_pembayaran = 'gagal'
-             WHERE id_pembayaran = ? AND status_pembayaran = 'menunggu'`,
-            [payment.id_pembayaran],
-          );
+          if (notification.transaction_status === 'expire' || isOrderPaymentExpired(payment)) {
+            await expireOrderInTransaction(connection, payment, { force: true });
+          } else {
+            await connection.query(
+              `UPDATE pembayaran SET status_pembayaran = 'gagal'
+               WHERE id_pembayaran = ? AND status_pembayaran = 'menunggu'`,
+              [payment.id_pembayaran],
+            );
+          }
         }
       }
 

@@ -1,27 +1,49 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 import { orderService, normalizePaymentStatus } from '../services/orderService';
+import { catalogService } from '../services/catalogService';
 import { loadMidtransSnap } from '../services/midtrans';
 import { formatRupiah } from '../utils/format';
+import { getProductImage } from '../utils/productImage';
+import { saveOrderToHistory } from '../utils/orderHistory';
 import QrisModal from '../components/QrisModal';
 import './OrderPage.css';
 
-import berasImg from '../assets/Beras.jpg';
-import minyakImg from '../assets/Minyak-Goreng.jpg';
-import gulaImg from '../assets/Gula-Pasir.jpg';
-import telurImg from '../assets/Telur Ayam.jpg';
-import mieImg from '../assets/Mie-Instan.jpg';
-import kopiImg from '../assets/Kopi-Sachet.jpg';
+const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-function getProductThumbnail(nama = '') {
-  const n = (nama || '').toLowerCase();
-  if (n.includes('beras')) return berasImg;
-  if (n.includes('minyak')) return minyakImg;
-  if (n.includes('gula')) return gulaImg;
-  if (n.includes('telur')) return telurImg;
-  if (n.includes('mie') || n.includes('sedap') || n.includes('indomie')) return mieImg;
-  if (n.includes('kopi') || n.includes('kapal')) return kopiImg;
-  return null;
+function formatCountdown(totalSeconds) {
+  const s = Math.max(0, Number(totalSeconds) || 0);
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  return [hours, minutes, seconds].map((v) => String(v).padStart(2, '0')).join(':');
+}
+
+function getDeadlineIso(order) {
+  if (!order || order.metode_pembayaran === 'cod') return null;
+  if (order.batas_pembayaran) return order.batas_pembayaran;
+  if (!order.tanggal) return null;
+  const createdMs = new Date(order.tanggal).getTime();
+  return Number.isFinite(createdMs) ? new Date(createdMs + PAYMENT_WINDOW_MS).toISOString() : null;
+}
+
+function getOrderStatusBadgeClass(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'dibayar') return 'order-badge-dibayar';
+  if (s === 'diproses') return 'order-badge-diproses';
+  if (s.includes('siap')) return 'order-badge-siap';
+  if (s === 'selesai') return 'order-badge-paid';
+  if (s.includes('batal')) return 'order-badge-batal';
+  return 'order-badge-pending';
+}
+
+function resolveDisplayOrderStatus(order) {
+  if (!order) return 'Menunggu Pembayaran';
+  if (order.status === 'Siap Diambil/Dikirim') {
+    return order.metode_penerimaan === 'kurir' ? 'Siap Dikirim' : 'Siap Diambil';
+  }
+  return order.status || 'Menunggu Pembayaran';
 }
 
 function getOrderStatusDetails(order, isPaid) {
@@ -111,14 +133,28 @@ function getOrderStatusDetails(order, isPaid) {
 
 export default function OrderPage() {
   const { nomor } = useParams();
+  const navigate = useNavigate();
+  const { addItem } = useCart();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [errorType, setErrorType] = useState('fetch_error');
+  const [reloadCount, setReloadCount] = useState(0);
   const [copied, setCopied] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState('');
+  const [reviewTargetId, setReviewTargetId] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewedProductIds, setReviewedProductIds] = useState([]);
+  const [remainingSeconds, setRemainingSeconds] = useState(null);
+
+  const deadlineIso = getDeadlineIso(order);
+  const deadlineMs = deadlineIso ? new Date(deadlineIso).getTime() : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -131,45 +167,33 @@ export default function OrderPage() {
         if (!cancelled) {
           if (res.data) {
             setOrder(res.data);
+            saveOrderToHistory(res.data);
             const normalized = normalizePaymentStatus(res.data.status_pembayaran);
             const lunas = normalized === 'dibayar' ||
+                          res.data.status === 'Dibayar' ||
                           res.data.status === 'Diproses' ||
                           res.data.status === 'Siap Diambil' ||
                           res.data.status === 'Siap Dikirim' ||
+                          res.data.status === 'Siap Diambil/Dikirim' ||
                           res.data.status === 'Selesai';
             setIsPaid(lunas);
           } else {
+            setErrorType('not_found');
             setError('Pesanan tidak ditemukan');
           }
           setLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
-          // Fallback realistis sesuai rancangan UAS Toko Abah
-          setOrder({
-            id: 1,
-            nomor_pesanan: nomor || 'TA-20261115-001',
-            status: 'Menunggu Pembayaran',
-            status_pembayaran: 'menunggu',
-            tanggal: new Date().toISOString(),
-            nama_pemesan: 'Ibu Rahmawati',
-            no_hp: '0812-9876-5432',
-            catatan: '-',
-            metode_penerimaan: 'ambil_di_toko',
-            metode_pembayaran: 'midtrans',
-            alamat_lengkap: '',
-            wilayah: '',
-            items: [
-              { product_id: 1, nama: 'Beras Ramos Setra 5 kg', harga: 74000, jumlah: 1, subtotal: 74000 },
-              { product_id: 2, nama: 'Minyak Goreng Sawit 2 L', harga: 36000, jumlah: 1, subtotal: 36000 },
-              { product_id: 3, nama: 'Gula Pasir Tebu 1 kg', harga: 17500, jumlah: 1, subtotal: 17500 },
-            ],
-            subtotal: 127500,
-            ongkir: 0,
-            diskon: 0,
-            total: 127500,
-          });
+          setOrder(null);
+          if (err?.status === 404) {
+            setErrorType('not_found');
+            setError('Pesanan tidak ditemukan');
+          } else {
+            setErrorType('fetch_error');
+            setError(err?.message || 'Gagal memuat pesanan');
+          }
           setLoading(false);
         }
       });
@@ -177,24 +201,28 @@ export default function OrderPage() {
     return () => {
       cancelled = true;
     };
-  }, [nomor]);
+  }, [nomor, reloadCount]);
 
-  // Polling status otomatis setiap 3 detik saat pesanan belum lunas
+  // Polling status otomatis setiap 3 detik saat pesanan masih menunggu pembayaran
   useEffect(() => {
-    if (!order || isPaid || order.metode_pembayaran === 'cod') return;
+    if (!order || isPaid || order.metode_pembayaran === 'cod' || order.status === 'Dibatalkan' || order.status === 'Selesai') {
+      return undefined;
+    }
     const interval = setInterval(() => {
       orderService
         .get(nomor)
         .then((res) => {
           if (!res.data) return;
+          setOrder(res.data);
           const normalized = normalizePaymentStatus(res.data.status_pembayaran);
           const lunas = normalized === 'dibayar' ||
+                        res.data.status === 'Dibayar' ||
                         res.data.status === 'Diproses' ||
                         res.data.status === 'Siap Diambil' ||
                         res.data.status === 'Siap Dikirim' ||
+                        res.data.status === 'Siap Diambil/Dikirim' ||
                         res.data.status === 'Selesai';
           if (lunas) {
-            setOrder(res.data);
             setIsPaid(true);
           }
         })
@@ -223,7 +251,7 @@ export default function OrderPage() {
     });
   }
 
-  function refreshOrderStatus() {
+  const refreshOrderStatus = useCallback(() => {
     orderService
       .get(nomor)
       .then((res) => {
@@ -231,14 +259,44 @@ export default function OrderPage() {
         setOrder(res.data);
         const normalized = normalizePaymentStatus(res.data.status_pembayaran);
         const lunas = normalized === 'dibayar' ||
+                      res.data.status === 'Dibayar' ||
                       res.data.status === 'Diproses' ||
                       res.data.status === 'Siap Diambil' ||
                       res.data.status === 'Siap Dikirim' ||
+                      res.data.status === 'Siap Diambil/Dikirim' ||
                       res.data.status === 'Selesai';
         setIsPaid(lunas);
       })
       .catch(() => {});
-  }
+  }, [nomor]);
+
+  // Hitung mundur batas waktu pembayaran 24 jam dan otomatis segarkan saat habis
+  useEffect(() => {
+    if (
+      !order
+      || isPaid
+      || order.metode_pembayaran === 'cod'
+      || order.status !== 'Menunggu Pembayaran'
+      || !deadlineMs
+    ) {
+      setRemainingSeconds(null);
+      return undefined;
+    }
+
+    let triggeredExpire = false;
+    const tick = () => {
+      const diffSec = Math.max(0, Math.floor((deadlineMs - Date.now()) / 1000));
+      setRemainingSeconds(diffSec);
+      if (diffSec === 0 && !triggeredExpire) {
+        triggeredExpire = true;
+        refreshOrderStatus();
+      }
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [order, isPaid, deadlineMs, refreshOrderStatus]);
 
   async function handlePayWithSnap() {
     if (!order?.nomor_pesanan) return;
@@ -285,10 +343,34 @@ export default function OrderPage() {
         },
       });
     } catch (err) {
+      if (err.status === 409) {
+        refreshOrderStatus();
+      }
       setPayError(err.message || 'Gagal memproses pembayaran. Coba beberapa saat lagi.');
     } finally {
       setPayLoading(false);
     }
+  }
+
+  function handleReCheckout() {
+    if (!order?.items?.length) {
+      navigate('/katalog');
+      return;
+    }
+    for (const it of order.items) {
+      if (!it.product_id) continue;
+      addItem(
+        {
+          id: it.product_id,
+          nama: it.nama,
+          harga: Number(it.harga),
+          stok: Math.max(1, Number(it.jumlah) || 1),
+          ...(it.foto_produk ? { foto_produk: it.foto_produk } : {}),
+        },
+        Number(it.jumlah) || 1,
+      );
+    }
+    navigate('/checkout');
   }
 
   if (loading) {
@@ -303,6 +385,7 @@ export default function OrderPage() {
   }
 
   if (error || !order) {
+    const isNotFound = errorType === 'not_found';
     return (
       <div className="order-success-page">
         <div className="order-state-card error" role="alert">
@@ -313,11 +396,28 @@ export default function OrderPage() {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h2 className="order-state-error-title">Pesanan tidak ditemukan</h2>
-          <p className="order-state-error-sub">Nomor pesanan yang Anda tuju belum terdaftar di sistem.</p>
-          <Link to="/katalog" className="order-copy-btn" style={{ textDecoration: 'none' }}>
-            <span>Kembali ke Katalog</span>
-          </Link>
+          <h2 className="order-state-error-title">
+            {isNotFound ? 'Pesanan tidak ditemukan' : 'Gagal memuat pesanan'}
+          </h2>
+          <p className="order-state-error-sub">
+            {isNotFound
+              ? 'Nomor pesanan yang Anda tuju belum terdaftar di sistem.'
+              : error}
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {!isNotFound && (
+              <button
+                type="button"
+                className="order-copy-btn"
+                onClick={() => setReloadCount((c) => c + 1)}
+              >
+                <span>Coba Lagi</span>
+              </button>
+            )}
+            <Link to="/katalog" className="order-copy-btn" style={{ textDecoration: 'none' }}>
+              <span>Kembali ke Katalog</span>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -332,6 +432,24 @@ export default function OrderPage() {
     minute: '2-digit',
   }) + ' WIB';
 
+  const deadlineFormatted = deadlineMs
+    ? new Date(deadlineMs).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }) + ' WIB'
+    : null;
+
+  const isExpiredCancelled =
+    order.status === 'Dibatalkan'
+    && (
+      order.kedaluwarsa_pembayaran
+      || (order.metode_pembayaran !== 'cod'
+        && (order.status_pembayaran === 'gagal' || (deadlineMs !== null && Date.now() >= deadlineMs)))
+    );
+
   const waNumber = '6285708350575';
   const waMessage = `Halo Toko Abah, pesanan saya nomor ${order.nomor_pesanan} sudah dibuat.`;
   const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
@@ -344,14 +462,28 @@ export default function OrderPage() {
       <main className="order-success-container">
         {/* Hero / Status Header */}
         <div className="order-hero">
-          <div className="order-hero-icon-circle">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="8 12 11 15 16 9" />
-            </svg>
+          <div className={`order-hero-icon-circle${isExpiredCancelled ? ' expired' : ''}`}>
+            {isExpiredCancelled ? (
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            ) : (
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="8 12 11 15 16 9" />
+              </svg>
+            )}
           </div>
-          <h1 className="order-hero-title">{statusDetails.title}</h1>
-          <p className="order-hero-subtitle">{statusDetails.description}</p>
+          <h1 className="order-hero-title">
+            {isExpiredCancelled ? 'Pesanan Dibatalkan Otomatis' : statusDetails.title}
+          </h1>
+          <p className="order-hero-subtitle">
+            {isExpiredCancelled
+              ? 'Batas waktu pembayaran 24 jam telah berakhir. Silakan lakukan checkout ulang.'
+              : statusDetails.description}
+          </p>
         </div>
 
         {/* Card: Lacak Pengiriman & Status Pesanan */}
@@ -364,7 +496,7 @@ export default function OrderPage() {
                 <circle cx="5.5" cy="18.5" r="2.5" />
                 <circle cx="18.5" cy="18.5" r="2.5" />
               </svg>
-              <span>Pelacakan Status & Pengiriman Barang</span>
+              <span>Pelacakan Status &amp; Pengiriman Barang</span>
             </span>
             <span className={statusDetails.badgeClass}>
               <span>{statusDetails.badgeLabel}</span>
@@ -435,8 +567,14 @@ export default function OrderPage() {
               )}
             </span>
             <div className="order-status-banner-text">
-              <h4 className="order-status-banner-title">{statusDetails.title}</h4>
-              <p className="order-status-banner-desc">{statusDetails.description}</p>
+              <h4 className="order-status-banner-title">
+                {isExpiredCancelled ? 'Pesanan Dibatalkan Otomatis' : statusDetails.title}
+              </h4>
+              <p className="order-status-banner-desc">
+                {isExpiredCancelled
+                  ? 'Batas waktu pembayaran 24 jam telah berakhir. Silakan lakukan checkout ulang.'
+                  : statusDetails.description}
+              </p>
             </div>
           </div>
         </div>
@@ -495,11 +633,17 @@ export default function OrderPage() {
               <dl className="order-dl">
                 <div className="order-dl-row">
                   <dt className="order-dl-dt">Nama</dt>
-                  <dd className="order-dl-dd">{order.nama_pemesan || 'Ibu Rahmawati'}</dd>
+                  <dd className="order-dl-dd">{order.nama_pemesan || '-'}</dd>
                 </div>
                 <div className="order-dl-row">
                   <dt className="order-dl-dt">Nomor HP</dt>
-                  <dd className="order-dl-dd">{order.no_hp || '0812-9876-5432'}</dd>
+                  <dd className="order-dl-dd">{order.no_hp || '-'}</dd>
+                </div>
+                <div className="order-dl-row">
+                  <dt className="order-dl-dt">Status Pembayaran</dt>
+                  <dd className="order-dl-dd">
+                    {isPaid ? 'Dibayar' : order.status === 'Dibatalkan' ? 'Dibatalkan' : 'Menunggu Pembayaran'}
+                  </dd>
                 </div>
                 <div className="order-dl-row">
                   <dt className="order-dl-dt">Catatan</dt>
@@ -529,6 +673,12 @@ export default function OrderPage() {
                   <dt className="order-dl-dt">Waktu Pesanan</dt>
                   <dd className="order-dl-dd">{dateFormatted}</dd>
                 </div>
+                {order.metode_pembayaran !== 'cod' && deadlineFormatted && (
+                  <div className="order-dl-row">
+                    <dt className="order-dl-dt">Batas Pembayaran</dt>
+                    <dd className="order-dl-dd">{deadlineFormatted}</dd>
+                  </div>
+                )}
               </dl>
             </div>
           </div>
@@ -551,7 +701,7 @@ export default function OrderPage() {
               {/* Items List */}
               <div className="order-items-list">
                 {(order.items || []).map((it, idx) => {
-                  const thumb = getProductThumbnail(it.nama);
+                  const thumb = getProductImage(it);
                   return (
                     <div key={it.product_id || idx} className="order-item-row">
                       <div className="order-item-thumb">
@@ -571,6 +721,26 @@ export default function OrderPage() {
                         <p className="order-item-sub">
                           {it.jumlah} x {formatRupiah(it.harga)}
                         </p>
+                        {order.status === 'Selesai' && it.product_id && (
+                          <div className="order-item-review-action">
+                            {reviewedProductIds.includes(it.product_id) ? (
+                              <span className="order-item-reviewed-badge">✓ Sudah Diulas</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="order-item-review-btn"
+                                onClick={() => {
+                                  setReviewTargetId(reviewTargetId === it.product_id ? null : it.product_id);
+                                  setReviewRating(5);
+                                  setReviewComment('');
+                                  setReviewError('');
+                                }}
+                              >
+                                {reviewTargetId === it.product_id ? 'Batal Ulas' : '★ Beri Ulasan'}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <span className="order-item-total">
                         {formatRupiah(it.subtotal || it.harga * it.jumlah)}
@@ -579,6 +749,79 @@ export default function OrderPage() {
                   );
                 })}
               </div>
+
+              {order.status === 'Selesai' && reviewTargetId && (
+                <form
+                  className="order-review-box"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setReviewSubmitting(true);
+                    setReviewError('');
+                    try {
+                      await catalogService.addReview(reviewTargetId, {
+                        nama_pengulas: order.nama_pemesan || 'Pelanggan',
+                        rating: reviewRating,
+                        komentar: reviewComment.trim(),
+                        nomor_pesanan: order.nomor_pesanan,
+                      });
+                      setReviewedProductIds((prev) => [...prev, reviewTargetId]);
+                      setReviewTargetId(null);
+                      setReviewComment('');
+                    } catch (err) {
+                      const msg = err.errors ? Object.values(err.errors)[0] : '';
+                      if ((msg || err.message || '').includes('sudah pernah diulas')) {
+                        setReviewedProductIds((prev) => [...prev, reviewTargetId]);
+                        setReviewTargetId(null);
+                      } else {
+                        setReviewError(msg || err.message || 'Gagal mengirim ulasan');
+                      }
+                    } finally {
+                      setReviewSubmitting(false);
+                    }
+                  }}
+                >
+                  <div className="order-review-top">
+                    <span className="order-review-title">
+                      Beri Ulasan untuk {(order.items || []).find((x) => x.product_id === reviewTargetId)?.nama}
+                    </span>
+                    <div className="order-review-stars">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className="order-review-star-btn"
+                          onClick={() => setReviewRating(s)}
+                          aria-label={`${s} bintang`}
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill={s <= reviewRating ? '#f59e0b' : 'none'}
+                            stroke="#f59e0b"
+                            strokeWidth="1.8"
+                          >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    rows={2}
+                    required
+                    maxLength={500}
+                    className="order-review-textarea"
+                    placeholder="Tulis ulasan Anda tentang produk ini..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                  />
+                  {reviewError && <p className="order-review-error">{reviewError}</p>}
+                  <button type="submit" className="order-review-submit" disabled={reviewSubmitting}>
+                    {reviewSubmitting ? 'Mengirim...' : 'Kirim Ulasan'}
+                  </button>
+                </form>
+              )}
 
               {/* Divider */}
               <div className="order-divider" />
@@ -625,7 +868,29 @@ export default function OrderPage() {
               <div className="order-actions-stack">
                 {/* Pay Button / Status */}
                 <div>
-                  {isPaid ? (
+                  {order.status === 'Dibatalkan' ? (
+                    isExpiredCancelled ? (
+                      <div className="order-expired-banner" role="alert">
+                        <div className="order-expired-title">
+                          Batas Waktu Pembayaran 24 Jam Berakhir
+                        </div>
+                        <p className="order-expired-desc">
+                          Pesanan belum dibayar melewati batas 24 jam sehingga dibatalkan otomatis dan stok barang sudah dikembalikan. Silakan checkout ulang.
+                        </p>
+                        <button
+                          type="button"
+                          className="order-btn-recheckout"
+                          onClick={handleReCheckout}
+                        >
+                          Checkout Ulang Sekarang
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="order-badge-batal" style={{ padding: '12px 16px', borderRadius: '8px', justifyContent: 'center', width: '100%' }}>
+                        <span>Pesanan Dibatalkan</span>
+                      </div>
+                    )
+                  ) : isPaid ? (
                     <div className="order-btn-paid-done">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
@@ -643,6 +908,17 @@ export default function OrderPage() {
                     </div>
                   ) : (
                     <>
+                      {remainingSeconds !== null && (
+                        <div className="order-deadline-box" role="status">
+                          <div className="order-deadline-row">
+                            <span className="order-deadline-label">Batas Waktu Pembayaran (24 Jam)</span>
+                            <span className="order-deadline-timer">{formatCountdown(remainingSeconds)}</span>
+                          </div>
+                          <p className="order-deadline-sub">
+                            Selesaikan pembayaran sebelum <strong>{deadlineFormatted}</strong>. Jika melebihi 24 jam, pesanan otomatis dibatalkan.
+                          </p>
+                        </div>
+                      )}
                       <button
                         type="button"
                         className="order-btn-pay-active"
@@ -707,6 +983,7 @@ export default function OrderPage() {
         onClose={() => setIsQrisModalOpen(false)}
         total={order.total || 127500}
         orderId={order.nomor_pesanan || nomor || 'TA-20261115-001'}
+        deadline={deadlineIso}
         onPaymentSuccess={handlePaymentSuccess}
       />
     </div>

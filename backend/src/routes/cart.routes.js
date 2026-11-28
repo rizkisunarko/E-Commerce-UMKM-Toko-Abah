@@ -45,6 +45,7 @@ function formatCartRows(rows, quantities) {
       jumlah: quantity,
       jumlah_diminta: quantity,
       cukup: stock >= quantity,
+      ...(row.foto_produk ? { foto_produk: row.foto_produk } : {}),
     };
   });
 }
@@ -69,7 +70,7 @@ function createCartRoutes(db) {
 
       const [rows] = await db.query(
         `SELECT i.id_produk AS product_id, p.nama_produk AS nama,
-                p.harga_jual AS harga, p.jumlah_stok AS stok, i.jumlah
+                p.harga_jual AS harga, p.jumlah_stok AS stok, p.foto_produk, i.jumlah
          FROM item_keranjang i
          JOIN produk p ON p.id_produk = i.id_produk
          WHERE i.id_keranjang = ? AND p.archived_at IS NULL
@@ -118,7 +119,7 @@ function createCartRoutes(db) {
         const placeholders = productIds.map(() => '?').join(', ');
         [rows] = await connection.query(
           `SELECT id_produk AS product_id, nama_produk AS nama,
-                  harga_jual AS harga, jumlah_stok AS stok
+                  harga_jual AS harga, jumlah_stok AS stok, foto_produk
            FROM produk
            WHERE archived_at IS NULL AND id_produk IN (${placeholders})`,
           productIds,
@@ -204,7 +205,8 @@ function createCartRoutes(db) {
         `SELECT id_produk AS product_id,
                 nama_produk AS nama,
                 harga_jual AS harga,
-                jumlah_stok AS stok
+                jumlah_stok AS stok,
+                foto_produk
          FROM produk
          WHERE archived_at IS NULL AND id_produk IN (${placeholders})`,
         productIds,
@@ -217,6 +219,7 @@ function createCartRoutes(db) {
           stok: Number(row.stok),
           jumlah_diminta: quantities.get(Number(row.product_id)),
           cukup: Number(row.stok) >= quantities.get(Number(row.product_id)),
+          ...(row.foto_produk ? { foto_produk: row.foto_produk } : {}),
         })),
       });
     } catch (error) {

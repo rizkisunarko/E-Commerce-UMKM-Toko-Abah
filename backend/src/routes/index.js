@@ -16,6 +16,7 @@ function createRoutes(
   jwtSecret,
   shippingClient = createRajaOngkirClient(),
   paymentClient = createMidtransSnapClient(),
+  { uploadDir } = {},
 ) {
   const router = express.Router();
   router.use('/health', createHealthRoutes(db));
@@ -24,7 +25,7 @@ function createRoutes(
   router.use('/payments', createPaymentsRoutes(db, paymentClient));
   router.use('/orders', createOrdersRoutes(db, jwtSecret, shippingClient, paymentClient));
   router.use('/shipping', createShippingRoutes(db, shippingClient));
-  router.use('/', createProductsRoutes(db, jwtSecret));
+  router.use('/', createProductsRoutes(db, jwtSecret, uploadDir));
   router.use('/transactions', createTransactionsRoutes(db, jwtSecret));
   router.use('/reports', createReportsRoutes(db, jwtSecret));
   return router;

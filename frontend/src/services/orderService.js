@@ -33,6 +33,7 @@ export const orderService = {
   },
   get: (nomor) => api.get(`/orders/${encodeURIComponent(nomor)}`),
   getByNumber: (nomor) => api.get(`/orders/${encodeURIComponent(nomor)}`),
+  searchHistory: (query) => api.get(`/orders/riwayat?q=${encodeURIComponent(query)}`),
 };
 
 

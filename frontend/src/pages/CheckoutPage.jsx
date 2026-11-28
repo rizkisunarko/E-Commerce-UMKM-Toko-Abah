@@ -6,6 +6,7 @@ import useCartCheck from '../hooks/useCartCheck';
 import useShippingQuote from '../hooks/useShippingQuote';
 import { orderService } from '../services/orderService';
 import { formatRupiah } from '../utils/format';
+import { saveOrderToHistory } from '../utils/orderHistory';
 
 // Nomor HP Indonesia: 08..., 628..., atau +628..., 10 sampai 14 digit
 const PHONE_PATTERN = /^(\+62|62|0)8\d{8,11}$/;
@@ -144,6 +145,7 @@ export default function CheckoutPage() {
       }
 
       const res = await orderService.create(payload);
+      saveOrderToHistory(res.data);
       finished.current = true;
       clear();
       navigate(`/pesanan/${res.data.nomor_pesanan}`, { replace: true });
@@ -259,7 +261,7 @@ export default function CheckoutPage() {
                 <span className="ko-state-error-title">
                   {firstIssueItem ? `Stok tidak mencukupi untuk ${firstIssueItem.nama}` : 'Terjadi Kesalahan pada Checkout'}
                 </span>
-                {firstIssueItem ? (
+                {firstIssueItem || (formError && formError.toLowerCase().includes('stok')) ? (
                   <span className="ko-state-error-badge">Stok Habis</span>
                 ) : (
                   <span className="ko-state-error-badge" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>Gagal</span>
@@ -270,7 +272,7 @@ export default function CheckoutPage() {
               </p>
             </div>
           </div>
-          {firstIssueItem && (
+          {(firstIssueItem || (formError && formError.toLowerCase().includes('stok'))) && (
             <Link to="/keranjang" className="ko-state-error-btn">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="9" cy="21" r="1" />

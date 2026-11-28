@@ -1,4 +1,4 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { CartProvider, useCart } from '../context/CartContext';
 import storeBanner from '../assets/store-banner.jpg';
 import './PublicLayout.css';
@@ -61,19 +61,30 @@ function PublicHeader() {
 
           {/* Navigasi Menu */}
           <nav className="katalog-header-nav" aria-label="Menu Utama">
-            <Link to="/katalog" className="katalog-nav-link active">
+            <NavLink
+              to="/katalog"
+              className={({ isActive }) => `katalog-nav-link${isActive ? ' active' : ''}`}
+            >
               Katalog
-            </Link>
-            <a href="#katalog-grid" className="katalog-nav-link">
-              Promo Spesial
-            </a>
-            <a href="#katalog-grid" className="katalog-nav-link">
-              Status Pesanan
-            </a>
+            </NavLink>
+            <NavLink
+              to="/pesanan"
+              className={({ isActive }) => `katalog-nav-link${isActive ? ' active' : ''}`}
+            >
+              Pesanan Saya
+            </NavLink>
           </nav>
 
           {/* Tombol Aksi Kanan */}
           <div className="katalog-header-actions">
+            <Link
+              to="/pesanan"
+              className="katalog-mobile-orders-btn"
+              title="Riwayat & Lacak Pesanan"
+              aria-label="Pesanan Saya"
+            >
+              Pesanan
+            </Link>
             <a
               className="katalog-wa-btn"
               href="https://wa.me/6285708350575"
@@ -89,6 +100,7 @@ function PublicHeader() {
 
             {/* Keranjang Belanja */}
             <Link
+              id="katalog-header-cart-btn"
               to="/keranjang"
               className="katalog-cart-button"
               aria-label={`Keranjang berisi ${count} barang`}

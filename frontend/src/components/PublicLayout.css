@@ -176,6 +176,25 @@
   gap: 10px;
 }
 
+.katalog-mobile-orders-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (min-width: 900px) {
+  .katalog-mobile-orders-btn {
+    display: none;
+  }
+}
+
 .katalog-wa-btn {
   display: none;
   align-items: center;

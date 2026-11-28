@@ -1,4 +1,29 @@
-export default function ProductIcon({ nama = '', kategori = '', size = 48, className = '' }) {
+import { useState } from 'react';
+import { resolveProductPhotoUrl } from '../utils/productImage';
+
+export default function ProductIcon({ nama = '', kategori = '', fotoProduk = null, size = 48, className = '' }) {
+  const [failedUrl, setFailedUrl] = useState(null);
+  const resolvedUrl = resolveProductPhotoUrl(fotoProduk);
+  const photoUrl = resolvedUrl && failedUrl !== resolvedUrl ? resolvedUrl : null;
+
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={nama || 'Foto produk'}
+        className={`product-icon-box ${className}`}
+        style={{
+          width: size,
+          height: size,
+          objectFit: 'cover',
+          border: '1px solid #e5e7eb',
+          background: '#f9fafb',
+        }}
+        onError={() => setFailedUrl(resolvedUrl)}
+      />
+    );
+  }
+
   const text = `${nama || ''} ${kategori || ''}`.toLowerCase();
 
   // 1. Beras & Pokok
