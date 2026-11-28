@@ -18,6 +18,10 @@ function notificationStatus(notification) {
        notification.fraud_status === 'challenge')) {
     return 'menunggu';
   }
+  if (notification.transaction_status === 'capture' &&
+      notification.fraud_status === 'deny') {
+    return 'gagal';
+  }
   if (['deny', 'cancel', 'expire', 'failure'].includes(notification.transaction_status)) {
     return 'gagal';
   }
@@ -56,7 +60,7 @@ function createPaymentsRoutes(db, paymentClient) {
 
       const [rows] = await connection.query(
         `SELECT p.id_pembayaran, p.id_transaksi, p.status_pembayaran,
-                p.jumlah_bayar, t.status_transaksi
+                p.jumlah_bayar, t.status_transaksi, t.kode_transaksi, t.stock_reserved
          FROM pembayaran p
          JOIN transaksi t ON t.id_transaksi = p.id_transaksi
          WHERE p.kode_referensi = ? AND t.jenis_transaksi = 'online'
@@ -79,6 +83,61 @@ function createPaymentsRoutes(db, paymentClient) {
       if (payment.status_pembayaran === 'menunggu' &&
           payment.status_transaksi === 'menunggu') {
         if (status === 'berhasil') {
+          let stockReservedNow = Number(payment.stock_reserved) === 1;
+          if (!stockReservedNow) {
+            const [deductedRows] = await connection.query(
+              `SELECT id_riwayat FROM riwayat_stok
+               WHERE jenis_perubahan = 'keluar' AND keterangan LIKE ?
+               LIMIT 1`,
+              [`%${payment.kode_transaksi}%`],
+            );
+
+            if (!deductedRows.length) {
+              const [items] = await connection.query(
+                `SELECT id_produk, jumlah
+                 FROM detail_transaksi
+                 WHERE id_transaksi = ?
+                 ORDER BY id_produk`,
+                [payment.id_transaksi],
+              );
+
+              for (const item of items) {
+                const [productRows] = await connection.query(
+                  'SELECT id_produk, jumlah_stok FROM produk WHERE id_produk = ? FOR UPDATE',
+                  [item.id_produk],
+                );
+                if (!productRows.length) continue;
+
+                const stockBefore = Number(productRows[0].jumlah_stok);
+                const requested = Number(item.jumlah);
+                const deducted = Math.min(Math.max(0, stockBefore), requested);
+                const stockAfter = Math.max(0, stockBefore - requested);
+
+                let keterangan = `Pembayaran pesanan ${payment.kode_transaksi}`;
+                if (stockBefore < requested) {
+                  console.warn(
+                    `[PERINGATAN STOK] Stok kurang untuk pesanan ${payment.kode_transaksi} (produk #${item.id_produk}): diminta ${requested}, tersedia ${stockBefore}`,
+                  );
+                  keterangan = `PERINGATAN: Stok kurang saat pembayaran pesanan ${payment.kode_transaksi} (diminta ${requested}, tersedia ${stockBefore})`;
+                }
+
+                await connection.query(
+                  `UPDATE produk
+                   SET jumlah_stok = ?, status_produk = ?, updated_at = CURRENT_TIMESTAMP
+                   WHERE id_produk = ?`,
+                  [stockAfter, stockAfter === 0 ? 'habis' : 'tersedia', item.id_produk],
+                );
+                await connection.query(
+                  `INSERT INTO riwayat_stok (
+                     id_produk, id_admin, jenis_perubahan, jumlah, stok_sebelum, stok_sesudah, keterangan
+                   ) VALUES (?, NULL, 'keluar', ?, ?, ?, ?)`,
+                  [item.id_produk, deducted, stockBefore, stockAfter, keterangan],
+                );
+              }
+            }
+            stockReservedNow = true;
+          }
+
           await connection.query(
             `UPDATE pembayaran
              SET status_pembayaran = 'berhasil', tanggal_pembayaran = CURRENT_TIMESTAMP
@@ -92,10 +151,10 @@ function createPaymentsRoutes(db, paymentClient) {
             [payment.id_transaksi, payment.id_pembayaran],
           );
           await connection.query(
-            `UPDATE transaksi SET status_transaksi = 'diproses'
+            `UPDATE transaksi SET status_transaksi = 'dibayar', stock_reserved = ?
              WHERE id_transaksi = ? AND jenis_transaksi = 'online'
                AND status_transaksi = 'menunggu'`,
-            [payment.id_transaksi],
+            [stockReservedNow ? 1 : 0, payment.id_transaksi],
           );
         } else if (status === 'gagal') {
           await connection.query(

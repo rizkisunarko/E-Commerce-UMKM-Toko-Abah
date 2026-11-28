@@ -150,8 +150,10 @@ function createProductListHandler(db, { publicCatalog = false } = {}) {
          ${where}`,
         params,
       );
+      const includeCost = !publicCatalog && req.user?.role === 'admin';
       return res.json({
-        data: rows.map(publicCatalog ? formatCatalogProduct : formatProduct),
+        data: rows.map((row) =>
+          (publicCatalog ? formatCatalogProduct(row) : formatProduct(row, { includeCost }))),
         pagination: {
           page,
           limit,
@@ -408,7 +410,9 @@ function createProductsRoutes(db, jwtSecret) {
         [id],
       );
       if (!rows.length) return res.status(404).json({ message: 'Produk tidak ditemukan' });
-      return res.json({ data: formatProduct(rows[0]) });
+      return res.json({
+        data: formatProduct(rows[0], { includeCost: req.user?.role === 'admin' }),
+      });
     } catch (error) {
       return next(error);
     }
@@ -435,8 +439,9 @@ function createProductsRoutes(db, jwtSecret) {
       const [countRows] = await db.query(
         'SELECT COUNT(*) AS stok_kritis FROM produk WHERE archived_at IS NULL AND jumlah_stok <= batas_stok_minimum',
       );
+      const includeCost = req.user?.role === 'admin';
       return res.json({
-        data: rows.map(formatProduct),
+        data: rows.map((row) => formatProduct(row, { includeCost })),
         ringkasan: { stok_kritis: Number(countRows[0].stok_kritis) },
       });
     } catch (error) {

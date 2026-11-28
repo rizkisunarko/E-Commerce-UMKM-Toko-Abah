@@ -1,3 +1,6 @@
+-- CATATAN KEAMANAN:
+-- Akun contoh (admin / admin_contoh) pada dump SQL ini hanya untuk pengembangan lokal.
+-- Ganti kata sandi admin menggunakan `npm run db:reset-admin-password` sebelum digunakan di luar lokal.
 -- phpMyAdmin SQL Dump
 -- version 5.2.0
 -- https://www.phpmyadmin.net/
@@ -400,6 +403,7 @@ CREATE TABLE `transaksi` (
   `ongkos_kirim` decimal(12,2) NOT NULL DEFAULT '0.00',
   `total_bayar` decimal(12,2) NOT NULL DEFAULT '0.00',
   `status_transaksi` enum('menunggu','dibayar','diproses','siap_diambil','siap_dikirim','selesai','batal') COLLATE utf8mb4_unicode_ci DEFAULT 'menunggu',
+  `stock_reserved` tinyint(1) NOT NULL DEFAULT '0',
   `tanggal_transaksi` datetime DEFAULT CURRENT_TIMESTAMP,
   `catatan` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
