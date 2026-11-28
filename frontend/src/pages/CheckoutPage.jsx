@@ -259,21 +259,25 @@ export default function CheckoutPage() {
                 <span className="ko-state-error-title">
                   {firstIssueItem ? `Stok tidak mencukupi untuk ${firstIssueItem.nama}` : 'Terjadi Kesalahan pada Checkout'}
                 </span>
-                <span className="ko-state-error-badge">Stok Habis</span>
+                <span className="ko-state-error-badge">
+                  {firstIssueItem || (formError && formError.toLowerCase().includes('stok')) ? 'Stok Habis' : 'Gagal'}
+                </span>
               </div>
               <p className="ko-state-error-desc">
                 {formError || 'Sisa stok barang di toko berubah. Harap periksa dan perbarui keranjang belanja Anda.'}
               </p>
             </div>
           </div>
-          <Link to="/keranjang" className="ko-state-error-btn">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
-            <span>Ubah Keranjang</span>
-          </Link>
+          {(firstIssueItem || (formError && formError.toLowerCase().includes('stok'))) && (
+            <Link to="/keranjang" className="ko-state-error-btn">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="20" cy="21" r="1" />
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+              </svg>
+              <span>Ubah Keranjang</span>
+            </Link>
+          )}
         </div>
       )}
 
