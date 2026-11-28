@@ -36,4 +36,4 @@ export function getProductImage(product = {}, { defaultImage = null } = {}) {
   return getFallbackProductImage(product?.nama, product?.kategori, defaultImage);
 }
 
-export { berasImg, storeBannerImg };
+export { berasImg, minyakImg, telurImg, storeBannerImg };

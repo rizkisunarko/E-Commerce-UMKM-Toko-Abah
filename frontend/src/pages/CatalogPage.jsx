@@ -6,7 +6,12 @@ import './CatalogPage.css';
 
 // Import aset gambar lokal dan utilitas resolusi foto produk
 import screenImg from '../assets/screen.png';
-import { berasImg, getProductImage as resolveCatalogImage } from '../utils/productImage';
+import {
+  berasImg,
+  minyakImg,
+  telurImg,
+  getProductImage as resolveCatalogImage,
+} from '../utils/productImage';
 
 const LIMIT = 12;
 
