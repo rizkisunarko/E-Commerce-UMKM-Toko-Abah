@@ -13,6 +13,7 @@ const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const EMPTY = {
   nama: '',
   kategori: '',
+  deskripsi: '',
   harga: '',
   berat: '',
   stok: '',
@@ -68,6 +69,10 @@ function validate(values, showStock) {
     if (!Number.isFinite(b) || b < 0) {
       e.batas_stok_kritis = INVALID_NUMBER;
     }
+  }
+
+  if (values.deskripsi && values.deskripsi.trim().length > 1000) {
+    e.deskripsi = 'Deskripsi maksimal 1000 karakter';
   }
 
   return e;
@@ -463,6 +468,35 @@ export default function ProductForm({
               </div>
               {shown.kategori && (
                 <span className="field-error-message">ⓘ {shown.kategori}</span>
+              )}
+            </div>
+
+            {/* Kolom: Deskripsi Produk (Opsional) */}
+            <div className="form-group-item" style={{ marginTop: '16px' }}>
+              <div className="form-label-row">
+                <label htmlFor="deskripsi" className="form-field-label">
+                  Deskripsi Produk
+                </label>
+                <span className="label-extra-info">
+                  Opsional • {(values.deskripsi || '').length}/1000 karakter
+                </span>
+              </div>
+              <textarea
+                id="deskripsi"
+                rows={3}
+                maxLength={1000}
+                className={`form-textarea-input${shown.deskripsi ? ' is-error' : ''}`}
+                placeholder="Contoh: Tepung terigu serbaguna kemasan 1 kg, cocok untuk aneka kue, roti, dan gorengan."
+                value={values.deskripsi || ''}
+                onChange={change('deskripsi')}
+                aria-invalid={Boolean(shown.deskripsi)}
+              />
+              {shown.deskripsi ? (
+                <span className="field-error-message">ⓘ {shown.deskripsi}</span>
+              ) : (
+                <span className="field-helper-message">
+                  Ditampilkan di halaman detail katalog pelanggan agar pembeli mengetahui rincian produk.
+                </span>
               )}
             </div>
 

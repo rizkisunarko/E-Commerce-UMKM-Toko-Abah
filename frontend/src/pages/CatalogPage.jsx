@@ -33,152 +33,35 @@ function getProductUnit(product = {}) {
   return '/ item';
 }
 
-function getProductDescription(product = {}) {
-  const text = (product.nama || '').toLowerCase();
-  if (text.includes('beras')) return 'Kualitas super, pulen harum, putih alami';
-  if (text.includes('minyak')) return 'Kemasan pouch higienis, jernih 2x penyaringan';
-  if (text.includes('gula')) return 'Manis murni alami dari tebu pilihan nusantara';
-  if (text.includes('telur')) return 'Kondisi utuh, cangkang tebal, baru masuk kandang';
-  if (text.includes('mie')) return 'Paket hemat lezat gurih, pas dinikmati kapan saja';
-  if (text.includes('kopi')) return '10 sachet kopi bubuk plus gula mantap';
-  if (text.includes('teh')) return 'Aroma wangi melati alami menyegarkan';
-  if (text.includes('sabun')) return 'Bahan pembersih wangi dan higienis';
-  if (text.includes('kecap')) return 'Kedelai hitam mallika kental dan gurih harum';
-  return 'Produk sembako segar dan terpercaya Toko Abah';
+function getRealProductSpecs(product = {}) {
+  const specs = [
+    { label: 'Kategori', value: product.kategori || 'Sembako' },
+    {
+      label: 'Berat Kemasan',
+      value: product.berat
+        ? `${Number(product.berat).toLocaleString('id-ID')} gram`
+        : (product.satuan || '-'),
+    },
+    {
+      label: 'Stok Tersedia',
+      value: product.stok > 0 ? `${product.stok} unit` : 'Stok Habis',
+    },
+  ];
+  if (Number(product.terjual) > 0) {
+    specs.push({ label: 'Total Terjual', value: `${product.terjual} unit` });
+  }
+  return specs;
 }
 
-function getProductSold(product = {}) {
-  if (product.terjual !== undefined && product.terjual !== null) {
-    return product.terjual;
-  }
-  const seed = (Number(product.id) || 1) * 37 + (product.nama ? product.nama.length * 11 : 13);
-  return (seed % 140) + 25;
-}
-
-// Helper Social Proof & Price Framing (Step 3)
-function getProductSocialProof(product = {}) {
-  const text = (product.nama || '').toLowerCase();
-  const seed = (Number(product.id) || 1) * 43;
-
-  if (text.includes('beras')) {
-    return {
-      rating: '4.9',
-      reviewText: '1,4 rb ulasan',
-      soldBadge: 'Terjual 5 rb+',
-    };
-  }
-
-  if (text.includes('minyak')) {
-    return {
-      rating: '4.9',
-      reviewText: '2,1 rb ulasan',
-      soldBadge: 'Terjual 4,2 rb+',
-    };
-  }
-
-  const rawSold = getProductSold(product);
-  const reviewsCount = ((seed % 15) + 8) * 100;
-  const reviewText = `${(reviewsCount / 1000).toFixed(1).replace('.', ',')} rb ulasan`;
-  const soldBadge = rawSold > 60 ? `Terjual ${Math.floor(rawSold / 10) * 10}+` : `Terjual ${rawSold}`;
-
-  return {
-    rating: '4.9',
-    reviewText,
-    soldBadge,
-  };
-}
-
-// Hover Detail Kemasan Belakang & Informasi Nutrisi / Sertifikasi (Step 2)
-function getProductNutritionAndCert(product = {}) {
-  const text = ((product.nama || '') + ' ' + (product.kategori || '')).toLowerCase();
-
-  if (text.includes('beras')) {
-    return {
-      cert: 'BPOM RI & Halal MUI',
-      highlight: 'Bulir Super Pulen Alami',
-      badge: 'Kemasan Belakang & Nutrisi',
-      specs: [
-        { label: 'Komposisi', val: '100% Beras Kepala Pilihan' },
-        { label: 'Energi / 100g', val: '355 kkal' },
-        { label: 'Karbohidrat', val: '78.5 g (Serat Alami)' },
-        { label: 'Standar Mutu', val: 'Tanpa Pemutih / Pengawet' },
-      ],
-      sealText: 'Segel Pabrik Utuh & Timbangan Pas',
-    };
-  }
-
-  if (text.includes('minyak')) {
-    return {
-      cert: 'SNI Teruji & Halal MUI',
-      highlight: '2x Penyaringan Higienis',
-      badge: 'Informasi Gizi & Mutu',
-      specs: [
-        { label: 'Bahan Baku', val: '100% Kelapa Sawit Segar' },
-        { label: 'Kandungan', val: 'Kaya Vitamin A & E Alami' },
-        { label: 'Kolesterol', val: '0 mg (Bebas Kolesterol)' },
-        { label: 'Titik Asap', val: 'Tinggi & Minyak Bening' },
-      ],
-      sealText: 'Pouch Tebal Food Grade Anti Bocor',
-    };
-  }
-
-  if (text.includes('gula')) {
-    return {
-      cert: 'SNI Murni & Halal LPPOM',
-      highlight: 'Kristal Tebu Pilihan Nusantara',
-      badge: 'Kemurnian & Komposisi',
-      specs: [
-        { label: 'Komposisi', val: '100% Sari Tebu Murni' },
-        { label: 'Energi / 100g', val: '390 kkal' },
-        { label: 'Pemanis Buatan', val: '0% (Murni Alami)' },
-        { label: 'Standar Mutu', val: 'ICUMSA Food Grade' },
-      ],
-      sealText: 'Kemasan Rapat Tersegel Kedap Udara',
-    };
-  }
-
-  if (text.includes('telur')) {
-    return {
-      cert: 'Veteriner Terverifikasi & Halal',
-      highlight: 'Telur Ayam Ras Segar Panen Subuh',
-      badge: 'Nutrisi Protein Tinggi',
-      specs: [
-        { label: 'Grade Kualitas', val: 'Grade A Cangkang Bersih' },
-        { label: 'Protein / butir', val: '6.3 gram' },
-        { label: 'Kandungan', val: 'Kolin, Zat Besi, Omega 3' },
-        { label: 'Penyimpanan', val: 'Sejuk 14 hari / Kulkas 30 hari' },
-      ],
-      sealText: 'Jaminan Utuh Tanpa Retak Toko Abah',
-    };
-  }
-
-  if (text.includes('mie')) {
-    return {
-      cert: 'BPOM RI MD & Halal MUI',
-      highlight: 'Rempah Asli Nusantara',
-      badge: 'Komposisi & Nilai Gizi',
-      specs: [
-        { label: 'Komposisi', val: 'Tepung Terigu, Minyak Nabati' },
-        { label: 'Energi Total', val: '380 kkal' },
-        { label: 'Waktu Masak', val: '3 Menit Air Mendidih' },
-        { label: 'Legalitas', val: 'Izin Edar Resmi BPOM RI' },
-      ],
-      sealText: 'Karton & Bungkus Tersegel Rapih',
-    };
-  }
-
-  return {
-    cert: 'Terverifikasi Halal & BPOM',
-    highlight: 'Kualitas Terjamin Toko Abah',
-    badge: 'Detail Kemasan & Standar',
-    specs: [
-      { label: 'Kondisi', val: 'Baru & Tersegel Rapat' },
-      { label: 'Kedaluwarsa', val: 'Aman & Terjamin Lama' },
-      { label: 'Timbangan', val: 'Akurat 100% Terverifikasi' },
-      { label: 'Jaminan', val: 'Garansi Retur Jika Cacat' },
-    ],
-    sealText: 'Produk Pilihan Keluarga Toko Abah',
-  };
+function formatReviewDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 // Animasi Miniatur Melayang ke Ikon Keranjang (Step 5)
@@ -220,98 +103,6 @@ function triggerFlyToCart(sourceEl, imgUrl) {
   } catch (err) {
     // Graceful fallback
   }
-}
-
-function getProductDetailedDescription(product = {}) {
-  const text = (product.nama || '').toLowerCase();
-  if (text.includes('beras')) {
-    return {
-      deskripsi:
-        'Beras kualitas super pilihan langsung dari sentra lumbung padi petani binaan Toko Abah. Memiliki bulir utuh, putih bersih alami tanpa pemutih sintetis, beraroma harum alami, dan menghasilkan nasi yang pulen gurih saat dimasak. Sangat cocok untuk kebutuhan konsumsi harian keluarga maupun katering dan warung makan.',
-      spesifikasi: [
-        { label: 'Berat Bersih', value: '5 kg / sak' },
-        { label: 'Kualitas Bulir', value: 'Kepala Super Pulen (Derajat Sosoh 95%)' },
-        { label: 'Asal Daerah', value: 'Banyuwangi & Lumajang Pilihan' },
-        { label: 'Sertifikasi', value: 'KEMTAN & Bebas Pengawet / Pemutih' },
-        { label: 'Penyimpanan', value: 'Simpan di wadah kering, rapat & terlindung dari serangga' },
-      ],
-    };
-  }
-  if (text.includes('minyak')) {
-    return {
-      deskripsi:
-        'Minyak goreng sawit kelapa pilihan bermutu premium yang diproses dengan teknologi 2x penyaringan higienis. Menghasilkan warna minyak jernih, tahan panas, tidak mudah menghitam, serta membuat aneka gorengan lebih garing, renyah, dan lezat tanpa kolesterol berlebih.',
-      spesifikasi: [
-        { label: 'Isi Bersih', value: '2 Liter (Pouch Higienis)' },
-        { label: 'Kandungan', value: 'Kaya Vitamin A, D, & Omega 9 Alami' },
-        { label: 'Bahan Baku', value: '100% Buah Sawit Kelapa Segar Nusantara' },
-        { label: 'Standar Mutu', value: 'SNI Terverifikasi & Halal LPPOM MUI' },
-        { label: 'Keunggulan', value: 'Minyak bening, titik asap tinggi, hemat pemakaian' },
-      ],
-    };
-  }
-  if (text.includes('gula')) {
-    return {
-      deskripsi:
-        'Gula pasir kristal putih murni higienis yang dihasilkan dari tebu segar pilihan petani Indonesia. Kristal gula halus hingga sedang, mudah larut dalam minuman dingin maupun panas, dan memberikan rasa manis murni alami tanpa aftertaste getir atau pengawet kimia.',
-      spesifikasi: [
-        { label: 'Berat Bersih', value: '1 kg kemasan pack' },
-        { label: 'Bahan Baku', value: '100% Sari Tebu Murni Nusantara' },
-        { label: 'Kemasan', value: 'Plastik Polietilena Rapat Food-Grade Tebal' },
-        { label: 'Tingkat Kemurnian', value: 'ICUMSA Standard Food Grade' },
-        { label: 'Masa Simpan', value: '24 Bulan dalam wadah tertutup' },
-      ],
-    };
-  }
-  if (text.includes('telur')) {
-    return {
-      deskripsi:
-        'Telur ayam ras segar pilihan yang dipasok langsung setiap subuh dari peternakan terverifikasi di Jawa Timur. Telur diseleksi ketat satu per satu untuk menjamin cangkang utuh bersih, kuning telur kental bulat, serta bebas bakteri berbahaya demi asupan protein terbaik keluarga.',
-      spesifikasi: [
-        { label: 'Satuan Jual', value: '1 Tray (~30 butir / berat berkisar 1.8 - 1.9 kg)' },
-        { label: 'Kondisi Cangkang', value: 'Cokelat Bersih, Tebal & Tidak Retak' },
-        { label: 'Grade Kualitas', value: 'Grade A Segar Panen Hari Ini' },
-        { label: 'Kandungan Gizi', value: 'Tinggi Protein, Kolin, Asam Folat & Zat Besi' },
-        { label: 'Penyimpanan', value: 'Suhu ruangan 14 hari / Lemari pendingin s/d 30 hari' },
-      ],
-    };
-  }
-  if (text.includes('mie')) {
-    return {
-      deskripsi:
-        'Mie instan terfavorit masyarakat Indonesia dengan tekstur mie yang kenyal, gurih, dan dipadukan bumbu rempah otentik pilihan. Praktis dihidangkan hanya dalam waktu 3 menit untuk sarapan kilat, camilan malam, maupun bekal praktis keluarga.',
-      spesifikasi: [
-        { label: 'Berat Bersih', value: '85 gram / bungkus' },
-        { label: 'Komposisi Utama', value: 'Tepung Terigu Pilihan, Minyak Nabati & Rempah' },
-        { label: 'Waktu Rebus', value: '3 Menit pada air mendidih' },
-        { label: 'Kemasan', value: 'Aluminium Foil Seal Kedap Udara' },
-        { label: 'Legalitas', value: 'BPOM RI & Halal MUI' },
-      ],
-    };
-  }
-  if (text.includes('kopi')) {
-    return {
-      deskripsi:
-        'Paduan racikan biji kopi robusta pilihan dengan gula pasir alami berpadu pas menghadirkan aroma wangi semerbak dan sensasi rasa mantap. Memberikan suntikan semangat berenergi saat memulai aktivitas di pagi hari.',
-      spesifikasi: [
-        { label: 'Isi Paket', value: '1 Renceng (10 Sachet @ 25 gram)' },
-        { label: 'Komposisi', value: 'Biji Kopi Sangrai Halus + Gula Murni' },
-        { label: 'Penyajian', value: 'Seduh dengan 150ml air mendidih' },
-        { label: 'Kemasan', value: 'Sachet Praktis Anti Lembab' },
-      ],
-    };
-  }
-  return {
-    deskripsi:
-      product.deskripsi ||
-      'Produk sembako segar dan kebutuhan pokok berkualitas terpercaya dari Toko Abah. Selalu diperiksa tanggal kedaluwarsa dan keutuhan kemasan sebelum dikirim ke tangan pelanggan setia kami.',
-    spesifikasi: [
-      { label: 'Kategori', value: product.kategori || 'Sembako Pokok' },
-      { label: 'Kondisi Barang', value: 'Baru, Tersegel Rapih & Bersih' },
-      { label: 'Jaminan Toko', value: 'Garansi Timbangan Pas & Barang Segar' },
-      { label: 'Lokasi Pengiriman', value: 'Gudang Toko Abah, Jl. Raya Telang-Kamal' },
-    ],
-  };
 }
 
 function getCategoryIcon(catName = '') {
@@ -435,6 +226,18 @@ export default function CatalogPage() {
   const [error, setError] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalQty, setModalQty] = useState(1);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsSummary, setReviewsSummary] = useState({ jumlah_ulasan: 0, rating_rata: null });
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState('');
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [reviewName, setReviewName] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewOrderNo, setReviewOrderNo] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitError, setReviewSubmitError] = useState('');
+  const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState('');
 
   // States Khusus Katalog Produk
   const [addedFeedback, setAddedFeedback] = useState({});
@@ -501,6 +304,100 @@ export default function CatalogPage() {
       cancelled = true;
     };
   }, [search, kategori, page]);
+
+  // Muat ulasan nyata saat modal detail produk dibuka
+  const selectedProductId = selectedProduct?.id;
+  useEffect(() => {
+    if (!selectedProductId) return undefined;
+    let cancelled = false;
+    setReviews([]);
+    setReviewsError('');
+    setReviewsLoading(true);
+    setReviewFormOpen(false);
+    setReviewName('');
+    setReviewRating(5);
+    setReviewComment('');
+    setReviewOrderNo('');
+    setReviewSubmitError('');
+    setReviewSubmitSuccess('');
+
+    catalogService
+      .reviews(selectedProductId)
+      .then((res) => {
+        if (cancelled) return;
+        setReviews(res.data || []);
+        setReviewsSummary(
+          res.ringkasan || {
+            jumlah_ulasan: (res.data || []).length,
+            rating_rata: null,
+          },
+        );
+      })
+      .catch((err) => {
+        if (!cancelled) setReviewsError(err.message || 'Gagal memuat ulasan produk');
+      })
+      .finally(() => {
+        if (!cancelled) setReviewsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProductId]);
+
+  async function handleSubmitReview(e) {
+    e.preventDefault();
+    if (!selectedProduct) return;
+    setReviewSubmitting(true);
+    setReviewSubmitError('');
+    setReviewSubmitSuccess('');
+
+    try {
+      const res = await catalogService.addReview(selectedProduct.id, {
+        nama_pengulas: reviewName.trim(),
+        rating: reviewRating,
+        komentar: reviewComment.trim(),
+        ...(reviewOrderNo.trim() ? { nomor_pesanan: reviewOrderNo.trim() } : {}),
+      });
+      if (res?.data) {
+        setReviews((prev) => [res.data, ...prev]);
+      }
+      if (res?.ringkasan) {
+        setReviewsSummary(res.ringkasan);
+        setSelectedProduct((prev) =>
+          prev
+            ? {
+                ...prev,
+                jumlah_ulasan: res.ringkasan.jumlah_ulasan,
+                rating_rata: res.ringkasan.rating_rata,
+              }
+            : prev,
+        );
+        setRows((prev) =>
+          prev.map((item) =>
+            item.id === selectedProduct.id
+              ? {
+                  ...item,
+                  jumlah_ulasan: res.ringkasan.jumlah_ulasan,
+                  rating_rata: res.ringkasan.rating_rata,
+                }
+              : item,
+          ),
+        );
+      }
+      setReviewFormOpen(false);
+      setReviewName('');
+      setReviewRating(5);
+      setReviewComment('');
+      setReviewOrderNo('');
+      setReviewSubmitSuccess('Terima kasih! Ulasan Anda berhasil dikirim.');
+    } catch (err) {
+      const firstFieldError = err.errors ? Object.values(err.errors)[0] : '';
+      setReviewSubmitError(firstFieldError || err.message || 'Gagal mengirim ulasan');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
 
   // Timer auto dismiss Toast Undo
   useEffect(() => {
@@ -855,8 +752,11 @@ export default function CatalogPage() {
             {sortedRows.map((p) => {
               const soldOut = p.stok <= 0;
               const productImg = getProductImage(p);
-              const social = getProductSocialProof(p);
-              const nutrition = getProductNutritionAndCert(p);
+              const reviewCount = Number(p.jumlah_ulasan || 0);
+              const avgRating = reviewCount > 0 && p.rating_rata !== null && p.rating_rata !== undefined
+                ? Number(p.rating_rata)
+                : null;
+              const soldCount = Number(p.terjual || 0);
               const isWishlisted = wishlist.includes(p.id);
               const isJustAdded = !!addedFeedback[p.id];
 
@@ -920,27 +820,40 @@ export default function CatalogPage() {
                       {soldOut ? 'Stok Habis' : `Tersedia ${p.stok}`}
                     </span>
 
-                    {/* Hover Overlay: Detail Kemasan Belakang & Informasi Nutrisi / Sertifikasi (Step 2) */}
+                    {/* Hover Overlay: Ringkasan Info Nyata Produk */}
                     <div className="katalog-nutrition-overlay" aria-hidden="true">
                       <div className="katalog-nutri-header">
-                        <span className="katalog-nutri-badge">{nutrition.badge}</span>
-                        <span className="katalog-nutri-cert">{nutrition.cert}</span>
+                        <span className="katalog-nutri-badge">{p.kategori || 'Sembako'}</span>
+                        <span className="katalog-nutri-cert">
+                          {p.berat ? `${Number(p.berat).toLocaleString('id-ID')} g` : (p.satuan || 'Unit')}
+                        </span>
                       </div>
-                      <p className="katalog-nutri-highlight">{nutrition.highlight}</p>
+                      <p className="katalog-nutri-highlight">{p.nama}</p>
                       <div className="katalog-nutri-specs">
-                        {nutrition.specs.map((item, i) => (
-                          <div key={i} className="katalog-nutri-spec-row">
-                            <span className="katalog-nutri-spec-k">{item.label}</span>
-                            <span className="katalog-nutri-spec-v">{item.val}</span>
+                        <div className="katalog-nutri-spec-row">
+                          <span className="katalog-nutri-spec-k">Stok</span>
+                          <span className="katalog-nutri-spec-v">
+                            {p.stok > 0 ? `${p.stok} tersedia` : 'Habis'}
+                          </span>
+                        </div>
+                        {soldCount > 0 && (
+                          <div className="katalog-nutri-spec-row">
+                            <span className="katalog-nutri-spec-k">Terjual</span>
+                            <span className="katalog-nutri-spec-v">{soldCount} unit</span>
                           </div>
-                        ))}
+                        )}
+                        {p.deskripsi && (
+                          <p className="katalog-nutri-desc-preview">
+                            {p.deskripsi.length > 90 ? `${p.deskripsi.slice(0, 90)}...` : p.deskripsi}
+                          </p>
+                        )}
                       </div>
                       <div className="katalog-nutri-footer">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                           <polyline points="22 4 12 14.01 9 11.01" />
                         </svg>
-                        <span>{nutrition.sealText}</span>
+                        <span>Klik untuk detail &amp; ulasan</span>
                       </div>
                     </div>
 
@@ -981,17 +894,25 @@ export default function CatalogPage() {
                       {/* Judul Produk Rapi & Berwarna Gelap (Step 1) */}
                       <h3 className="katalog-card-title">{p.nama}</h3>
 
-                      {/* Social Proof: Rating Bintang, Ulasan & Terjual (Step 3) */}
+                      {/* Rating Nyata & Jumlah Terjual */}
                       <div className="katalog-social-proof-row">
-                        <div className="katalog-stars-pill">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" aria-hidden="true">
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                          </svg>
-                          <span className="katalog-stars-score">{social.rating}</span>
-                          <span className="katalog-reviews-count">({social.reviewText})</span>
-                        </div>
-                        <span className="katalog-social-divider">•</span>
-                        <span className="katalog-sold-proof">{social.soldBadge}</span>
+                        {reviewCount > 0 && avgRating !== null ? (
+                          <div className="katalog-stars-pill">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" aria-hidden="true">
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+                            <span className="katalog-stars-score">{avgRating}</span>
+                            <span className="katalog-reviews-count">({reviewCount} ulasan)</span>
+                          </div>
+                        ) : (
+                          <span className="katalog-reviews-count">Belum ada ulasan</span>
+                        )}
+                        {soldCount > 0 && (
+                          <>
+                            <span className="katalog-social-divider">•</span>
+                            <span className="katalog-sold-proof">Terjual {soldCount}</span>
+                          </>
+                        )}
                       </div>
 
                       {/* Harga Asli dari Server */}
@@ -1176,18 +1097,37 @@ export default function CatalogPage() {
                   {selectedProduct.nama}
                 </h2>
 
-                {/* Rating & Terjual */}
+                {/* Rating & Terjual Nyata */}
                 <div className="katalog-modal-rating-row">
-                  <div className="katalog-modal-stars" aria-label="Rating 4.9 dari 5 bintang">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" aria-hidden="true">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                      </svg>
-                    ))}
-                    <span className="katalog-modal-rating-score">4.9</span>
-                  </div>
-                  <span className="katalog-modal-divider">•</span>
-                  <span className="katalog-modal-sold-text">{getProductSocialProof(selectedProduct).soldBadge}</span>
+                  {reviewsSummary.jumlah_ulasan > 0 && reviewsSummary.rating_rata !== null ? (
+                    <div className="katalog-modal-stars" aria-label={`Rating ${reviewsSummary.rating_rata} dari 5 bintang`}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <svg
+                          key={s}
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill={s <= Math.round(reviewsSummary.rating_rata) ? '#f59e0b' : 'none'}
+                          stroke="#f59e0b"
+                          strokeWidth="1.5"
+                          aria-hidden="true"
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      ))}
+                      <span className="katalog-modal-rating-score">
+                        {reviewsSummary.rating_rata} ({reviewsSummary.jumlah_ulasan} ulasan)
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="katalog-reviews-count">Belum ada ulasan</span>
+                  )}
+                  {Number(selectedProduct.terjual || 0) > 0 && (
+                    <>
+                      <span className="katalog-modal-divider">•</span>
+                      <span className="katalog-modal-sold-text">Terjual {selectedProduct.terjual}</span>
+                    </>
+                  )}
                 </div>
 
                 {/* Harga Resmi & Framing */}
@@ -1197,29 +1137,181 @@ export default function CatalogPage() {
                     <span className="katalog-modal-price-unit">{getProductUnit(selectedProduct)}</span>
                   </div>
                   <p className="katalog-modal-price-note">
-                    Harga grosir &amp; eceran terbaik di Telang-Kamal, Bangkalan • Garansi timbangan akurat
+                    Harga resmi Toko Abah • Timbangan akurat
                   </p>
                 </div>
 
-                {/* Deskripsi Barang Terperinci */}
+                {/* Deskripsi Produk dari Database */}
                 <div className="katalog-modal-desc-section">
                   <h4 className="katalog-modal-section-title">Deskripsi Produk</h4>
                   <p className="katalog-modal-desc-p">
-                    {getProductDetailedDescription(selectedProduct).deskripsi}
+                    {selectedProduct.deskripsi
+                      ? selectedProduct.deskripsi
+                      : 'Belum ada deskripsi tambahan untuk produk ini.'}
                   </p>
                 </div>
 
-                {/* Spesifikasi Teknis */}
+                {/* Spesifikasi Produk Nyata */}
                 <div className="katalog-modal-specs-section">
-                  <h4 className="katalog-modal-section-title">Spesifikasi &amp; Detail Kemasan</h4>
+                  <h4 className="katalog-modal-section-title">Informasi Produk</h4>
                   <div className="katalog-modal-specs-grid">
-                    {getProductDetailedDescription(selectedProduct).spesifikasi.map((spec, i) => (
+                    {getRealProductSpecs(selectedProduct).map((spec, i) => (
                       <div key={i} className="katalog-modal-spec-item">
                         <span className="katalog-modal-spec-label">{spec.label}</span>
                         <span className="katalog-modal-spec-val">{spec.value}</span>
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Ulasan Pembeli Nyata */}
+                <div className="katalog-modal-reviews-section">
+                  <div className="katalog-reviews-header">
+                    <h4 className="katalog-modal-section-title" style={{ margin: 0 }}>
+                      Ulasan Pembeli ({reviewsSummary.jumlah_ulasan})
+                    </h4>
+                    <button
+                      type="button"
+                      className="katalog-btn-write-review"
+                      onClick={() => {
+                        setReviewFormOpen((v) => !v);
+                        setReviewSubmitError('');
+                      }}
+                    >
+                      {reviewFormOpen ? 'Tutup Form' : '+ Tulis Ulasan'}
+                    </button>
+                  </div>
+
+                  {reviewSubmitSuccess && (
+                    <div className="katalog-review-success" role="status">
+                      {reviewSubmitSuccess}
+                    </div>
+                  )}
+
+                  {reviewFormOpen && (
+                    <form className="katalog-review-form" onSubmit={handleSubmitReview}>
+                      <div className="katalog-review-form-row">
+                        <label className="katalog-review-label">
+                          Nama Anda <span style={{ color: '#dc2626' }}>*</span>
+                          <input
+                            type="text"
+                            maxLength={100}
+                            required
+                            className="katalog-review-input"
+                            placeholder="Contoh: Siti Aminah"
+                            value={reviewName}
+                            onChange={(e) => setReviewName(e.target.value)}
+                          />
+                        </label>
+
+                        <div className="katalog-review-label">
+                          <span>Rating</span>
+                          <div className="katalog-star-picker" role="group" aria-label="Pilih rating">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                className="katalog-star-pick-btn"
+                                onClick={() => setReviewRating(star)}
+                                aria-label={`${star} bintang`}
+                              >
+                                <svg
+                                  width="20"
+                                  height="20"
+                                  viewBox="0 0 24 24"
+                                  fill={star <= reviewRating ? '#f59e0b' : 'none'}
+                                  stroke="#f59e0b"
+                                  strokeWidth="1.8"
+                                >
+                                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <label className="katalog-review-label">
+                        Nomor Pesanan (Opsional — untuk lencana Pembeli Terverifikasi)
+                        <input
+                          type="text"
+                          maxLength={50}
+                          className="katalog-review-input"
+                          placeholder="Contoh: TA-20261128-0001"
+                          value={reviewOrderNo}
+                          onChange={(e) => setReviewOrderNo(e.target.value)}
+                        />
+                      </label>
+
+                      <label className="katalog-review-label">
+                        Ulasan <span style={{ color: '#dc2626' }}>*</span>
+                        <textarea
+                          rows={2}
+                          maxLength={500}
+                          required
+                          className="katalog-review-textarea"
+                          placeholder="Bagikan pengalaman Anda tentang kualitas produk ini..."
+                          value={reviewComment}
+                          onChange={(e) => setReviewComment(e.target.value)}
+                        />
+                      </label>
+
+                      {reviewSubmitError && (
+                        <p className="katalog-review-error">{reviewSubmitError}</p>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="katalog-review-submit-btn"
+                        disabled={reviewSubmitting}
+                      >
+                        {reviewSubmitting ? 'Mengirim...' : 'Kirim Ulasan'}
+                      </button>
+                    </form>
+                  )}
+
+                  {reviewsLoading ? (
+                    <p className="katalog-reviews-empty">Memuat ulasan...</p>
+                  ) : reviewsError ? (
+                    <p className="katalog-review-error">{reviewsError}</p>
+                  ) : reviews.length === 0 ? (
+                    <p className="katalog-reviews-empty">
+                      Belum ada ulasan. Jadilah pembeli pertama yang mengulas produk ini!
+                    </p>
+                  ) : (
+                    <div className="katalog-reviews-list">
+                      {reviews.map((rev) => (
+                        <div key={rev.id} className="katalog-review-item">
+                          <div className="katalog-review-item-top">
+                            <div className="katalog-review-author-wrap">
+                              <span className="katalog-review-author">{rev.nama_pengulas}</span>
+                              {rev.terverifikasi && (
+                                <span className="katalog-review-verified">✓ Pembeli Terverifikasi</span>
+                              )}
+                            </div>
+                            <span className="katalog-review-date">{formatReviewDate(rev.created_at)}</span>
+                          </div>
+                          <div className="katalog-review-stars">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <svg
+                                key={s}
+                                width="13"
+                                height="13"
+                                viewBox="0 0 24 24"
+                                fill={s <= rev.rating ? '#f59e0b' : 'none'}
+                                stroke="#f59e0b"
+                                strokeWidth="1.6"
+                                aria-hidden="true"
+                              >
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                              </svg>
+                            ))}
+                          </div>
+                          <p className="katalog-review-comment">{rev.komentar}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Pengaturan Kuantitas & Tombol Tambah */}

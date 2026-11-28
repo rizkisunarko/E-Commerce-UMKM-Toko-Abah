@@ -9,6 +9,7 @@
     "test": "node --test",
     "db:setup": "node scripts/setup-database.js",
     "db:migrate:orders": "node scripts/migrate-order-checkout.js",
+    "db:migrate:reviews": "node scripts/migrate-reviews.js",
     "db:reset-admin-password": "node scripts/reset-admin-password.js",
     "tunnel": "npx localtunnel --port 5000",
     "tunnel:ngrok": "ngrok http 5000"

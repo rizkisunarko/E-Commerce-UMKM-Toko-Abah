@@ -77,6 +77,20 @@ function validateProduct(body = {}, mode = 'create') {
     }
   }
 
+  let deskripsi;
+  if (body.deskripsi !== undefined) {
+    if (body.deskripsi === null || String(body.deskripsi).trim() === '') {
+      deskripsi = null;
+    } else {
+      const trimmedDesc = String(body.deskripsi).trim();
+      if (trimmedDesc.length > 1000) {
+        errors.deskripsi = 'Deskripsi maksimal 1000 karakter';
+      } else {
+        deskripsi = trimmedDesc;
+      }
+    }
+  }
+
   return {
     errors,
     values: {
@@ -89,6 +103,7 @@ function validateProduct(body = {}, mode = 'create') {
       batas_stok_kritis: batas,
       satuan: body.satuan ? String(body.satuan).trim() : `${berat} g`,
       foto_produk: fotoProduk,
+      deskripsi,
     },
   };
 }

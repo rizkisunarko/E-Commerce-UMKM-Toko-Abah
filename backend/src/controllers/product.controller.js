@@ -7,6 +7,7 @@ const PRODUCT_SELECT = `
   SELECT p.id_produk AS id,
          p.nama_produk AS nama,
          k.nama_kategori AS kategori,
+         p.deskripsi,
          p.harga_jual AS harga,
          p.harga_beli,
          p.satuan,
@@ -36,6 +37,7 @@ function formatProduct(row, { includeCost = true } = {}) {
     id: typeof row.id === 'string' ? Number(row.id) : row.id,
     nama: row.nama,
     kategori: row.kategori,
+    deskripsi: row.deskripsi || null,
     berat,
     foto_produk: row.foto_produk || null,
     status_stok: getStockStatus(row.stok, row.batas_stok_kritis),
@@ -85,13 +87,14 @@ async function createProductHandler(req, res, next, db = defaultDb) {
     const kodeProduk = `PRD-${randomBytes(8).toString('hex')}`;
     const [result] = await connection.query(
       `INSERT INTO produk (
-         id_kategori, kode_produk, nama_produk, harga_beli, harga_jual,
+         id_kategori, kode_produk, nama_produk, deskripsi, harga_beli, harga_jual,
          satuan, foto_produk, status_produk, jumlah_stok, batas_stok_minimum
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         idKategori,
         kodeProduk,
         values.nama,
+        values.deskripsi ?? null,
         values.hargaBeli,
         values.harga,
         values.satuan,

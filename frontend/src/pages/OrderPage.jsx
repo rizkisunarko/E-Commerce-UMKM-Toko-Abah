@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { orderService, normalizePaymentStatus } from '../services/orderService';
+import { catalogService } from '../services/catalogService';
 import { loadMidtransSnap } from '../services/midtrans';
 import { formatRupiah } from '../utils/format';
 import { getProductImage } from '../utils/productImage';
@@ -37,6 +38,12 @@ export default function OrderPage() {
   const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState('');
+  const [reviewTargetId, setReviewTargetId] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewedProductIds, setReviewedProductIds] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -416,6 +423,26 @@ export default function OrderPage() {
                         <p className="order-item-sub">
                           {it.jumlah} x {formatRupiah(it.harga)}
                         </p>
+                        {order.status === 'Selesai' && it.product_id && (
+                          <div className="order-item-review-action">
+                            {reviewedProductIds.includes(it.product_id) ? (
+                              <span className="order-item-reviewed-badge">✓ Sudah Diulas</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="order-item-review-btn"
+                                onClick={() => {
+                                  setReviewTargetId(reviewTargetId === it.product_id ? null : it.product_id);
+                                  setReviewRating(5);
+                                  setReviewComment('');
+                                  setReviewError('');
+                                }}
+                              >
+                                {reviewTargetId === it.product_id ? 'Batal Ulas' : '★ Beri Ulasan'}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <span className="order-item-total">
                         {formatRupiah(it.subtotal || it.harga * it.jumlah)}
@@ -424,6 +451,79 @@ export default function OrderPage() {
                   );
                 })}
               </div>
+
+              {order.status === 'Selesai' && reviewTargetId && (
+                <form
+                  className="order-review-box"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setReviewSubmitting(true);
+                    setReviewError('');
+                    try {
+                      await catalogService.addReview(reviewTargetId, {
+                        nama_pengulas: order.nama_pemesan || 'Pelanggan',
+                        rating: reviewRating,
+                        komentar: reviewComment.trim(),
+                        nomor_pesanan: order.nomor_pesanan,
+                      });
+                      setReviewedProductIds((prev) => [...prev, reviewTargetId]);
+                      setReviewTargetId(null);
+                      setReviewComment('');
+                    } catch (err) {
+                      const msg = err.errors ? Object.values(err.errors)[0] : '';
+                      if ((msg || err.message || '').includes('sudah pernah diulas')) {
+                        setReviewedProductIds((prev) => [...prev, reviewTargetId]);
+                        setReviewTargetId(null);
+                      } else {
+                        setReviewError(msg || err.message || 'Gagal mengirim ulasan');
+                      }
+                    } finally {
+                      setReviewSubmitting(false);
+                    }
+                  }}
+                >
+                  <div className="order-review-top">
+                    <span className="order-review-title">
+                      Beri Ulasan untuk {(order.items || []).find((x) => x.product_id === reviewTargetId)?.nama}
+                    </span>
+                    <div className="order-review-stars">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className="order-review-star-btn"
+                          onClick={() => setReviewRating(s)}
+                          aria-label={`${s} bintang`}
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill={s <= reviewRating ? '#f59e0b' : 'none'}
+                            stroke="#f59e0b"
+                            strokeWidth="1.8"
+                          >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    rows={2}
+                    required
+                    maxLength={500}
+                    className="order-review-textarea"
+                    placeholder="Tulis ulasan Anda tentang produk ini..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                  />
+                  {reviewError && <p className="order-review-error">{reviewError}</p>}
+                  <button type="submit" className="order-review-submit" disabled={reviewSubmitting}>
+                    {reviewSubmitting ? 'Mengirim...' : 'Kirim Ulasan'}
+                  </button>
+                </form>
+              )}
 
               {/* Divider */}
               <div className="order-divider" />

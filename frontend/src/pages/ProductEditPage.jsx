@@ -55,6 +55,7 @@ export default function ProductEditPage() {
       kategori: values.kategori,
       harga: Number(values.harga),
       berat: Number(values.berat),
+      deskripsi: values.deskripsi?.trim() || null,
     };
 
     if (values.batas_stok_kritis !== '' && values.batas_stok_kritis !== null && values.batas_stok_kritis !== undefined) {
@@ -130,6 +131,7 @@ export default function ProductEditPage() {
         harga: String(product.harga),
         berat: String(product.berat),
         stok: String(product.stok),
+        deskripsi: product.deskripsi || '',
         foto_produk: product.foto_produk || '',
         batas_stok_kritis:
           product.batas_stok_kritis !== undefined && product.batas_stok_kritis !== null
