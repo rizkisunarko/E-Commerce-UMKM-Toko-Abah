@@ -4,15 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { productService } from '../services/productService';
 import { transactionService } from '../services/transactionService';
 import { formatRupiah } from '../utils/format';
+import { getProductImage } from '../utils/productImage';
 import './KasirPage.css';
-
-// Aset gambar produk dari frontend/src/assets
-import imgBeras from '../assets/Beras.jpg';
-import imgGula from '../assets/Gula-Pasir.jpg';
-import imgKopi from '../assets/Kopi-Sachet.jpg';
-import imgMie from '../assets/Mie-Instan.jpg';
-import imgMinyak from '../assets/Minyak-Goreng.jpg';
-import imgTelur from '../assets/Telur Ayam.jpg';
 
 const METHOD_REQUIRED = 'Pilih metode bayar terlebih dahulu';
 const INVALID_NUMBER = 'Masukkan angka yang valid';
@@ -74,17 +67,6 @@ function getProductMeta(name = '', category = '') {
     unit: 'pcs',
     posCategory: category || 'Sembako',
   };
-}
-
-function getProductImage(productName = '', category = '') {
-  const lower = (productName + ' ' + category).toLowerCase();
-  if (lower.includes('beras')) return imgBeras;
-  if (lower.includes('gula')) return imgGula;
-  if (lower.includes('kopi')) return imgKopi;
-  if (lower.includes('mie')) return imgMie;
-  if (lower.includes('minyak')) return imgMinyak;
-  if (lower.includes('telur')) return imgTelur;
-  return null;
 }
 
 function localItemError(item) {
@@ -561,7 +543,7 @@ export default function KasirPage() {
               <div className="kasir-product-grid">
                 {filteredProducts.map((p) => {
                   const meta = getProductMeta(p.nama, p.kategori);
-                  const img = getProductImage(p.nama, p.kategori);
+                  const img = getProductImage(p);
                   const isOutOfStock = p.stok <= 0;
                   const isCritical = p.status_stok === 'Stok Kritis' || p.stok <= (p.batas_stok_kritis ?? 10);
 

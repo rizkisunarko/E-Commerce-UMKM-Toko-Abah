@@ -4,28 +4,14 @@ import { catalogService } from '../services/catalogService';
 import { formatRupiah } from '../utils/format';
 import './CatalogPage.css';
 
-// Import aset gambar lokal sesuai instruksi
-import berasImg from '../assets/Beras.jpg';
-import minyakImg from '../assets/Minyak-Goreng.jpg';
-import gulaImg from '../assets/Gula-Pasir.jpg';
-import telurImg from '../assets/Telur Ayam.jpg';
-import mieImg from '../assets/Mie-Instan.jpg';
-import kopiImg from '../assets/Kopi-Sachet.jpg';
-import bannerImg from '../assets/store-banner.jpg';
+// Import aset gambar lokal dan utilitas resolusi foto produk
 import screenImg from '../assets/screen.png';
+import { berasImg, getProductImage as resolveCatalogImage } from '../utils/productImage';
 
 const LIMIT = 12;
 
 function getProductImage(product = {}) {
-  const text = ((product.nama || '') + ' ' + (product.kategori || '')).toLowerCase();
-  if (text.includes('beras')) return berasImg;
-  if (text.includes('minyak')) return minyakImg;
-  if (text.includes('gula') || text.includes('manis')) return gulaImg;
-  if (text.includes('telur') || text.includes('lauk')) return telurImg;
-  if (text.includes('mie') || text.includes('indomie') || text.includes('instan')) return mieImg;
-  if (text.includes('kopi') || text.includes('teh')) return kopiImg;
-  if (text.includes('sabun') || text.includes('rumah')) return bannerImg;
-  return berasImg;
+  return resolveCatalogImage(product, { defaultImage: berasImg });
 }
 
 function getProductUnit(product = {}) {

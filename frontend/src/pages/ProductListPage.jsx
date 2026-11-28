@@ -443,7 +443,7 @@ export default function ProductListPage() {
                     <tr key={p.id}>
                       <td>
                         <div className="product-title-cell">
-                          <ProductIcon nama={p.nama} kategori={p.kategori} />
+                          <ProductIcon nama={p.nama} kategori={p.kategori} fotoProduk={p.foto_produk} />
                           <div className="product-name-and-sku">
                             <span className="product-main-name">{p.nama}</span>
                           </div>

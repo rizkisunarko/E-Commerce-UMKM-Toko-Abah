@@ -62,6 +62,15 @@ export default function ProductEditPage() {
     }
 
     try {
+      if (values.photoFile) {
+        const uploaded = await productService.uploadPhoto(values.photoFile);
+        if (uploaded?.data?.url) {
+          payload.foto_produk = uploaded.data.url;
+        }
+      } else if (values.photoRemoved) {
+        payload.foto_produk = null;
+      }
+
       const res = await productService.update(id, payload);
       const namaProduk = res?.data?.nama || payload.nama;
       navigate('/produk', {
@@ -121,6 +130,7 @@ export default function ProductEditPage() {
         harga: String(product.harga),
         berat: String(product.berat),
         stok: String(product.stok),
+        foto_produk: product.foto_produk || '',
         batas_stok_kritis:
           product.batas_stok_kritis !== undefined && product.batas_stok_kritis !== null
             ? String(product.batas_stok_kritis)

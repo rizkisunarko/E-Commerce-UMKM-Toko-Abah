@@ -981,6 +981,11 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
     });
   }
 
+  if (method === 'POST' && path === '/products/photo') {
+    if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
+    return reply(201, { data: { url: body?.url || '' } });
+  }
+
   if (method === 'POST' && path === '/products') {
     if (!isAdmin) return reply(403, { message: 'Akses ditolak' });
     const errors = validateProduct(body, 'create');
@@ -992,6 +997,7 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
       harga: Number(body.harga),
       berat: Number(body.berat),
       stok: Number(body.stok),
+      foto_produk: body.foto_produk || null,
       batas_stok_kritis: isBlank(body.batas_stok_kritis) ? 5 : Number(body.batas_stok_kritis),
       created_at: now(),
       updated_at: now(),
@@ -1019,6 +1025,7 @@ export async function mockRequest(method, fullPath, body = {}, token, requestHea
         kategori: body.kategori,
         harga: Number(body.harga),
         berat: Number(body.berat),
+        ...(body.foto_produk !== undefined ? { foto_produk: body.foto_produk || null } : {}),
         batas_stok_kritis: isBlank(body.batas_stok_kritis) ? product.batas_stok_kritis : Number(body.batas_stok_kritis),
         updated_at: now(),
       });

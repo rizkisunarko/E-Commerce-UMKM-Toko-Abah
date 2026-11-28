@@ -10,6 +10,7 @@ const PRODUCT_SELECT = `
          p.harga_jual AS harga,
          p.harga_beli,
          p.satuan,
+         p.foto_produk,
          p.jumlah_stok AS stok,
          p.batas_stok_minimum AS batas_stok_kritis,
          p.archived_at,
@@ -36,6 +37,7 @@ function formatProduct(row, { includeCost = true } = {}) {
     nama: row.nama,
     kategori: row.kategori,
     berat,
+    foto_produk: row.foto_produk || null,
     status_stok: getStockStatus(row.stok, row.batas_stok_kritis),
   };
   if (!includeCost) {
@@ -84,8 +86,8 @@ async function createProductHandler(req, res, next, db = defaultDb) {
     const [result] = await connection.query(
       `INSERT INTO produk (
          id_kategori, kode_produk, nama_produk, harga_beli, harga_jual,
-         satuan, status_produk, jumlah_stok, batas_stok_minimum
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         satuan, foto_produk, status_produk, jumlah_stok, batas_stok_minimum
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         idKategori,
         kodeProduk,
@@ -93,6 +95,7 @@ async function createProductHandler(req, res, next, db = defaultDb) {
         values.hargaBeli,
         values.harga,
         values.satuan,
+        values.foto_produk ?? null,
         values.stok === 0 ? 'habis' : 'tersedia',
         values.stok,
         values.batas_stok_kritis,

@@ -63,6 +63,7 @@ export function CartProvider({ children }) {
             stok: item.stok,
             jumlah: item.jumlah,
             cukup: item.cukup,
+            ...(item.foto_produk ? { foto_produk: item.foto_produk } : {}),
           })), false);
         } else if (!localChanges.current && itemsRef.current.length === 0) {
           skipNextSave.current = true;

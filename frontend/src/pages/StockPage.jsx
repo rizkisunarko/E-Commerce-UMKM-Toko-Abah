@@ -362,7 +362,7 @@ export default function StockPage() {
                         {/* Nama Produk */}
                         <td>
                           <div className="product-cell-wrapper">
-                            <ProductIcon nama={p.nama} kategori={p.kategori} />
+                            <ProductIcon nama={p.nama} kategori={p.kategori} fotoProduk={p.foto_produk} />
                             <div className="product-cell-info">
                               <span className="product-cell-name">{p.nama}</span>
                               <span className="product-cell-sku">{p.kategori || 'Sembako'}</span>

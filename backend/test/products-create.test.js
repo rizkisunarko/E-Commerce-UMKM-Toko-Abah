@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict');
 const { once } = require('node:events');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 const bcrypt = require('bcryptjs');
 const createApp = require('../src/app');
@@ -132,23 +135,25 @@ async function createFixture(t) {
           harga: params[4],
           harga_beli: params[3],
           satuan: params[5],
-          stok: params[7],
-          batas_stok_kritis: params[8],
+          foto_produk: params[6] ?? null,
+          stok: params[8],
+          batas_stok_kritis: params[9],
           kategori: 'Minuman',
         };
         products.push(newProduct);
         return [{ insertId: newProduct.id }, []];
       }
       if (sql.trimStart().startsWith('UPDATE produk')) {
-        const product = products.find((item) => item.id === params[9]);
+        const product = products.find((item) => item.id === params[11]);
         if (product) {
           Object.assign(product, {
             nama: params[1],
             harga: params[2],
             harga_beli: params[3] ?? product.harga_beli,
             satuan: params[4],
-            batas_stok_kritis: params[5] ?? product.batas_stok_kritis,
-            stok: params[6] ?? product.stok,
+            foto_produk: params[5] === 1 ? params[6] : product.foto_produk,
+            batas_stok_kritis: params[7] ?? product.batas_stok_kritis,
+            stok: params[8] ?? product.stok,
           });
         }
         return [{ affectedRows: product ? 1 : 0 }, []];
@@ -211,13 +216,18 @@ async function createFixture(t) {
     release() {},
   });
 
-  const server = createApp({ db, jwtSecret: JWT_SECRET }).listen(0);
+  const uploadDir = await fs.mkdtemp(path.join(os.tmpdir(), 'toko-abah-upload-'));
+  const server = createApp({ db, jwtSecret: JWT_SECRET, uploadDir }).listen(0);
   await once(server, 'listening');
-  t.after(() => new Promise((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  }));
+  t.after(async () => {
+    await new Promise((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    await fs.rm(uploadDir, { recursive: true, force: true });
+  });
   return {
     baseUrl: `http://127.0.0.1:${server.address().port}/api`,
+    serverOrigin: `http://127.0.0.1:${server.address().port}`,
     stockHistory,
     transactionDetails,
     purchaseDetails,
@@ -581,4 +591,131 @@ test('DELETE /api/products/:id: hapus produk tanpa riwayat, arsipkan produk yang
     headers,
   });
   assert.equal(missingResponse.status, 404);
+});
+
+test('POST /api/products/photo dan foto_produk: upload, validasi, dan penyimpanan', async (t) => {
+  const invalidUrl = validateProduct({
+    nama: 'Kopi ABC',
+    kategori: 'Minuman',
+    harga: 2000,
+    berat: 25,
+    stok: 10,
+    foto_produk: 'javascript:alert(1)',
+  });
+  assert.ok(invalidUrl.errors.foto_produk);
+
+  const { baseUrl, serverOrigin } = await createFixture(t);
+  const loginPegawai = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'pegawai', password: 'employee-pass' }),
+  });
+  const pegawaiToken = (await loginPegawai.json()).token;
+
+  const loginAdmin = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'admin-pass' }),
+  });
+  const adminToken = (await loginAdmin.json()).token;
+
+  const validPng = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  ]);
+
+  const noTokenRes = await fetch(`${baseUrl}/products/photo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'image/png' },
+    body: validPng,
+  });
+  assert.equal(noTokenRes.status, 401);
+
+  const pegawaiRes = await fetch(`${baseUrl}/products/photo`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'image/png',
+      Authorization: `Bearer ${pegawaiToken}`,
+    },
+    body: validPng,
+  });
+  assert.equal(pegawaiRes.status, 403);
+
+  const spoofedRes = await fetch(`${baseUrl}/products/photo`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'image/png',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: Buffer.from('<script>alert(1)</script>'),
+  });
+  assert.equal(spoofedRes.status, 422);
+
+  const uploadRes = await fetch(`${baseUrl}/products/photo`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'image/png',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: validPng,
+  });
+  assert.equal(uploadRes.status, 201);
+  const uploadedUrl = (await uploadRes.json()).data.url;
+  assert.match(uploadedUrl, /^\/uploads\/products\/prd-.*\.png$/);
+
+  const staticRes = await fetch(`${serverOrigin}${uploadedUrl}`);
+  assert.equal(staticRes.status, 200);
+  assert.equal(staticRes.headers.get('cross-origin-resource-policy'), 'cross-origin');
+
+  const createRes = await fetch(`${baseUrl}/products`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({
+      nama: 'Kopi ABC Susu',
+      kategori: 'Minuman',
+      harga: 2000,
+      berat: 30,
+      stok: 20,
+      foto_produk: uploadedUrl,
+    }),
+  });
+  assert.equal(createRes.status, 201);
+  const created = (await createRes.json()).data;
+  assert.equal(created.foto_produk, uploadedUrl);
+
+  const preserveRes = await fetch(`${baseUrl}/products/${created.id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({
+      nama: 'Kopi ABC Susu 30g',
+      kategori: 'Minuman',
+      harga: 2500,
+      berat: 30,
+    }),
+  });
+  assert.equal(preserveRes.status, 200);
+  assert.equal((await preserveRes.json()).data.foto_produk, uploadedUrl);
+
+  const clearRes = await fetch(`${baseUrl}/products/${created.id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({
+      nama: 'Kopi ABC Susu 30g',
+      kategori: 'Minuman',
+      harga: 2500,
+      berat: 30,
+      foto_produk: null,
+    }),
+  });
+  assert.equal(clearRes.status, 200);
+  assert.equal((await clearRes.json()).data.foto_produk, null);
 });

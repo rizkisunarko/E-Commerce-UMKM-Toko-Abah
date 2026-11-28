@@ -3,26 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { orderService, normalizePaymentStatus } from '../services/orderService';
 import { loadMidtransSnap } from '../services/midtrans';
 import { formatRupiah } from '../utils/format';
+import { getProductImage } from '../utils/productImage';
 import QrisModal from '../components/QrisModal';
 import './OrderPage.css';
-
-import berasImg from '../assets/Beras.jpg';
-import minyakImg from '../assets/Minyak-Goreng.jpg';
-import gulaImg from '../assets/Gula-Pasir.jpg';
-import telurImg from '../assets/Telur Ayam.jpg';
-import mieImg from '../assets/Mie-Instan.jpg';
-import kopiImg from '../assets/Kopi-Sachet.jpg';
-
-function getProductThumbnail(nama = '') {
-  const n = (nama || '').toLowerCase();
-  if (n.includes('beras')) return berasImg;
-  if (n.includes('minyak')) return minyakImg;
-  if (n.includes('gula')) return gulaImg;
-  if (n.includes('telur')) return telurImg;
-  if (n.includes('mie') || n.includes('sedap') || n.includes('indomie')) return mieImg;
-  if (n.includes('kopi') || n.includes('kapal')) return kopiImg;
-  return null;
-}
 
 function getOrderStatusBadgeClass(status) {
   const s = (status || '').toLowerCase();
@@ -413,7 +396,7 @@ export default function OrderPage() {
               {/* Items List */}
               <div className="order-items-list">
                 {(order.items || []).map((it, idx) => {
-                  const thumb = getProductThumbnail(it.nama);
+                  const thumb = getProductImage(it);
                   return (
                     <div key={it.product_id || idx} className="order-item-row">
                       <div className="order-item-thumb">

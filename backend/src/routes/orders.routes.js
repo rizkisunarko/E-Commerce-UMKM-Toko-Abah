@@ -183,6 +183,7 @@ function formatOrder(row, items = []) {
       harga: Number(item.harga ?? item.harga_satuan),
       jumlah: Number(item.jumlah),
       subtotal: Number(item.subtotal),
+      ...(item.foto_produk ? { foto_produk: item.foto_produk } : {}),
     })),
     subtotal,
     diskon: Math.max(0, subtotal + ongkir - total),
@@ -538,7 +539,7 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
 
         const [items] = await connection.query(
           `SELECT dt.id_produk AS product_id, p.nama_produk AS nama,
-                  k.nama_kategori AS kategori, dt.harga_satuan AS harga,
+                  k.nama_kategori AS kategori, p.foto_produk, dt.harga_satuan AS harga,
                   dt.jumlah, dt.subtotal
            FROM detail_transaksi dt
            JOIN produk p ON p.id_produk = dt.id_produk
@@ -1045,7 +1046,7 @@ function createOrdersRoutes(db, jwtSecretOrShipping, maybeShipping, maybePayment
       const order = orders[0];
       const [items] = await db.query(
         `SELECT dt.id_produk AS product_id, p.nama_produk AS nama,
-                k.nama_kategori AS kategori, dt.harga_satuan AS harga,
+                k.nama_kategori AS kategori, p.foto_produk, dt.harga_satuan AS harga,
                 dt.jumlah, dt.subtotal
          FROM detail_transaksi dt
          JOIN produk p ON p.id_produk = dt.id_produk

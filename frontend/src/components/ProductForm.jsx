@@ -1,23 +1,14 @@
-import { useState } from 'react';
-import berasImg from '../assets/Beras.jpg';
-import minyakImg from '../assets/Minyak-Goreng.jpg';
-import gulaImg from '../assets/Gula-Pasir.jpg';
-import telurImg from '../assets/Telur Ayam.jpg';
-import mieImg from '../assets/Mie-Instan.jpg';
-import kopiImg from '../assets/Kopi-Sachet.jpg';
+import { useEffect, useRef, useState } from 'react';
 import { formatRupiah } from '../utils/format';
+import {
+  berasImg,
+  getFallbackProductImage,
+  resolveProductPhotoUrl,
+} from '../utils/productImage';
 import './ProductForm.css';
 
-function getRackProductImage(nama = '', kategori = '') {
-  const text = `${nama || ''} ${kategori || ''}`.toLowerCase();
-  if (text.includes('beras') || text.includes('gandum') || text.includes('tepung') || text.includes('beras & pokok')) return berasImg;
-  if (text.includes('minyak') || text.includes('goreng') || text.includes('mentega') || text.includes('margarin')) return minyakImg;
-  if (text.includes('gula') || text.includes('manis') || text.includes('pemanis')) return gulaImg;
-  if (text.includes('telur') || text.includes('lauk') || text.includes('protein')) return telurImg;
-  if (text.includes('mie') || text.includes('indomie') || text.includes('instan') || text.includes('sedap')) return mieImg;
-  if (text.includes('kopi') || text.includes('teh')) return kopiImg;
-  return berasImg;
-}
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 const EMPTY = {
   nama: '',
@@ -104,9 +95,24 @@ export default function ProductForm({
   const [clientErrors, setClientErrors] = useState({});
   const [showTips, setShowTips] = useState(true);
   const [activeChips, setActiveChips] = useState(['Produk Terlaris']);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(
+    initialValues?.foto_produk ? resolveProductPhotoUrl(initialValues.foto_produk) : '',
+  );
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const objectUrlRef = useRef('');
+  const fileInputRef = useRef(null);
+
+  useEffect(() => () => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+  }, []);
 
   // Gabungkan error: error lokal/klien menimpa error dari server jika kolom diubah
   const shown = { ...errors, ...clientErrors };
+  if (photoError && !shown.foto_produk) {
+    shown.foto_produk = photoError;
+  }
   const errorCount = Object.keys(shown).filter((k) => Boolean(shown[k])).length;
   const hasErrors = errorCount > 0 || Boolean(formError);
 
@@ -141,16 +147,72 @@ export default function ProductForm({
   };
 
   const handleReset = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = '';
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setValues({ ...EMPTY, ...initialValues });
     setClientErrors({});
+    setPhotoFile(null);
+    setPhotoPreview(initialValues?.foto_produk ? resolveProductPhotoUrl(initialValues.foto_produk) : '');
+    setPhotoRemoved(false);
+    setPhotoError('');
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      setPhotoError('Format foto harus JPG, PNG, atau WebP.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setPhotoError('Ukuran foto maksimal 2 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+    const nextUrl = URL.createObjectURL(file);
+    objectUrlRef.current = nextUrl;
+    setPhotoFile(file);
+    setPhotoPreview(nextUrl);
+    setPhotoRemoved(false);
+    setPhotoError('');
+    setClientErrors((prev) => {
+      const copy = { ...prev };
+      delete copy.foto_produk;
+      return copy;
+    });
+  };
+
+  const handleRemovePhoto = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = '';
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setPhotoFile(null);
+    setPhotoPreview('');
+    setPhotoRemoved(true);
+    setPhotoError('');
   };
 
   function handleSubmit(e) {
     e.preventDefault();
     const found = validate(values, showStock);
     setClientErrors(found);
-    if (Object.keys(found).length > 0) return;
-    onSubmit(values);
+    if (Object.keys(found).length > 0 || photoError) return;
+    onSubmit({
+      ...values,
+      photoFile,
+      photoRemoved,
+    });
   }
 
   const effectiveStock = currentStock !== undefined ? currentStock : (values.stok !== '' && !isNaN(Number(values.stok)) ? Number(values.stok) : 42);
@@ -401,6 +463,65 @@ export default function ProductForm({
               </div>
               {shown.kategori && (
                 <span className="field-error-message">ⓘ {shown.kategori}</span>
+              )}
+            </div>
+
+            {/* Kolom: Foto Produk (Opsional) */}
+            <div className="form-group-item" style={{ marginTop: '16px' }}>
+              <div className="form-label-row">
+                <label htmlFor="foto_produk" className="form-field-label">
+                  Foto Produk
+                </label>
+                <span className="label-extra-info">Opsional • JPG, PNG, WebP (Maks. 2 MB)</span>
+              </div>
+
+              <div className={`photo-upload-box${shown.foto_produk ? ' is-error' : ''}`}>
+                <div className="photo-upload-preview-wrap">
+                  <img
+                    src={photoPreview || getFallbackProductImage(values.nama, values.kategori, berasImg)}
+                    alt={values.nama || 'Pratinjau foto produk'}
+                    className="photo-upload-thumb"
+                  />
+                  <span className={`photo-source-badge${photoPreview ? ' custom' : ''}`}>
+                    {photoPreview ? 'Foto Khusus' : 'Default Kategori'}
+                  </span>
+                </div>
+
+                <div className="photo-upload-controls">
+                  <div className="photo-upload-buttons">
+                    <label htmlFor="foto_produk" className="btn-upload-photo">
+                      {photoPreview ? 'Ganti Foto' : 'Pilih Foto Produk'}
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      id="foto_produk"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handlePhotoChange}
+                      className="photo-file-input-hidden"
+                    />
+                    {photoPreview && (
+                      <button
+                        type="button"
+                        className="btn-remove-photo"
+                        onClick={handleRemovePhoto}
+                      >
+                        Hapus Foto
+                      </button>
+                    )}
+                  </div>
+                  <p className="field-helper-message" style={{ margin: 0 }}>
+                    {photoFile
+                      ? `File dipilih: ${photoFile.name}`
+                      : photoPreview
+                        ? 'Foto khusus produk sedang aktif di katalog dan kasir.'
+                        : 'Jika tidak diunggah, tampilan otomatis memakai foto default sesuai kategori produk.'}
+                  </p>
+                </div>
+              </div>
+
+              {shown.foto_produk && (
+                <span className="field-error-message">ⓘ {shown.foto_produk}</span>
               )}
             </div>
           </div>
@@ -787,7 +908,7 @@ export default function ProductForm({
 
             <div className="rack-image-container">
               <img
-                src={getRackProductImage(values.nama, values.kategori)}
+                src={photoPreview || getFallbackProductImage(values.nama, values.kategori, berasImg)}
                 alt={values.nama || 'Pratinjau Rak Sembako'}
                 className="rack-preview-image"
               />

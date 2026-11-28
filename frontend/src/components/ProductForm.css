@@ -205,35 +205,6 @@
   font-weight: 600;
 }
 
-.btn-toggle-mode {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  color: #c2410c;
-  padding: 5px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-toggle-mode:hover {
-  background: #ffedd5;
-}
-
-.btn-toggle-mode.normal-mode {
-  background: #ffffff;
-  border-color: var(--color-card-border);
-  color: var(--color-text-body);
-}
-
-.btn-toggle-mode.normal-mode:hover {
-  background: #f9fafb;
-}
-
 /* Judul halaman */
 .page-title-section {
   margin-bottom: 20px;
@@ -1393,4 +1364,127 @@
   gap: 6px;
   font-size: 12px;
   color: var(--color-text-muted);
+}
+
+/* Upload Foto Produk */
+.photo-upload-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px dashed var(--color-input-border);
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.photo-upload-box.is-error {
+  border-color: var(--color-error-red);
+  background: var(--color-error-bg);
+}
+
+.photo-upload-preview-wrap {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-card-border);
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.photo-upload-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-source-badge {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.photo-source-badge.custom {
+  background: rgba(21, 128, 61, 0.9);
+}
+
+.photo-upload-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.photo-upload-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.photo-file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.btn-upload-photo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: var(--color-badge-green);
+  border: 1px solid var(--color-border-green);
+  color: var(--color-primary-green);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-upload-photo:hover {
+  background: var(--color-light-green);
+}
+
+.btn-remove-photo {
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  color: var(--color-error-red);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-remove-photo:hover {
+  background: var(--color-error-bg);
+}
+
+@media (max-width: 560px) {
+  .photo-upload-box {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

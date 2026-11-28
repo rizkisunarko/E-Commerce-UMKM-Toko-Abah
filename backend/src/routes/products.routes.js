@@ -1,4 +1,7 @@
 const express = require('express');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const { randomBytes } = require('node:crypto');
 const { createAuthenticate, authorizeRoles } = require('../middleware/auth');
 const { validateProduct, REQUIRED, INVALID_NUMBER } = require('../utils/productValidation');
 const {
@@ -8,12 +11,29 @@ const {
   PRODUCT_SELECT,
 } = require('../controllers/product.controller');
 
+const DEFAULT_UPLOAD_DIR = path.resolve(__dirname, '../../uploads/products');
+const ALLOWED_IMAGE_MIME = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+
+function detectImageExtension(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return null;
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return 'png';
+  if (buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP') return 'webp';
+  return null;
+}
+
 const CATALOG_PRODUCT_SELECT = `
   SELECT p.id_produk AS id,
          p.nama_produk AS nama,
          k.nama_kategori AS kategori,
          p.harga_jual AS harga,
          p.satuan,
+         p.foto_produk,
          p.jumlah_stok AS stok
   FROM produk p
   JOIN kategori k ON k.id_kategori = p.id_kategori
@@ -100,6 +120,7 @@ function formatCatalogProduct(row) {
     harga: Number(product.harga),
     satuan: product.satuan,
     berat: product.berat,
+    foto_produk: product.foto_produk || null,
     stok: Number(product.stok),
     tersedia: Number(product.stok) > 0,
   };
@@ -167,9 +188,13 @@ function createProductListHandler(db, { publicCatalog = false } = {}) {
   };
 }
 
-function createProductsRoutes(db, jwtSecret) {
+function createProductsRoutes(db, jwtSecret, uploadDir = DEFAULT_UPLOAD_DIR) {
   const router = express.Router();
   const authenticate = createAuthenticate(db, jwtSecret);
+  const rawImageParser = express.raw({
+    type: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+    limit: '2mb',
+  });
 
   router.get('/catalog/categories', async (req, res, next) => {
     try {
@@ -198,12 +223,55 @@ function createProductsRoutes(db, jwtSecret) {
   // 2. GET /api/products - Mengambil daftar produk (dengan paginasi & filter)
   router.get('/products', authenticate, createProductListHandler(db));
 
-  // 3. POST /api/products - Tambah produk baru (PPL-01.1, Khusus Admin)
+  // 3. POST /api/products/photo - Upload foto produk (Khusus Admin)
+  router.post(
+    '/products/photo',
+    authenticate,
+    authorizeRoles('admin'),
+    (req, res, next) => {
+      rawImageParser(req, res, (err) => {
+        if (err) {
+          if (err.type === 'entity.too.large') {
+            return res.status(413).json({
+              message: 'Ukuran foto maksimal 2 MB',
+              errors: { foto_produk: 'Ukuran foto maksimal 2 MB' },
+            });
+          }
+          return res.status(400).json({ message: 'Gagal membaca file foto' });
+        }
+        return next();
+      });
+    },
+    async (req, res, next) => {
+      const contentType = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+      const expectedExt = ALLOWED_IMAGE_MIME[contentType];
+      const detectedExt = detectImageExtension(req.body);
+      if (!expectedExt || !detectedExt || expectedExt !== detectedExt) {
+        return res.status(422).json({
+          message: 'Format foto harus JPG, PNG, atau WebP',
+          errors: { foto_produk: 'Format foto harus JPG, PNG, atau WebP (maks. 2 MB)' },
+        });
+      }
+
+      try {
+        await fs.mkdir(uploadDir, { recursive: true });
+        const filename = `prd-${Date.now()}-${randomBytes(6).toString('hex')}.${detectedExt}`;
+        await fs.writeFile(path.join(uploadDir, filename), req.body);
+        return res.status(201).json({
+          data: { url: `/uploads/products/${filename}` },
+        });
+      } catch (error) {
+        return next(error);
+      }
+    },
+  );
+
+  // 4. POST /api/products - Tambah produk baru (PPL-01.1, Khusus Admin)
   router.post('/products', authenticate, (req, res, next) => {
     return createProductHandler(req, res, next, db);
   });
 
-  // 4. PUT /api/products/:id - Ubah data produk (Khusus Admin)
+  // 5. PUT /api/products/:id - Ubah data produk (Khusus Admin)
   router.put('/products/:id', authenticate, authorizeRoles('admin'), async (req, res, next) => {
     const id = Number(req.params.id);
     if (!Number.isSafeInteger(id) || id < 1) {
@@ -239,11 +307,14 @@ function createProductsRoutes(db, jwtSecret) {
       const previousStock = Number(products[0].jumlah_stok);
       const stockChanged = values.stok !== undefined && values.stok !== previousStock;
       const satuan = values.satuan;
+      const hasPhotoUpdate = values.foto_produk !== undefined;
       await connection.query(
         `UPDATE produk
          SET id_kategori = ?, nama_produk = ?, harga_jual = ?,
              harga_beli = COALESCE(?, harga_beli),
-             satuan = ?, batas_stok_minimum = COALESCE(?, batas_stok_minimum),
+             satuan = ?,
+             foto_produk = CASE WHEN ? = 1 THEN ? ELSE foto_produk END,
+             batas_stok_minimum = COALESCE(?, batas_stok_minimum),
              jumlah_stok = COALESCE(?, jumlah_stok),
              status_produk = CASE WHEN ? IS NULL THEN status_produk
                WHEN ? = 0 THEN 'habis' ELSE 'tersedia' END,
@@ -255,6 +326,8 @@ function createProductsRoutes(db, jwtSecret) {
           values.harga,
           values.hargaBeli,
           satuan,
+          hasPhotoUpdate ? 1 : 0,
+          hasPhotoUpdate ? values.foto_produk : null,
           values.batas_stok_kritis,
           values.stok ?? null,
           values.stok ?? null,

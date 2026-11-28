@@ -4,24 +4,12 @@ import Button from '../components/Button';
 import { itemIssue, useCart } from '../context/CartContext';
 import useCartCheck from '../hooks/useCartCheck';
 import { formatRupiah } from '../utils/format';
+import { getProductImage } from '../utils/productImage';
 
 import berasImg from '../assets/Beras.jpg';
 import minyakImg from '../assets/Minyak-Goreng.jpg';
 import gulaImg from '../assets/Gula-Pasir.jpg';
 import telurImg from '../assets/Telur Ayam.jpg';
-import mieImg from '../assets/Mie-Instan.jpg';
-import kopiImg from '../assets/Kopi-Sachet.jpg';
-
-function getProductThumbnail(nama = '') {
-  const n = (nama || '').toLowerCase();
-  if (n.includes('beras')) return berasImg;
-  if (n.includes('minyak')) return minyakImg;
-  if (n.includes('gula')) return gulaImg;
-  if (n.includes('telur')) return telurImg;
-  if (n.includes('mie') || n.includes('sedap') || n.includes('indomie')) return mieImg;
-  if (n.includes('kopi') || n.includes('kapal')) return kopiImg;
-  return null;
-}
 
 function CartQuantityInput({ item, setJumlah, isError }) {
   const [val, setVal] = useState(String(item.jumlah));
@@ -333,7 +321,7 @@ export default function CartPage() {
           <div className="ko-items-container">
             {items.map((it) => {
               const issue = itemIssue(it);
-              const thumb = getProductThumbnail(it.nama);
+              const thumb = getProductImage(it);
               const sku = it.sku || `TKB-${String(it.id).padStart(3, '0')}`;
               const badgeText = it.badge || (it.nama.toLowerCase().includes('beras') ? 'Paling Laris' : it.nama.toLowerCase().includes('minyak') ? 'Promo Pekan Ini' : 'Sembako Pilihan');
               const itemDesc = it.desc || (it.nama.toLowerCase().includes('beras') ? 'Kualitas super pulen, putih alami tanpa pemutih' : it.nama.toLowerCase().includes('minyak') ? 'Penyaringan ganda higienis, jernih & tidak cepat beku' : 'Kebutuhan dapur pokok keluarga dengan mutu terjamin');

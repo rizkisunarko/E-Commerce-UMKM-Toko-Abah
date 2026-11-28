@@ -1,6 +1,7 @@
 const cors = require('cors');
 const express = require('express');
 const helmet = require('helmet');
+const path = require('node:path');
 const createRoutes = require('./routes');
 
 function getAllowedOrigins() {
@@ -11,7 +12,7 @@ function getAllowedOrigins() {
   return new Set(['http://localhost:5173', ...configured]);
 }
 
-function createApp({ db, jwtSecret, shippingClient, paymentClient }) {
+function createApp({ db, jwtSecret, shippingClient, paymentClient, uploadDir } = {}) {
   if (!db || typeof db.query !== 'function') {
     throw new Error('Pool database backend wajib dikonfigurasi');
   }
@@ -21,7 +22,8 @@ function createApp({ db, jwtSecret, shippingClient, paymentClient }) {
 
   const app = express();
   const allowedOrigins = getAllowedOrigins();
-  app.use(helmet());
+  const resolvedUploadDir = uploadDir || path.resolve(__dirname, '../uploads/products');
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(
     cors({
       origin(origin, callback) {
@@ -31,8 +33,9 @@ function createApp({ db, jwtSecret, shippingClient, paymentClient }) {
       },
     }),
   );
+  app.use('/uploads/products', express.static(resolvedUploadDir));
   app.use(express.json({ limit: '100kb' }));
-  app.use('/api', createRoutes(db, jwtSecret, shippingClient, paymentClient));
+  app.use('/api', createRoutes(db, jwtSecret, shippingClient, paymentClient, { uploadDir: resolvedUploadDir }));
   app.use((req, res) => res.status(404).json({ message: 'Endpoint tidak ditemukan' }));
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);

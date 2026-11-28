@@ -81,6 +81,34 @@ export async function request(method, path, body, extraHeaders = {}) {
   return data;
 }
 
+export async function uploadProductPhoto(file) {
+  const token = getToken();
+
+  if (USE_MOCK) {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new ApiError(400, 'Gagal membaca file foto'));
+      reader.readAsDataURL(file);
+    });
+    const res = await mockRequest('POST', '/products/photo', { url: dataUrl }, token);
+    if (res.status >= 400) throw new ApiError(res.status, res.body.message, res.body.errors);
+    return res.body;
+  }
+
+  const res = await fetch(`${API_URL}/products/photo`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: file,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, data.message || 'Gagal mengunggah foto produk', data.errors);
+  return data;
+}
+
 export const api = {
   get: (path, headers) => request('GET', path, undefined, headers),
   post: (path, body, headers) => request('POST', path, body, headers),

@@ -43,6 +43,13 @@ export default function ProductCreatePage() {
     }
 
     try {
+      if (values.photoFile) {
+        const uploaded = await productService.uploadPhoto(values.photoFile);
+        if (uploaded?.data?.url) {
+          payload.foto_produk = uploaded.data.url;
+        }
+      }
+
       const res = await productService.create(payload);
       const namaProduk = res?.data?.nama || payload.nama;
       navigate('/produk', {
